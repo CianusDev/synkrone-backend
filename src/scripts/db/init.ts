@@ -353,6 +353,7 @@ async function verifyTables(): Promise<void> {
     "companies",
     "admins",
     "user_sessions",
+    "admin_sessions",
     "otps",
   ];
 
@@ -447,6 +448,7 @@ async function resetDatabase(): Promise<void> {
     const dropQueries = [
       "DROP TABLE IF EXISTS otps CASCADE;",
       "DROP TABLE IF EXISTS user_sessions CASCADE;",
+      "DROP TABLE IF EXISTS admin_sessions CASCADE;",
       "DROP TABLE IF EXISTS admins CASCADE;",
       "DROP TABLE IF EXISTS companies CASCADE;",
       "DROP TABLE IF EXISTS freelances CASCADE;",
@@ -462,15 +464,21 @@ async function resetDatabase(): Promise<void> {
       "DROP FUNCTION IF EXISTS is_freelance_blocked(UUID) CASCADE;",
       "DROP FUNCTION IF EXISTS is_company_blocked(UUID) CASCADE;",
       "DROP FUNCTION IF EXISTS cleanup_expired_sessions() CASCADE;",
+      "DROP FUNCTION IF EXISTS cleanup_expired_admin_sessions() CASCADE;",
       "DROP FUNCTION IF EXISTS cleanup_expired_otps() CASCADE;",
       "DROP FUNCTION IF EXISTS admin_revoke_session(UUID) CASCADE;",
+      "DROP FUNCTION IF EXISTS admin_revoke_admin_session(UUID) CASCADE;",
       "DROP FUNCTION IF EXISTS admin_revoke_user_sessions(UUID) CASCADE;",
+      "DROP FUNCTION IF EXISTS admin_revoke_admin_sessions(UUID) CASCADE;",
       "DROP FUNCTION IF EXISTS admin_block_freelance(UUID, INTEGER) CASCADE;",
       "DROP FUNCTION IF EXISTS admin_block_company(UUID, INTEGER) CASCADE;",
 
       // Supprimer les vues
+      "DROP VIEW IF EXISTS admin_suspicious_admin_activity CASCADE;",
       "DROP VIEW IF EXISTS admin_suspicious_activity CASCADE;",
+      "DROP VIEW IF EXISTS admin_admin_session_stats CASCADE;",
       "DROP VIEW IF EXISTS admin_session_stats CASCADE;",
+      "DROP VIEW IF EXISTS admin_admin_sessions CASCADE;",
       "DROP VIEW IF EXISTS admin_user_sessions CASCADE;",
       "DROP VIEW IF EXISTS available_freelances CASCADE;",
       "DROP VIEW IF EXISTS active_companies CASCADE;",

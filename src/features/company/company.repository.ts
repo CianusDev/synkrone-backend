@@ -65,27 +65,32 @@ export class CompanyRepository {
    * @param companyData - Les données à mettre à jour
    * @returns L'entreprise mise à jour ou null si non trouvée
    */
-  async updateCompanyProfile(
+  async updateCompany(
     id: string,
     companyData: Partial<Company>,
   ): Promise<Company | null> {
     const query = `
         UPDATE companies SET
             company_name = $1,
-            logo_url = COALESCE($2, logo_url),
-            description = COALESCE($3, description),
-            industry = COALESCE($4, industry),
-            website_url = COALESCE($5, website_url),
-            address = COALESCE($6, address),
-            company_size = COALESCE($7, company_size),
-
-        WHERE id = $5
+            logo_url = $2 ,
+            company_description = $3,
+            industry = $4,
+            website_url = $5,
+            address = $6,
+            company_size = $7,
+            company_phone = $8
+        WHERE id = $9
         RETURNING *`;
 
     const values = [
       companyData.company_name,
-      companyData.company_email,
-      companyData.password_hashed,
+      companyData.logo_url,
+      companyData.company_description,
+      companyData.industry,
+      companyData.website_url,
+      companyData.address,
+      companyData.company_size,
+      companyData.company_phone,
       id,
     ];
 
@@ -142,6 +147,24 @@ export class CompanyRepository {
       return result.rows[0] as Company;
     } catch (error) {
       console.error("Error verifying company email:", error);
+      throw new Error("Database error");
+    }
+  }
+
+  async updateCompanyFirstLogin(id: string): Promise<Company | null> {
+    const query = `
+        UPDATE companies SET
+            is_first_login = false
+        WHERE id = $1
+        RETURNING *`;
+
+    const values = [id];
+
+    try {
+      const result = await db.query(query, values);
+      return result.rows[0] as Company;
+    } catch (error) {
+      console.error("Error updating company first login:", error);
       throw new Error("Database error");
     }
   }

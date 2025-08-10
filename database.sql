@@ -185,6 +185,28 @@ CREATE TRIGGER update_companies_updated_at
 -- DELIMITER //
 
 -- =============================================
+-- TABLE ADMIN_SESSIONS
+-- =============================================
+
+CREATE TABLE admin_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    admin_id UUID NOT NULL REFERENCES admins(id),
+    ip_address VARCHAR(45) NULL, -- Format IPv4 ou IPv6
+    user_agent TEXT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_activity_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at TIMESTAMP NULL
+);
+
+-- Index pour gestion des sessions admin
+CREATE INDEX idx_admin_sessions_admin_id ON admin_sessions(admin_id);
+CREATE INDEX idx_admin_sessions_is_active ON admin_sessions(is_active);
+CREATE INDEX idx_admin_sessions_expires_at ON admin_sessions(expires_at);
+CREATE INDEX idx_admin_sessions_ip_address ON admin_sessions(ip_address);
+
+-- =============================================
 -- FONCTIONS UTILITAIRES
 -- =============================================
 
@@ -242,13 +264,28 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Fonction pour nettoyer les sessions expirées
+-- Fonction pour nettoyer les sessions utilisateurs expirées
 CREATE OR REPLACE FUNCTION cleanup_expired_sessions()
 RETURNS INTEGER AS $$
 DECLARE
     deleted_count INTEGER;
 BEGIN
     DELETE FROM user_sessions
+    WHERE expires_at < CURRENT_TIMESTAMP
+    OR revoked_at IS NOT NULL;
+
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Fonction pour nettoyer les sessions admin expirées
+CREATE OR REPLACE FUNCTION cleanup_expired_admin_sessions()
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM admin_sessions
     WHERE expires_at < CURRENT_TIMESTAMP
     OR revoked_at IS NOT NULL;
 
@@ -285,6 +322,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Fonction ADMIN : Révoquer une session administrateur
+CREATE OR REPLACE FUNCTION admin_revoke_admin_session(session_uuid UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+    UPDATE admin_sessions
+    SET revoked_at = CURRENT_TIMESTAMP,
+        is_active = FALSE
+    WHERE id = session_uuid;
+
+    RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Fonction ADMIN : Révoquer toutes les sessions d'un utilisateur
 CREATE OR REPLACE FUNCTION admin_revoke_user_sessions(user_uuid UUID)
 RETURNS INTEGER AS $$
@@ -295,6 +345,23 @@ BEGIN
     SET revoked_at = CURRENT_TIMESTAMP,
         is_active = FALSE
     WHERE user_id = user_uuid
+    AND revoked_at IS NULL;
+
+    GET DIAGNOSTICS revoked_count = ROW_COUNT;
+    RETURN revoked_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Fonction ADMIN : Révoquer toutes les sessions d'un administrateur
+CREATE OR REPLACE FUNCTION admin_revoke_admin_sessions(admin_uuid UUID)
+RETURNS INTEGER AS $$
+DECLARE
+    revoked_count INTEGER;
+BEGIN
+    UPDATE admin_sessions
+    SET revoked_at = CURRENT_TIMESTAMP,
+        is_active = FALSE
+    WHERE admin_id = admin_uuid
     AND revoked_at IS NULL;
 
     GET DIAGNOSTICS revoked_count = ROW_COUNT;
@@ -395,7 +462,33 @@ LEFT JOIN freelances f ON s.user_id = f.id
 LEFT JOIN companies c ON s.user_id = c.id
 ORDER BY s.last_activity_at DESC;
 
--- Vue ADMIN : Statistiques des sessions
+-- Vue ADMIN : Sessions administrateurs avec détails
+CREATE VIEW admin_admin_sessions AS
+SELECT
+    s.id as session_id,
+    s.admin_id,
+    a.username as admin_username,
+    a.email as admin_email,
+    a.level as admin_level,
+    s.ip_address,
+    s.user_agent,
+    s.is_active,
+    s.last_activity_at,
+    s.expires_at,
+    s.created_at as session_started,
+    s.revoked_at,
+    CASE
+        WHEN s.expires_at < CURRENT_TIMESTAMP THEN 'expired'
+        WHEN s.revoked_at IS NOT NULL THEN 'revoked'
+        WHEN s.is_active = FALSE THEN 'inactive'
+        ELSE 'active'
+    END as session_status,
+    EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - s.last_activity_at))/60 as minutes_since_activity
+FROM admin_sessions s
+LEFT JOIN admins a ON s.admin_id = a.id
+ORDER BY s.last_activity_at DESC;
+
+-- Vue ADMIN : Statistiques des sessions utilisateurs
 CREATE VIEW admin_session_stats AS
 SELECT
     COUNT(*) as total_sessions,
@@ -407,7 +500,19 @@ SELECT
     COUNT(*) FILTER (WHERE last_activity_at > CURRENT_TIMESTAMP - INTERVAL '1 hour') as active_last_hour
 FROM user_sessions;
 
--- Vue ADMIN : Activité suspecte
+-- Vue ADMIN : Statistiques des sessions administrateurs
+CREATE VIEW admin_admin_session_stats AS
+SELECT
+    COUNT(*) as total_admin_sessions,
+    COUNT(*) FILTER (WHERE is_active = TRUE AND expires_at > CURRENT_TIMESTAMP) as active_admin_sessions,
+    COUNT(*) FILTER (WHERE expires_at < CURRENT_TIMESTAMP) as expired_admin_sessions,
+    COUNT(*) FILTER (WHERE revoked_at IS NOT NULL) as revoked_admin_sessions,
+    COUNT(DISTINCT admin_id) as unique_admins_with_sessions,
+    COUNT(*) FILTER (WHERE created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours') as admin_sessions_last_24h,
+    COUNT(*) FILTER (WHERE last_activity_at > CURRENT_TIMESTAMP - INTERVAL '1 hour') as admins_active_last_hour
+FROM admin_sessions;
+
+-- Vue ADMIN : Activité suspecte utilisateurs
 CREATE VIEW admin_suspicious_activity AS
 SELECT
     s.user_id,
@@ -429,6 +534,24 @@ GROUP BY s.user_id, f.email, c.company_email, f.id, c.id
 HAVING COUNT(DISTINCT s.ip_address) > 3 -- Plus de 3 IP différentes
 ORDER BY different_ips DESC;
 
+-- Vue ADMIN : Activité suspecte administrateurs
+CREATE VIEW admin_suspicious_admin_activity AS
+SELECT
+    s.admin_id,
+    a.username as admin_username,
+    a.email as admin_email,
+    a.level as admin_level,
+    COUNT(DISTINCT s.ip_address) as different_ips,
+    COUNT(s.id) as total_sessions,
+    MAX(s.last_activity_at) as last_activity,
+    array_agg(DISTINCT s.ip_address) as ip_addresses
+FROM admin_sessions s
+LEFT JOIN admins a ON s.admin_id = a.id
+WHERE s.created_at > CURRENT_TIMESTAMP - INTERVAL '7 days'
+GROUP BY s.admin_id, a.username, a.email, a.level
+HAVING COUNT(DISTINCT s.ip_address) > 2 -- Plus de 2 IP différentes pour les admins (plus strict)
+ORDER BY different_ips DESC;
+
 -- =============================================
 -- POLITIQUES DE SÉCURITÉ RLS (Row Level Security)
 -- =============================================
@@ -437,6 +560,7 @@ ORDER BY different_ips DESC;
 ALTER TABLE freelances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE otps ENABLE ROW LEVEL SECURITY;
 
 -- Politique pour les sessions : utilisateur voit ses sessions OU admin voit tout
@@ -444,6 +568,13 @@ CREATE POLICY user_sessions_policy ON user_sessions
     USING (
         user_id = current_setting('app.current_user_id', true)::UUID
         OR current_setting('app.user_role', true) IN ('super_admin', 'moderateur', 'support')
+    );
+
+-- Politique pour les sessions admin : admin voit uniquement sa session OU super_admin voit tout
+CREATE POLICY admin_sessions_policy ON admin_sessions
+    USING (
+        admin_id = current_setting('app.current_user_id', true)::UUID
+        OR current_setting('app.user_role', true) = 'super_admin'
     );
 
 -- Politique pour les freelances : freelance voit son profil OU admin voit tout
@@ -475,4 +606,5 @@ COMMENT ON TABLE freelances IS 'Table des freelances avec toutes leurs informati
 COMMENT ON TABLE companies IS 'Table des entreprises avec toutes leurs informations';
 COMMENT ON TABLE admins IS 'Comptes administrateurs';
 COMMENT ON TABLE user_sessions IS 'Sessions utilisateurs actives (freelances et entreprises)';
+COMMENT ON TABLE admin_sessions IS 'Sessions administrateurs actives';
 COMMENT ON TABLE otps IS 'Codes de vérification temporaires';

@@ -1,11 +1,11 @@
 export interface UserSession {
   id: string;
-  userId: string;
-  ipAddress?: string;
-  userAgent?: string;
-  isActive: boolean;
-  lastActivityAt: Date;
-  expiresAt: Date;
-  createdAt: Date;
-  revokedAt: Date | null;
+  user_id: string;
+  ip_address?: string;
+  user_agent?: string;
+  is_active: boolean;
+  last_activity_at: Date;
+  expires_at: Date;
+  created_at: Date;
+  revoked_at: Date | null;
 }

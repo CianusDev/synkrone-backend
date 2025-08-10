@@ -152,4 +152,22 @@ export class FreelanceRepository {
       throw new Error("Database error");
     }
   }
+
+  async updateFreelanceFirstLogin(id: string): Promise<Freelance | null> {
+    const query = `
+        UPDATE freelances SET
+            first_login = false,
+            updated_at = NOW()
+        WHERE id = $1 RETURNING *`;
+
+    const values = [id];
+
+    try {
+      const result = await db.query(query, values);
+      return result.rows[0] as Freelance;
+    } catch (error) {
+      console.error("Error updating freelance first login:", error);
+      throw new Error("Database error");
+    }
+  }
 }

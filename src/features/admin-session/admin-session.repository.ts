@@ -1,16 +1,18 @@
 import { db } from "../../config/database";
-import { UserSession } from "./user-session.model";
+import { AdminSession } from "./admin-session.model";
 
-export class UserSessionRepository {
+export class AdminSessionRepository {
   /**
-   * Crée une session utilisateur dans la base de données
+   * Crée une session admin dans la base de données
    * @param sessionData - Les données de la session à créer
    * @returns La session créée
    */
-  async createSession(sessionData: Partial<UserSession>): Promise<UserSession> {
+  async createSession(
+    sessionData: Partial<AdminSession>,
+  ): Promise<AdminSession> {
     const query = `
-        INSERT INTO user_sessions (
-            user_id,
+        INSERT INTO admin_sessions (
+            admin_id,
             ip_address,
             user_agent,
             expires_at,
@@ -20,10 +22,10 @@ export class UserSessionRepository {
         ) RETURNING *`;
 
     const values = [
-      sessionData.user_id,
+      sessionData.admin_id,
       sessionData.ip_address,
-      sessionData.user_agent,
-      sessionData.expires_at,
+      sessionData.userAgent,
+      sessionData.expiresAt,
       sessionData.is_active,
     ];
 
@@ -31,37 +33,37 @@ export class UserSessionRepository {
       const result = await db.query(query, values);
       return result.rows[0];
     } catch (error) {
-      console.error("Error creating user session:", error);
+      console.error("Error creating admin session:", error);
       throw new Error("Database error");
     }
   }
 
   /**
-   * Récupère une session utilisateur par son ID
+   * Récupère une session admin par son ID
    * @param id - L'ID de l'utilisateur à qui appartient la session
    * @returns La session correspondante ou null si non trouvée
    */
-  async getSessionByUserId(id: string): Promise<UserSession | null> {
-    const query = `SELECT * FROM user_sessions WHERE user_id = $1`;
+  async getSessionsByAdminId(id: string): Promise<AdminSession[] | null> {
+    const query = `SELECT * FROM admin_sessions WHERE admin_id = $1`;
     try {
       const result = await db.query(query, [id]);
-      return result.rows[0];
+      return result.rows as AdminSession[] | null;
     } catch (error) {
-      console.error("Error fetching user session by ID:", error);
+      console.error("Error fetching admin session by ID:", error);
       throw new Error("Database error");
     }
   }
 
-  async getSessionById(id: string): Promise<UserSession | null> {
+  async getSessionById(id: string): Promise<AdminSession | null> {
     const query = `
-        SELECT * FROM user_sessions
+        SELECT * FROM admin_sessions
         WHERE  id = $1`;
 
     try {
       const result = await db.query(query, [id]);
       return result.rows[0] || null;
     } catch (error) {
-      console.error("Error fetching user session by userId and ID:", error);
+      console.error("Error fetching admin session by userId and ID:", error);
       throw new Error("Database error");
     }
   }
@@ -74,10 +76,10 @@ export class UserSessionRepository {
    */
   async updateSession(
     id: string,
-    sessionData: Partial<UserSession>,
-  ): Promise<UserSession | null> {
+    sessionData: Partial<AdminSession>,
+  ): Promise<AdminSession | null> {
     const query = `
-        UPDATE user_sessions SET
+        UPDATE admin_sessions SET
             ip_address = $1,
             user_agent = $2,
             expires_at = $3,
@@ -87,8 +89,8 @@ export class UserSessionRepository {
 
     const values = [
       sessionData.ip_address,
-      sessionData.user_agent,
-      sessionData.expires_at,
+      sessionData.userAgent,
+      sessionData.expiresAt,
       sessionData.is_active,
       id,
     ];
@@ -97,7 +99,7 @@ export class UserSessionRepository {
       const result = await db.query(query, values);
       return result.rows[0];
     } catch (error) {
-      console.error("Error updating user session:", error);
+      console.error("Error updating admin session:", error);
       throw new Error("Database error");
     }
   }
@@ -107,17 +109,17 @@ export class UserSessionRepository {
    * @param id - L'ID de l'utilisateur dont la session doit être mise à jour
    * @returns La session mise à jour ou null si non trouvée
    */
-  async updateLastActivityByUser(id: string): Promise<UserSession | null> {
+  async updateLastActivityByUser(id: string): Promise<AdminSession | null> {
     const query = `
-        UPDATE user_sessions SET last_activity_at = NOW()
-        WHERE user_id = $1
+        UPDATE admin_sessions SET last_activity_at = NOW()
+        WHERE admin_id = $1
         RETURNING *`;
 
     try {
       const result = await db.query(query, [id]);
       return result.rows[0];
     } catch (error) {
-      console.error("Error updating last active user session:", error);
+      console.error("Error updating last active admin session:", error);
       throw new Error("Database error");
     }
   }
@@ -128,12 +130,44 @@ export class UserSessionRepository {
    * @returns True si la session a été supprimée, sinon false
    */
   async deleteSessionById(id: string): Promise<boolean> {
-    const query = `DELETE FROM user_sessions WHERE id = $1`;
+    const query = `DELETE FROM admin_sessions WHERE id = $1`;
     try {
       const result = await db.query(query, [id]);
       return result.rowCount ? result.rowCount > 0 : false;
     } catch (error) {
-      console.error("Error deleting user session:", error);
+      console.error("Error deleting admin session:", error);
+      throw new Error("Database error");
+    }
+  }
+
+  async revokeAllAdminSessions(adminId: string): Promise<number | null> {
+    const query = `
+        UPDATE admin_sessions
+        SET is_active = false, revoked_at = NOW()
+        WHERE admin_id = $1 AND is_active = true
+        RETURNING *`;
+
+    try {
+      const result = await db.query(query, [adminId]);
+      return result.rowCount;
+    } catch (error) {
+      console.error("Error revoking all admin sessions:", error);
+      throw new Error("Database error");
+    }
+  }
+
+  async revokeSessionById(id: string): Promise<AdminSession | null> {
+    const query = `
+        UPDATE admin_sessions
+        SET is_active = false, revoked_at = NOW()
+        WHERE id = $1
+        RETURNING *`;
+
+    try {
+      const result = await db.query(query, [id]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error("Error revoking admin session by ID:", error);
       throw new Error("Database error");
     }
   }

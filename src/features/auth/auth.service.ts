@@ -22,11 +22,12 @@ import { OtpType } from "../otp/otp.model";
 import { UserSessionRepository } from "../user-session/user-session.repository";
 import { Request } from "express";
 import { CompanyRepository } from "../company/company.repository";
+import { HTTP_STATUS } from "../../utils/constant";
 
 // Définir des types d'erreur personnalisés
 class AuthError extends Error {
   statusCode: number;
-  constructor(message: string, statusCode: number = 400) {
+  constructor(message: string, statusCode: number = HTTP_STATUS.BAD_REQUEST) {
     super(message);
     this.name = this.constructor.name;
     this.statusCode = statusCode;
@@ -35,19 +36,19 @@ class AuthError extends Error {
 
 class NotFoundError extends AuthError {
   constructor(message: string) {
-    super(message, 404);
+    super(message, HTTP_STATUS.NOT_FOUND);
   }
 }
 
 class UnauthorizedError extends AuthError {
   constructor(message: string) {
-    super(message, 401);
+    super(message, HTTP_STATUS.UNAUTHORIZED);
   }
 }
 
 class ValidationError extends AuthError {
   constructor(message: string) {
-    super(message, 400);
+    super(message, HTTP_STATUS.BAD_REQUEST);
   }
 }
 
@@ -177,7 +178,7 @@ export class AuthService {
    * @returns ID de la session
    */
   private async handleUserSession(
-    userId: string,
+    user_id: string,
     req: Request,
     existingSessionId?: string,
   ): Promise<string> {
@@ -186,24 +187,24 @@ export class AuthService {
         ? await this.userSessionRepository.getSessionById(existingSessionId)
         : null;
 
-      if (!existingSession || !existingSession.isActive) {
+      if (!existingSession || !existingSession.is_active) {
         // Création d'une nouvelle session
         const session = await this.userSessionRepository.createSession({
-          userId,
-          ipAddress: req.ip || "unknown",
-          userAgent: req.headers["user-agent"] || "unknown",
-          expiresAt: new Date(Date.now() + this.SESSION_VALIDITY_PERIOD),
-          isActive: true,
+          user_id,
+          ip_address: req.ip || "unknown",
+          user_agent: req.headers["user-agent"] || "unknown",
+          expires_at: new Date(Date.now() + this.SESSION_VALIDITY_PERIOD),
+          is_active: true,
         });
 
         return session.id;
       } else {
         // Mise à jour de la session existante
         await this.userSessionRepository.updateSession(existingSession.id, {
-          ipAddress: req.ip || "unknown",
-          userAgent: req.headers["user-agent"] || "unknown",
-          expiresAt: new Date(Date.now() + this.SESSION_VALIDITY_PERIOD),
-          isActive: true,
+          ip_address: req.ip || "unknown",
+          user_agent: req.headers["user-agent"] || "unknown",
+          expires_at: new Date(Date.now() + this.SESSION_VALIDITY_PERIOD),
+          is_active: true,
         });
 
         return existingSession.id;
@@ -908,8 +909,8 @@ export class AuthService {
 
       // Désactivation de la session
       await this.userSessionRepository.updateSession(sessionId, {
-        isActive: false,
-        expiresAt: new Date(Date.now() - 1000), // Expire immédiatement
+        is_active: false,
+        expires_at: new Date(Date.now() - 1000), // Expire immédiatement
       });
     } catch (error) {
       // Propagation des erreurs personnalisées

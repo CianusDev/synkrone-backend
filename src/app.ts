@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { HTTP_STATUS } from "./utils/constant";
 import authRoutes from "./features/auth/auth.route";
+import authAdminRoutes from "./features/auth-admin/auth-admin.routes";
+import profileRoutes from "./features/profile/profile.routes";
 dotenv.config();
 
 export const app = express();
@@ -33,3 +35,5 @@ app.get("/health", (_, res: Response) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/auth-admin", authAdminRoutes);
+app.use("/api/profile", profileRoutes);
