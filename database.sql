@@ -30,15 +30,14 @@ CREATE TABLE freelances (
     job_title VARCHAR(200),
     experience_years INTEGER CHECK (experience_years >= 0),
     description TEXT,
-    portfolio_url VARCHAR(500),
     cover_url VARCHAR(500),
-    video_url VARCHAR(500),
     linkedin_url VARCHAR(500),
     tjm DECIMAL(10,2) CHECK (tjm > 0),
     availability availability_enum DEFAULT 'available',
     location VARCHAR(500),
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     country VARCHAR(100),
+    city VARCHAR(100),
     phone VARCHAR(20),
     block_duration INTEGER DEFAULT 0 CHECK (block_duration >= -1),
     is_first_login BOOLEAN DEFAULT TRUE,
@@ -77,6 +76,7 @@ CREATE TABLE companies (
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     block_duration INTEGER DEFAULT 0 CHECK (block_duration >= -1),
     country VARCHAR(100),
+    city VARCHAR(100),
     company_phone VARCHAR(20),
     is_first_login BOOLEAN DEFAULT TRUE,
     deleted_at TIMESTAMP NULL,
@@ -598,6 +598,54 @@ CREATE POLICY otps_policy ON otps
         OR current_setting('app.user_role', true) IN ('super_admin', 'moderateur', 'support')
     );
 
+
+
+-- =============================================
+-- TABLE CATEGORY_SKILLS
+-- =============================================
+
+CREATE TABLE category_skills (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    slug VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL
+);
+
+CREATE INDEX idx_category_skills_name ON category_skills(name);
+
+-- =============================================
+-- TABLE SKILLS
+-- =============================================
+
+CREATE TABLE skills (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    category_id UUID REFERENCES category_skills(id) ON DELETE SET NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL
+);
+
+CREATE INDEX idx_skills_name ON skills(name);
+CREATE INDEX idx_skills_category_id ON skills(category_id);
+
+-- =============================================
+-- TABLE FREELANCE_SKILLS (relation N-N entre freelances et skills)
+-- =============================================
+
+CREATE TABLE freelance_skills (
+    freelance_id UUID NOT NULL REFERENCES freelances(id) ON DELETE CASCADE,
+    skill_id UUID NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+    PRIMARY KEY (freelance_id, skill_id),
+    level VARCHAR(50), -- Optionnel : niveau de compétence (débutant, intermédiaire, expert, etc.)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_freelance_skills_freelance_id ON freelance_skills(freelance_id);
+CREATE INDEX idx_freelance_skills_skill_id ON freelance_skills(skill_id);
+
 -- =============================================
 -- COMMENTAIRES SUR LES TABLES
 -- =============================================
@@ -608,3 +656,6 @@ COMMENT ON TABLE admins IS 'Comptes administrateurs';
 COMMENT ON TABLE user_sessions IS 'Sessions utilisateurs actives (freelances et entreprises)';
 COMMENT ON TABLE admin_sessions IS 'Sessions administrateurs actives';
 COMMENT ON TABLE otps IS 'Codes de vérification temporaires';
+COMMENT ON TABLE category_skills IS 'Catégories de compétences pour les skills';
+COMMENT ON TABLE skills IS 'Compétences associées à une catégorie';
+COMMENT ON TABLE freelance_skills IS 'Relation N-N entre freelances et skills, avec niveau de compétence optionnel';

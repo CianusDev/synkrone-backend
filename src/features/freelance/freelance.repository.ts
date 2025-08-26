@@ -10,15 +10,16 @@ export class FreelanceRepository {
   async createFreelance(freelance: Partial<Freelance>): Promise<Freelance> {
     const query = `
         INSERT INTO freelances (
-            firstname, lastname, email, password_hashed
+            firstname, lastname, email, country, password_hashed
         ) VALUES (
-            $1, $2, $3, $4
+            $1, $2, $3, $4, $5
         ) RETURNING *`;
 
     const values = [
       freelance.firstname,
       freelance.lastname,
       freelance.email,
+      freelance.country,
       freelance.password_hashed,
     ];
 
@@ -63,30 +64,28 @@ export class FreelanceRepository {
             lastname = COALESCE($2, lastname),
             experience_years = COALESCE($3, experience_years),
             description = COALESCE($4, description),
-            portfolio_url = COALESCE($5, portfolio_url),
-            photo_url = COALESCE($6, photo_url),
-            job_title = COALESCE($7, job_title),
-            cover_url = COALESCE($8, cover_url),
-            video_url = COALESCE($9, video_url),
-            linkedin_url = COALESCE($10, linkedin_url),
-            tjm = COALESCE($11, tjm),
-            availability = COALESCE($12, availability),
-            location = COALESCE($13, location),
-            phone = COALESCE($14, phone),
-            country = COALESCE($15, country),
+            photo_url = COALESCE($5, photo_url),
+            job_title = COALESCE($6, job_title),
+            cover_url = COALESCE($7, cover_url),
+            linkedin_url = COALESCE($8, linkedin_url),
+            tjm = COALESCE($9, tjm),
+            availability = COALESCE($10, availability),
+            location = COALESCE($11, location),
+            phone = COALESCE($12, phone),
+            country = COALESCE($13, country),
             updated_at = NOW()
-        WHERE id = $16 RETURNING *`;
+        WHERE id = $14 RETURNING *`;
 
     const values = [
       freelanceData.firstname,
       freelanceData.lastname,
       freelanceData.experience_years,
       freelanceData.description,
-      freelanceData.portfolio_url,
+      // freelanceData.portfolio_url,
       freelanceData.photo_url,
       freelanceData.job_title,
       freelanceData.cover_url,
-      freelanceData.video_url,
+      // freelanceData.video_url,
       freelanceData.linkedin_url,
       freelanceData.tjm,
       freelanceData.availability,

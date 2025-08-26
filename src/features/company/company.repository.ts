@@ -10,12 +10,17 @@ export class CompanyRepository {
   async createCompany(company: Partial<Company>): Promise<Company> {
     const query = `
         INSERT INTO companies (
-            company_email, password_hashed
+            company_name, company_email, country, password_hashed
         ) VALUES (
-            $1, $2
+            $1, $2, $3, $4
         ) RETURNING *`;
 
-    const values = [company.company_email, company.password_hashed];
+    const values = [
+      company.company_name,
+      company.company_email,
+      company.country,
+      company.password_hashed,
+    ];
 
     try {
       const result = await db.query(query, values);

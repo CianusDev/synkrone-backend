@@ -158,16 +158,16 @@ export class AuthController {
 
   async resetPasswordFreelance(req: Request, res: Response) {
     try {
-      const { email, code, newPassword } = req.body;
-      if (!email || !code || !newPassword) {
+      const { token, newPassword } = req.body;
+      if (!token || !newPassword) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: "Email, code, and new password are required",
+          message: "Token, and new password are required",
         });
       }
+
       const result = await this.authService.resetPasswordFreelance(
-        email,
-        code,
+        token,
         newPassword,
       );
 
@@ -315,16 +315,15 @@ export class AuthController {
 
   async resetPasswordCompany(req: Request, res: Response) {
     try {
-      const { email, code, newPassword } = req.body;
-      if (!email || !code || !newPassword) {
+      const { token, newPassword } = req.body;
+      if (!token || !newPassword) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: "Email, code, and new password are required",
+          message: "Token and new password are required",
         });
       }
       const result = await this.authService.resetPasswordCompany(
-        email,
-        code,
+        token,
         newPassword,
       );
       res.status(HTTP_STATUS.OK).json({

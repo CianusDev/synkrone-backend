@@ -5,22 +5,18 @@ import { HTTP_STATUS } from "./utils/constant";
 import authRoutes from "./features/auth/auth.route";
 import authAdminRoutes from "./features/auth-admin/auth-admin.routes";
 import profileRoutes from "./features/profile/profile.routes";
+import { envConfig } from "./config/env.config";
 dotenv.config();
 
 export const app = express();
-const CORS_ORIGIN = process.env.CORS_ORIGIN;
 
-if (!CORS_ORIGIN) {
-  throw new Error(
-    "La variable d'environnement CORS_ORIGIN est requise mais n'est pas définie.",
-  );
-}
+const CORS_ORIGIN = envConfig.corsOrigin;
 
 app.use(express.json()); // 👈 nécessaire pour parser le JSON
 
 // Configuration de CORS pour autoriser les origines spécifiques
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || "*", // à adapter selon vos besoins de sécurité
+  origin: CORS_ORIGIN || "*", // à adapter selon vos besoins de sécurité
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
 };

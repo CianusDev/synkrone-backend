@@ -116,18 +116,20 @@ export const emailTemplates = {
     `,
   }),
 
-  // Template de réinitialisation de mot de passe
-  passwordReset: (code: string, firstName?: string) => ({
+  // Template de réinitialisation de mot de passe avec lien
+  passwordReset: (resetLink: string, firstName?: string) => ({
     subject: "Réinitialisation de votre mot de passe - Synkrone",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Réinitialisation de mot de passe</h2>
         ${firstName ? `<p>Bonjour ${firstName},</p>` : "<p>Bonjour,</p>"}
-        <p>Vous avez demandé la réinitialisation de votre mot de passe. Utilisez le code suivant :</p>
-        <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
-          <h1 style="color: #dc3545; font-size: 32px; margin: 0; letter-spacing: 8px;">${code}</h1>
+        <p>Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe :</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetLink}" style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Réinitialiser mon mot de passe
+          </a>
         </div>
-        <p>Ce code est valide pendant 10 minutes.</p>
+        <p>Ce lien est valide pendant 10 minutes.</p>
         <p><strong>Si vous n'avez pas demandé cette réinitialisation, contactez-nous immédiatement.</strong></p>
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
         <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
@@ -138,11 +140,11 @@ export const emailTemplates = {
 
       ${firstName ? `Bonjour ${firstName},` : "Bonjour,"}
 
-      Vous avez demandé la réinitialisation de votre mot de passe. Utilisez le code suivant :
+      Vous avez demandé la réinitialisation de votre mot de passe. Veuillez utiliser le lien suivant pour définir un nouveau mot de passe :
 
-      Code: ${code}
+      Lien de réinitialisation : ${resetLink}
 
-      Ce code est valide pendant 10 minutes.
+      Ce lien est valide pendant 10 minutes.
 
       Si vous n'avez pas demandé cette réinitialisation, contactez-nous immédiatement.
 

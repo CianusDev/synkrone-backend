@@ -20,6 +20,7 @@ export interface Company {
   is_verified: boolean;
   block_duration?: number;
   country?: string;
+  city?: string;
   company_phone?: string;
   is_first_login?: boolean;
   deleted_at?: Date | null;

@@ -171,6 +171,33 @@ export const verifyAdminToken = (
   }
 };
 
+export const createResetOTPToken = (
+  email: string,
+  code: string,
+  expiresIn: StringValue = "10m",
+): string => {
+  try {
+    const options: SignOptions = { expiresIn };
+    return jwt.sign({ email, code }, secret, options);
+  } catch (error) {
+    throw new Error("Erreur lors de la création du token OTP");
+  }
+};
+
+export const verifyResetOTPToken = (
+  token: string,
+): { email: string | null; code: string | null } => {
+  try {
+    const decoded = jwt.verify(token, secret) as {
+      email: string;
+      code: string;
+    };
+    return { email: decoded.email, code: decoded.code };
+  } catch (error) {
+    return { email: null, code: null };
+  }
+};
+
 /**
  * Génère un UUID v4
  * @returns Un UUID v4 sous forme de chaîne de caractères

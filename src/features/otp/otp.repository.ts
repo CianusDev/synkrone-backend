@@ -61,6 +61,23 @@ export class OtpRepository {
   }
 
   /**
+   * Vérifie si un OTP est valide
+   * @param email - L'email de l'OTP à vérifier
+   * @param codeId - L'ID du code de l'OTP à vérifier
+   * @returns True si l'OTP est valide, sinon false
+   */
+  async isValidOtpByCodeID(codeId: string): Promise<boolean> {
+    const query = `SELECT * FROM otps WHERE id = $2 AND expires_at > NOW()`;
+    try {
+      const result = await db.query(query, [codeId]);
+      return result.rows.length > 0;
+    } catch (error) {
+      console.error("Error validating OTP:", error);
+      throw new Error("Database error");
+    }
+  }
+
+  /**
    * Supprime un OTP par son email
    * @param email - L'email de l'OTP à supprimer
    * @returns True si l'OTP a été supprimé, sinon false
@@ -69,6 +86,22 @@ export class OtpRepository {
     const query = `DELETE FROM otps WHERE email = $1`;
     try {
       const result = await db.query(query, [email]);
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting OTP:", error);
+      throw new Error("Database error");
+    }
+  }
+
+  /**
+   * Supprime un OTP par son id
+   * @param codeId - L'id de l'OTP à supprimer
+   * @returns True si l'OTP a été supprimé, sinon false
+   */
+  async deleteOtpById(id: string): Promise<boolean> {
+    const query = `DELETE FROM otps WHERE  = $1`;
+    try {
+      const result = await db.query(query, [id]);
       return result.rowCount !== null && result.rowCount > 0;
     } catch (error) {
       console.error("Error deleting OTP:", error);

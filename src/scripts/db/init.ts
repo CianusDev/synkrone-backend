@@ -355,6 +355,9 @@ async function verifyTables(): Promise<void> {
     "user_sessions",
     "admin_sessions",
     "otps",
+    "category_skills",
+    "skills",
+    "freelance_skills",
   ];
 
   console.log("🔍 Vérification des tables créées...");
@@ -446,6 +449,9 @@ async function resetDatabase(): Promise<void> {
 
     // Supprimer toutes les tables dans l'ordre inverse des dépendances
     const dropQueries = [
+      "DROP TABLE IF EXISTS freelance_skills CASCADE;",
+      "DROP TABLE IF EXISTS skills CASCADE;",
+      "DROP TABLE IF EXISTS category_skills CASCADE;",
       "DROP TABLE IF EXISTS otps CASCADE;",
       "DROP TABLE IF EXISTS user_sessions CASCADE;",
       "DROP TABLE IF EXISTS admin_sessions CASCADE;",

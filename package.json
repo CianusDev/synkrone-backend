@@ -7,6 +7,7 @@
     "start": "ts-node src/server.ts",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "db:superadmin": "ts-node src/scripts/db/create-superadmin.ts",
+    "db:categorie_and_skills": "ts-node src/scripts/db/skills-and-categories.ts",
     "db:init": "ts-node src/scripts/db/init.ts init",
     "db:reset": "ts-node src/scripts/db/init.ts reset",
     "db:verify": "ts-node src/scripts/db/init.ts verify",

@@ -12,9 +12,10 @@ import {
   comparePassword,
   createCompanyToken,
   createFreelanceToken,
+  createResetOTPToken,
   generateCodeOTP,
-  generateUUID,
   hashPassword,
+  verifyResetOTPToken,
 } from "../../utils/utils";
 import { emailTemplates, sendEmail } from "../../config/smtp-email";
 import { OtpRepository } from "../otp/otp.repository";
@@ -23,6 +24,7 @@ import { UserSessionRepository } from "../user-session/user-session.repository";
 import { Request } from "express";
 import { CompanyRepository } from "../company/company.repository";
 import { HTTP_STATUS } from "../../utils/constant";
+import { envConfig } from "../../config/env.config";
 
 // Définir des types d'erreur personnalisés
 class AuthError extends Error {
@@ -121,6 +123,7 @@ export class AuthService {
 
       // Génération d'un nouveau code OTP
       const code = generateCodeOTP();
+      const codeToken = createResetOTPToken(options.to, code);
 
       // Enregistrement de l'OTP dans la base de données
       await this.otpRepository.createOtp({
@@ -130,11 +133,12 @@ export class AuthService {
         expiresAt: new Date(Date.now() + this.OTP_VALIDITY_PERIOD),
       });
 
-      // Préparation du modèle d'email
+      const frontendUrl = envConfig.frontendUrl || "http://localhost:3000";
+      const resetLink = `${frontendUrl}/auth/reset-password?token=${codeToken}`;
       const template =
         otpType === OtpType.EMAIL_VERIFICATION
           ? emailTemplates.emailVerification(code, options.name)
-          : emailTemplates.passwordReset(code, options.name);
+          : emailTemplates.passwordReset(resetLink, options.name);
 
       // Envoi de l'email
       await sendEmail({
@@ -145,7 +149,7 @@ export class AuthService {
       return code;
     } catch (error) {
       console.error(`Erreur lors de l'envoi de l'OTP à ${options.to}:`, error);
-      throw new AuthError("Erreur lors de l'envoi du code de vérification");
+      throw new AuthError("Erreur lors de l'envoi de  OTP de vérification");
     }
   }
 
@@ -157,6 +161,30 @@ export class AuthService {
    */
   private async verifyOTP(email: string, code: string): Promise<boolean> {
     const otp = await this.otpRepository.isValidOtp(email, code);
+
+    if (!otp) {
+      throw new ValidationError(
+        "Code de vérification invalide ou expiré ! Veuillez réessayer.",
+      );
+    }
+
+    // Suppression de l'OTP après vérification (bonne pratique de sécurité)
+    await this.otpRepository.deleteOtpByEmail(email);
+
+    return true;
+  }
+
+  /**
+   * Méthode pour vérifier un OTP
+   * @param email Email associé à l'OTP
+   * @param codeId CodeId OTP à vérifier
+   * @returns true si l'OTP est valide, sinon throw une erreur
+   */
+  private async verifyOTPByCodeId(
+    email: string,
+    codeId: string,
+  ): Promise<boolean> {
+    const otp = await this.otpRepository.isValidOtpByCodeID(codeId);
 
     if (!otp) {
       throw new ValidationError(
@@ -391,11 +419,17 @@ export class AuthService {
    * @param newPassword Nouveau mot de passe
    */
   async resetPasswordFreelance(
-    email: string,
-    code: string,
+    token: string,
     newPassword: string,
   ): Promise<void> {
     try {
+      // Récupération de l'OTP par son ID (token)
+      const otpData = verifyResetOTPToken(token);
+      const email = otpData.email || "";
+      const code = otpData.code || "";
+      if (!email || !code) {
+        throw new ValidationError("Token invalide ou expiré.");
+      }
       // Vérification de l'OTP
       await this.verifyOTP(email, code);
 
@@ -730,11 +764,17 @@ export class AuthService {
    * @param newPassword Nouveau mot de passe
    */
   async resetPasswordCompany(
-    email: string,
-    code: string,
+    token: string,
     newPassword: string,
   ): Promise<void> {
     try {
+      // Récupération de l'OTP par son ID (token)
+      const otpData = verifyResetOTPToken(token);
+      const email = otpData.email || "";
+      const code = otpData.code || "";
+      if (!email || !code) {
+        throw new ValidationError("Token invalide ou expiré.");
+      }
       // Vérification de l'OTP
       await this.verifyOTP(email, code);
 

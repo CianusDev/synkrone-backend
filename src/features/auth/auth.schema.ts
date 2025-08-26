@@ -10,6 +10,7 @@ export const registerFreelanceSchema = z.object({
   firstname: z.string().min(1, "Le prénom est requis"),
   lastname: z.string().min(1, "Le nom de famille est requis"),
   email: z.email("L'email doit être valide"),
+  country: z.string().min(1, "Le pays est requis"),
   password: z
     .string()
     .min(8, "Le mot de passe doit contenir au moins 8 caractères")
@@ -33,6 +34,8 @@ export const registerFreelanceSchema = z.object({
 });
 
 export const registerCompanySchema = z.object({
+  company_name: z.string().min(1, "Le nom de l'entreprise est requis"),
+  country: z.string().min(1, "Le pays est requis"),
   company_email: z.email("L'email de l'entreprise doit être valide"),
   password: z
     .string()
