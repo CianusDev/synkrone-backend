@@ -26,7 +26,7 @@ export class ProfileController {
    */
   async completeFreelanceProfile(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = (req as any).freelance.id;
       const data = req.body;
 
       // Validation de l'ID
@@ -69,7 +69,8 @@ export class ProfileController {
    */
   async completeCompanyProfile(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const company = (req as any).company;
+      const id = company.id;
       const data = req.body;
 
       // Validation de l'ID
@@ -112,7 +113,7 @@ export class ProfileController {
    */
   async getFreelanceProfile(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = (req as any).freelance.id;
 
       // Validation de l'ID
       const validation = profileIdSchema.safeParse({ id });
@@ -141,7 +142,7 @@ export class ProfileController {
    */
   async getCompanyProfile(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = (req as any).company.id;
 
       // Validation de l'ID
       const validation = profileIdSchema.safeParse({ id });

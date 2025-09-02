@@ -36,11 +36,9 @@ export class FreelanceSkillsService {
   ) {}
 
   async createFreelanceSkills(
-    freelanceSkills: Partial<FreelanceSkills>,
+    freelance_id: string,
+    skill_id: string,
   ): Promise<FreelanceSkills> {
-    const freelance_id = freelanceSkills.freelance_id || "";
-    const skill_id = freelanceSkills.skill_id || "";
-
     const skill = await this.skillRepository.getSkillById(skill_id);
 
     if (!skill) {
@@ -58,9 +56,10 @@ export class FreelanceSkillsService {
       );
     }
 
-    return this.freelanceSkillsRepository.createFreelanceSkills(
-      freelanceSkills,
-    );
+    return this.freelanceSkillsRepository.createFreelanceSkills({
+      freelance_id,
+      skill_id,
+    });
   }
 
   async getFreelanceSkillsByFreelanceId(

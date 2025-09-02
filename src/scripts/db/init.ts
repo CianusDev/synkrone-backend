@@ -399,7 +399,8 @@ async function verifyEnumTypes(): Promise<void> {
     "availability_enum",
     "company_size_enum",
     "admin_level_enum",
-    "otp_type_enum", // Ajout du nouveau type enum pour les OTPs
+    "otp_type_enum",
+    "experience_level_enum",
   ];
 
   console.log("🔍 Vérification des types énumérés...");
@@ -464,6 +465,7 @@ async function resetDatabase(): Promise<void> {
       "DROP TYPE IF EXISTS admin_level_enum CASCADE;",
       "DROP TYPE IF EXISTS company_size_enum CASCADE;",
       "DROP TYPE IF EXISTS availability_enum CASCADE;",
+      "DROP TYPE IF EXISTS experience_level_enum CASCADE;",
 
       // Supprimer les fonctions
       "DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;",

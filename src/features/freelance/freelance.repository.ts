@@ -62,7 +62,7 @@ export class FreelanceRepository {
         UPDATE freelances SET
             firstname = COALESCE($1, firstname),
             lastname = COALESCE($2, lastname),
-            experience_years = COALESCE($3, experience_years),
+            experience = COALESCE($3, experience),
             description = COALESCE($4, description),
             photo_url = COALESCE($5, photo_url),
             job_title = COALESCE($6, job_title),
@@ -77,21 +77,19 @@ export class FreelanceRepository {
         WHERE id = $14 RETURNING *`;
 
     const values = [
-      freelanceData.firstname,
-      freelanceData.lastname,
-      freelanceData.experience_years,
-      freelanceData.description,
-      // freelanceData.portfolio_url,
+      freelanceData.firstname?.trim(),
+      freelanceData.lastname?.trim(),
+      freelanceData.experience,
+      freelanceData.description?.trim(),
       freelanceData.photo_url,
-      freelanceData.job_title,
+      freelanceData.job_title?.trim(),
       freelanceData.cover_url,
-      // freelanceData.video_url,
       freelanceData.linkedin_url,
       freelanceData.tjm,
       freelanceData.availability,
       freelanceData.location,
-      freelanceData.phone,
-      freelanceData.country,
+      freelanceData.phone?.trim(),
+      freelanceData.country?.trim(),
       id,
     ];
 
@@ -155,7 +153,7 @@ export class FreelanceRepository {
   async updateFreelanceFirstLogin(id: string): Promise<Freelance | null> {
     const query = `
         UPDATE freelances SET
-            first_login = false,
+            is_first_login = false,
             updated_at = NOW()
         WHERE id = $1 RETURNING *`;
 

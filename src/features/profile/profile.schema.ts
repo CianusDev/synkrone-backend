@@ -44,7 +44,13 @@ export const updateCompanyProfileSchema = z.object({
   website_url: z.url("L'URL du site web n'est pas valide").optional(),
   address: z.string().min(1, "L'adresse est requise").optional(),
   company_size: z
-    .enum([CompanySize.LARGE_COMPANY, CompanySize.SME, CompanySize.STARTUP])
+    .enum([
+      CompanySize.MICRO,
+      CompanySize.SMALL,
+      CompanySize.MEDIUM,
+      CompanySize.LARGE,
+      CompanySize.VERY_LARGE,
+    ])
     .optional(),
   certification_doc_url: z
     .url("L'URL du document de certification n'est pas valide")

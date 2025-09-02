@@ -1,7 +1,9 @@
 export enum CompanySize {
-  STARTUP = "startup",
-  SME = "sme",
-  LARGE_COMPANY = "large_company",
+  MICRO = "micro",
+  SMALL = "small",
+  MEDIUM = "medium",
+  LARGE = "large",
+  VERY_LARGE = "very_large",
 }
 
 export interface Company {

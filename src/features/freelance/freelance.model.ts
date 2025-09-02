@@ -4,6 +4,12 @@ export enum Availability {
   BUSY = "busy",
 }
 
+export enum ExprerienceLevel {
+  BEGINNER = "beginner",
+  INTERMEDIATE = "intermediate",
+  EXPERT = "expert",
+}
+
 export interface Freelance {
   id: string;
   firstname: string;
@@ -12,7 +18,7 @@ export interface Freelance {
   password_hashed: string;
   photo_url?: string;
   job_title?: string;
-  experience_years?: number;
+  experience?: ExprerienceLevel;
   description?: string;
   cover_url?: string;
   linkedin_url?: string;

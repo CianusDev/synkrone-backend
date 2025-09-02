@@ -74,11 +74,12 @@ export const createFreelanceToken = (
  */
 export const verifyFreelanceToken = (
   token: string,
-  secret: string,
 ): { freelance: Freelance | null } => {
   try {
-    const decoded = jwt.verify(token, secret) as Freelance;
-    return { freelance: decoded };
+    const decoded = jwt.verify(token, secret) as {
+      freelance: Freelance | null;
+    };
+    return { freelance: decoded.freelance };
   } catch (error) {
     return { freelance: null };
   }
@@ -125,11 +126,10 @@ export const createCompanyToken = (
  */
 export const verifyCompanyToken = (
   token: string,
-  secret: string,
 ): { company: Company | null } => {
   try {
-    const decoded = jwt.verify(token, secret) as Company;
-    return { company: decoded };
+    const decoded = jwt.verify(token, secret) as { company: Company | null };
+    return { company: decoded.company };
   } catch (error) {
     return { company: null };
   }
@@ -147,7 +147,7 @@ export const createAdminToken = (
 ): string => {
   try {
     const options: SignOptions = { expiresIn };
-    return jwt.sign({ admin }, secret, options);
+    return jwt.sign(admin, secret, options);
   } catch (error) {
     throw new Error("Erreur lors de la création du token d'administrateur");
   }

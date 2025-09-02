@@ -1,11 +1,12 @@
-import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { HTTP_STATUS } from "./utils/constant";
-import authRoutes from "./features/auth/auth.route";
-import authAdminRoutes from "./features/auth-admin/auth-admin.routes";
-import profileRoutes from "./features/profile/profile.routes";
+import express, { Response } from "express";
 import { envConfig } from "./config/env.config";
+import authAdminRoutes from "./features/auth-admin/auth-admin.routes";
+import authRoutes from "./features/auth/auth.route";
+import freelanceSkillRoutes from "./features/freelance-skills/freelance-skills.route";
+import profileRoutes from "./features/profile/profile.routes";
+import { HTTP_STATUS } from "./utils/constant";
 dotenv.config();
 
 export const app = express();
@@ -33,3 +34,4 @@ app.get("/health", (_, res: Response) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/auth-admin", authAdminRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/freelance-skills/", freelanceSkillRoutes);

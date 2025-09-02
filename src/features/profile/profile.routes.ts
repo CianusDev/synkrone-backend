@@ -1,35 +1,45 @@
 import { Router } from "express";
 import { ProfileController } from "./profile.controller";
+import { AuthFreelanceMiddleware } from "../../middlewares/auth-freelance.middleware";
+import { AuthCompanyMiddleware } from "../../middlewares/auth-company.middleware";
 
 const router = Router();
 const controller = new ProfileController();
 
 // Routes pour le profil freelance
 router.get(
-  "/freelance/:id",
-  controller.getFreelanceProfile.bind(controller)
+  "/freelance",
+  AuthFreelanceMiddleware,
+  controller.getFreelanceProfile.bind(controller),
 );
-router.put(
-  "/freelance/:id",
-  controller.completeFreelanceProfile.bind(controller)
+router.patch(
+  "/freelance",
+  AuthFreelanceMiddleware,
+  controller.completeFreelanceProfile.bind(controller),
 );
 router.get(
-  "/freelance/:id/complete",
-  controller.isFreelanceProfileComplete.bind(controller)
+  "/freelance/complete",
+  AuthFreelanceMiddleware,
+  controller.isFreelanceProfileComplete.bind(controller),
 );
 
 // Routes pour le profil entreprise
 router.get(
-  "/company/:id",
-  controller.getCompanyProfile.bind(controller)
+  "/company",
+  AuthCompanyMiddleware,
+  controller.getCompanyProfile.bind(controller),
 );
-router.put(
-  "/company/:id",
-  controller.completeCompanyProfile.bind(controller)
+
+router.patch(
+  "/company",
+  AuthCompanyMiddleware,
+  controller.completeCompanyProfile.bind(controller),
 );
+
 router.get(
-  "/company/:id/complete",
-  controller.isCompanyProfileComplete.bind(controller)
+  "/company/complete",
+  AuthCompanyMiddleware,
+  controller.isCompanyProfileComplete.bind(controller),
 );
 
 export default router;

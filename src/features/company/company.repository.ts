@@ -83,19 +83,23 @@ export class CompanyRepository {
             website_url = $5,
             address = $6,
             company_size = $7,
-            company_phone = $8
-        WHERE id = $9
+            company_phone = $8,
+            country = $9,
+            certification_doc_url = $10
+        WHERE id = $11
         RETURNING *`;
 
     const values = [
-      companyData.company_name,
+      companyData.company_name?.trim(),
       companyData.logo_url,
-      companyData.company_description,
-      companyData.industry,
+      companyData.company_description?.trim(),
+      companyData.industry?.trim(),
       companyData.website_url,
       companyData.address,
       companyData.company_size,
       companyData.company_phone,
+      companyData.country,
+      companyData.certification_doc_url,
       id,
     ];
 
@@ -159,7 +163,8 @@ export class CompanyRepository {
   async updateCompanyFirstLogin(id: string): Promise<Company | null> {
     const query = `
         UPDATE companies SET
-            is_first_login = false
+            is_first_login = false,
+            updated_at = NOW()
         WHERE id = $1
         RETURNING *`;
 

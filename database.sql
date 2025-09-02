@@ -12,9 +12,10 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- =============================================
 
 CREATE TYPE availability_enum AS ENUM ('available', 'busy', 'unavailable');
-CREATE TYPE company_size_enum AS ENUM ('startup', 'sme', 'large_company');
+CREATE TYPE company_size_enum AS ENUM ('micro', 'small', 'medium', 'large', 'very_large');
 CREATE TYPE admin_level_enum AS ENUM ('super_admin', 'moderateur', 'support');
 CREATE TYPE otp_type_enum AS ENUM ('email_verification', 'password_reset');
+CREATE TYPE experience_level_enum AS ENUM ('beginner', 'intermediate', 'expert');
 
 -- =============================================
 -- TABLE FREELANCES
@@ -28,7 +29,7 @@ CREATE TABLE freelances (
     password_hashed VARCHAR(255) NOT NULL,
     photo_url VARCHAR(500),
     job_title VARCHAR(200),
-    experience_years INTEGER CHECK (experience_years >= 0),
+    experience experience_level_enum,
     description TEXT,
     cover_url VARCHAR(500),
     linkedin_url VARCHAR(500),
@@ -51,8 +52,7 @@ CREATE TABLE freelances (
 CREATE INDEX idx_freelances_email ON freelances(email);
 CREATE INDEX idx_freelances_job_title ON freelances(job_title);
 CREATE INDEX idx_freelances_availability ON freelances(availability);
-CREATE INDEX idx_freelances_experience ON freelances(experience_years);
-CREATE INDEX idx_freelances_is_verified ON freelances(is_verified);
+CREATE INDEX idx_freelances_experience ON freelances(experience);
 CREATE INDEX idx_freelances_country ON freelances(country);
 CREATE INDEX idx_freelances_deleted_at ON freelances(deleted_at);
 
@@ -424,12 +424,13 @@ AND NOT is_company_blocked(c.id);
 -- Vue pour les freelances disponibles
 CREATE VIEW available_freelances AS
 SELECT f.id, f.email, f.country, f.firstname, f.lastname,
-       f.job_title, f.tjm, f.availability, f.experience_years
+       f.job_title, f.tjm, f.availability, f.experience
 FROM freelances f
 WHERE f.deleted_at IS NULL
 AND f.is_verified = TRUE
 AND f.availability = 'available'
 AND NOT is_freelance_blocked(f.id);
+
 
 -- Vue ADMIN : Sessions utilisateurs avec détails
 CREATE VIEW admin_user_sessions AS

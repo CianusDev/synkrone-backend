@@ -1,7 +1,7 @@
 import { CompanyRepository } from "../company/company.repository";
 import { FreelanceRepository } from "../freelance/freelance.repository";
 import { Freelance } from "../freelance/freelance.model";
-import { Company } from "../company/company.model";
+import { Company, CompanySize } from "../company/company.model";
 import z from "zod";
 import {
   updateCompanyProfileSchema,
@@ -334,12 +334,12 @@ export class ProfileService {
       throw new ValidationError("Le TJM doit être un nombre positif");
     }
 
-    // Validation des années d'expérience
-    if (data.experience_years !== undefined && data.experience_years < 0) {
-      throw new ValidationError(
-        "Les années d'expérience ne peuvent pas être négatives",
-      );
-    }
+    // // Validation des années d'expérience
+    // if (data.experience_years !== undefined && data.experience_years < 0) {
+    //   throw new ValidationError(
+    //     "Les années d'expérience ne peuvent pas être négatives",
+    //   );
+    // }
 
     // Validation des URLs
     const urlFields = [
@@ -387,7 +387,12 @@ export class ProfileService {
     // Validation de la taille de l'entreprise
     if (
       data.company_size &&
-      !["startup", "sme", "large_company"].includes(data.company_size)
+      ![
+        CompanySize.MICRO,
+        CompanySize.LARGE,
+        CompanySize.MEDIUM,
+        CompanySize.VERY_LARGE,
+      ].includes(data.company_size)
     ) {
       throw new ValidationError(
         "La taille de l'entreprise doit être 'startup', 'sme' ou 'large_company'",
