@@ -55,7 +55,7 @@ export class FreelanceSkillsRepository {
    */
   async getFreelanceSkillsById(id: string): Promise<FreelanceSkills[]> {
     const query = `
-      SELECT * FROM freelance_skills WHERE id = $1`;
+      SELECT * FROM freelance_skills WHERE skill_id = $1`;
 
     try {
       const result = await db.query(query, [id]);
@@ -105,7 +105,7 @@ export class FreelanceSkillsRepository {
    */
   async deleteFreelanceSkills(id: string): Promise<boolean> {
     const query = `
-        DELETE FROM freelance_skills WHERE id = $1 RETURNING *`;
+        DELETE FROM freelance_skills WHERE skill_id = $1 RETURNING *`;
 
     try {
       const result = await db.query(query, [id]);

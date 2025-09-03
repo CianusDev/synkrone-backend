@@ -6,6 +6,7 @@ import authAdminRoutes from "./features/auth-admin/auth-admin.routes";
 import authRoutes from "./features/auth/auth.route";
 import freelanceSkillRoutes from "./features/freelance-skills/freelance-skills.route";
 import profileRoutes from "./features/profile/profile.routes";
+import skillsRoutes from "./features/skills/skill.route";
 import { HTTP_STATUS } from "./utils/constant";
 dotenv.config();
 
@@ -35,3 +36,4 @@ app.use("/api/auth", authRoutes);
 app.use("/api/auth-admin", authAdminRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/freelance-skills/", freelanceSkillRoutes);
+app.use("/api/skills", skillsRoutes);

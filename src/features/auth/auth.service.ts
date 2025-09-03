@@ -354,6 +354,12 @@ export class AuthService {
           is_first_login: freelance.is_first_login,
           availability: freelance.availability,
           phone: freelance.phone,
+          photo_url: freelance.photo_url,
+          job_title: freelance.job_title,
+          experience: freelance.experience,
+          description: freelance.description,
+          country: freelance.country,
+          city: freelance.city,
           // Ne pas retourner le mot de passe hashé ou d'autres informations sensibles
         },
         sessionId: newSessionId,

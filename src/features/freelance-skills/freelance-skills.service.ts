@@ -51,15 +51,48 @@ export class FreelanceSkillsService {
       );
 
     if (existingFreelanceSkills.some((skill) => skill.skill_id === skill_id)) {
-      throw new ValidationError(
-        "Cette compétence est déjà associée à ce freelance.",
-      );
+      return existingFreelanceSkills.find(
+        (skill) => skill.skill_id === skill_id,
+      ) as FreelanceSkills;
     }
 
     return this.freelanceSkillsRepository.createFreelanceSkills({
       freelance_id,
       skill_id,
     });
+  }
+
+  async updateFreelanceSkills(
+    id: string,
+    skill_id: string,
+    level?: string,
+  ): Promise<FreelanceSkills> {
+    // Vérifier que la compétence existe
+    const skill = await this.skillRepository.getSkillById(skill_id);
+    if (!skill) {
+      throw new NotFoundError("Compétence non trouvée.");
+    }
+
+    // Vérifier que la ligne freelance_skill existe
+    const freelanceSkillsArr =
+      await this.freelanceSkillsRepository.getFreelanceSkillsById(id);
+    const freelanceSkills = freelanceSkillsArr[0];
+    if (!freelanceSkills) {
+      throw new NotFoundError("Compétence freelance non trouvée.");
+    }
+
+    // Mettre à jour
+    const updated = await this.freelanceSkillsRepository.updateFreelanceSkills(
+      id,
+      {
+        skill_id,
+        level,
+      },
+    );
+    if (!updated) {
+      throw new Error("Erreur lors de la mise à jour de la compétence.");
+    }
+    return updated;
   }
 
   async getFreelanceSkillsByFreelanceId(

@@ -8,7 +8,7 @@ export class SkillRepository {
     const updated_at = new Date();
 
     const result = await db.query(
-      "INSERT INTO skills (name, description, category_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?) RETURNING *",
+      "INSERT INTO skills (name, description, category_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5) RETURNING *",
       [name, description, category_id, created_at, updated_at],
     );
 
@@ -20,6 +20,45 @@ export class SkillRepository {
     return result.rows[0] || null;
   }
 
+  async getAllSkills(
+    filter: { name?: string },
+    pagination: { page?: number; limit?: number },
+  ): Promise<{ data: Skill[]; total: number }> {
+    let baseQuery = "SELECT * FROM skills";
+    let countQuery = "SELECT COUNT(*) FROM skills";
+    const where: string[] = [];
+    const params: any[] = [];
+    let paramIdx = 1;
+
+    if (filter.name) {
+      where.push(`LOWER(name) LIKE $${paramIdx}`);
+      params.push(`%${filter.name.toLowerCase()}%`);
+      paramIdx++;
+    }
+
+    let whereClause = "";
+    if (where.length > 0) {
+      whereClause = " WHERE " + where.join(" AND ");
+    }
+
+    // Pagination
+    let limit =
+      pagination.limit && pagination.limit > 0 ? pagination.limit : 10;
+    let page = pagination.page && pagination.page > 0 ? pagination.page : 1;
+    let offset = (page - 1) * limit;
+
+    const finalQuery = `${baseQuery}${whereClause} ORDER BY name ASC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+    const finalParams = [...params, limit, offset];
+
+    const dataResult = await db.query(finalQuery, finalParams);
+
+    // Count total
+    const countResult = await db.query(`${countQuery}${whereClause}`, params);
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    return { data: dataResult.rows, total };
+  }
+
   async updateSkill(
     id: string,
     skillData: Partial<Skill>,
@@ -28,7 +67,7 @@ export class SkillRepository {
     const updated_at = new Date();
 
     const result = await db.query(
-      "UPDATE skills SET name = $1, description = $2, category_id = $3, updated_at = $4 WHERE id = $4 RETURNING *",
+      "UPDATE skills SET name = $1, description = $2, category_id = $3, updated_at = $4 WHERE id = $5 RETURNING *",
       [name, description, category_id, updated_at, id],
     );
 

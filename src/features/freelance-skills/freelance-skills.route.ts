@@ -21,4 +21,9 @@ router.delete("/:id", AuthFreelanceMiddleware, (req, res) =>
   controller.deleteFreelanceSkills(req, res),
 );
 
+// Mettre à jour une compétence d'un freelance (PATCH)
+router.patch("/:id", AuthFreelanceMiddleware, (req, res) =>
+  controller.updateFreelanceSkills(req, res),
+);
+
 export default router;

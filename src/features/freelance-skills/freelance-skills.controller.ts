@@ -28,7 +28,8 @@ export class FreelanceSkillsController {
    */
   async createFreelanceSkills(req: Request, res: Response) {
     try {
-      const { freelance_id, skill_id } = req.body;
+      const { skill_id } = req.body;
+      const freelance_id = (req as any).freelance.id;
       // Ajoute ici la validation si tu as un schéma Zod
       const requiredFields = { freelance_id, skill_id };
       for (const [key, value] of Object.entries(requiredFields)) {
@@ -68,6 +69,37 @@ export class FreelanceSkillsController {
         success: true,
         data: result,
         message: "Compétences du freelance récupérées avec succès",
+      });
+    } catch (error: any) {
+      this.handleError(error, res);
+    }
+  }
+
+  /**
+   * Met à jour une compétence d'un freelance
+   */
+  async updateFreelanceSkills(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { skill_id, level } = req.body;
+      // Ajoute ici la validation si tu as un schéma Zod
+
+      if (!skill_id) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: "Le champ skill_id est requis.",
+        });
+      }
+
+      const updated = await this.freelanceSkillsService.updateFreelanceSkills(
+        id,
+        skill_id,
+        level,
+      );
+      res.status(HTTP_STATUS.OK).json({
+        success: true,
+        data: updated,
+        message: "Compétence mise à jour avec succès",
       });
     } catch (error: any) {
       this.handleError(error, res);

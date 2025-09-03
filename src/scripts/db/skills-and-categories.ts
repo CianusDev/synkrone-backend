@@ -1,5 +1,15 @@
 import { db } from "../../config/database";
 
+// Génère un slug à partir d'une chaîne
+function slugify(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
 // Catégories de compétences fréquentes sur les plateformes de freelancing
 const categories = [
   {
@@ -183,9 +193,10 @@ async function insertCategoriesAndSkills() {
     // Insérer les catégories et récupérer leur id
     const categoryIdMap: Record<string, string> = {};
     for (const cat of categories) {
+      const slug = slugify(cat.name);
       const res = await client.query(
-        `INSERT INTO category_skills (name, description) VALUES ($1, $2) RETURNING id`,
-        [cat.name, cat.description],
+        `INSERT INTO category_skills (name, slug, description) VALUES ($1, $2, $3) RETURNING id`,
+        [cat.name, slug, cat.description],
       );
       categoryIdMap[cat.name] = res.rows[0].id;
     }
