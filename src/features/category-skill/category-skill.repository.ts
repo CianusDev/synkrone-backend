@@ -55,14 +55,52 @@ export class CategorySkillRepository {
     }
   }
 
-  async getAllCategorySkills(): Promise<CategorySkill[]> {
-    const query = `
+  /**
+   * Récupère les catégories de compétences avec pagination et recherche par nom.
+   * @param params { limit, offset, search }
+   * @returns [CategorySkill[], total]
+   */
+  async getAllCategorySkills(params?: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+  }): Promise<[CategorySkill[], number]> {
+    const limit = typeof params?.limit === "number" ? params.limit : 10;
+    const offset = typeof params?.offset === "number" ? params.offset : 0;
+    const search = typeof params?.search === "string" ? params.search : "";
+
+    let whereClause = "";
+    const values: (string | number)[] = [];
+
+    if (search) {
+      whereClause = "WHERE LOWER(name) LIKE $1";
+      values.push(`%${search.toLowerCase()}%`);
+    }
+
+    // Query for data
+    const dataQuery = `
       SELECT * FROM category_skills
+      ${whereClause}
       ORDER BY created_at DESC
+      LIMIT $${values.length + 1}
+      OFFSET $${values.length + 2}
     `;
+    values.push(limit, offset);
+
     try {
-      const result = await db.query(query);
-      return result.rows;
+      const dataResult = await db.query(dataQuery, values);
+
+      // Query for total count
+      let countQuery = "SELECT COUNT(*) FROM category_skills";
+      const countValues: string[] = [];
+      if (search) {
+        countQuery += " WHERE LOWER(name) LIKE $1";
+        countValues.push(`%${search.toLowerCase()}%`);
+      }
+      const countResult = await db.query(countQuery, countValues);
+      const total = parseInt(countResult.rows[0].count, 10);
+
+      return [dataResult.rows, total];
     } catch (error) {
       console.error("Error retrieving all category skills:", error);
       throw new Error("Database error while retrieving category skills");

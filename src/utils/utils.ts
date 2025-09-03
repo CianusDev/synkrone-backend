@@ -159,10 +159,7 @@ export const createAdminToken = (
  * @param secret - La clé secrète utilisée pour vérifier le token
  * @returns L'administrateur décodé ou null si le token est invalide
  */
-export const verifyAdminToken = (
-  token: string,
-  secret: string,
-): { admin: Admin | null } => {
+export const verifyAdminToken = (token: string): { admin: Admin | null } => {
   try {
     const decoded = jwt.verify(token, secret) as Admin;
     return { admin: decoded };

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { ProjectCategoriesController } from "./project-categories.controller";
+import { AuthAdminMiddleware } from "../../middlewares/auth-admin.middleware";
 
 const router = Router();
 const controller = new ProjectCategoriesController();
@@ -14,9 +15,13 @@ router.get("/", (req, res) => controller.getAllCategories(req, res));
 router.get("/:id", (req, res) => controller.getCategoryById(req, res));
 
 // Mettre à jour une catégorie de projet
-router.patch("/:id", (req, res) => controller.updateCategory(req, res));
+router.patch("/:id", AuthAdminMiddleware, (req, res) =>
+  controller.updateCategory(req, res),
+);
 
 // Supprimer une catégorie de projet
-router.delete("/:id", (req, res) => controller.deleteCategory(req, res));
+router.delete("/:id", AuthAdminMiddleware, (req, res) =>
+  controller.deleteCategory(req, res),
+);
 
 export default router;
