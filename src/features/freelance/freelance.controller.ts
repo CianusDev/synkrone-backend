@@ -71,7 +71,10 @@ export class FreelanceController {
 
       res.status(200).json({
         success: true,
-        data: result,
+        data: {
+          ...result,
+          totalPages: result.totalPages,
+        },
         message: "Liste des freelances récupérée avec succès",
       });
     } catch (error) {

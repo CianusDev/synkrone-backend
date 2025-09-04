@@ -61,7 +61,13 @@ export class FreelanceService {
     total: number;
     page: number;
     limit: number;
+    totalPages: number;
   }> {
-    return this.repository.getFreelancesWithFilters(params);
+    const result = await this.repository.getFreelancesWithFilters(params);
+    const totalPages = Math.ceil(result.total / (result.limit || 1));
+    return {
+      ...result,
+      totalPages,
+    };
   }
 }
