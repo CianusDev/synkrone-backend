@@ -604,6 +604,7 @@ export class AuthService {
 
       // Si la société n'existe pas, message d'erreur générique (sécurité)
       if (!company) {
+        console.log("Company not found with email:", data.email);
         throw new UnauthorizedError("Email ou mot de passe incorrect");
       }
 
@@ -618,6 +619,7 @@ export class AuthService {
 
       // Si le mot de passe n'est pas valide ou l'email n'est pas vérifié
       if (!isPasswordValid) {
+        console.log("Company not found with email:", data.email);
         throw new UnauthorizedError("Email ou mot de passe incorrect");
       }
 
@@ -644,10 +646,10 @@ export class AuthService {
           id: company.id,
           company_email: company.company_email,
           company_name: company.company_name,
+          logo_url: company.logo_url,
           is_verified: company.is_verified,
           is_first_login: company.is_first_login,
           company_phone: company.company_phone,
-
           // Ne pas retourner le mot de passe hashé ou d'autres informations sensibles
         },
         sessionId: newSessionId,

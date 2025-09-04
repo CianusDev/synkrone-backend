@@ -57,6 +57,7 @@ export class CompanyRepository {
     const query = `SELECT * FROM companies WHERE company_email = $1`;
     try {
       const result = await db.query(query, [email]);
+      // Cette requête retourne toutes les colonnes (*) de la table companies pour l'email donné
       return result.rows[0] as Company;
     } catch (error) {
       console.error("Error fetching company by email:", error);
@@ -75,25 +76,25 @@ export class CompanyRepository {
     companyData: Partial<Company>,
   ): Promise<Company | null> {
     const query = `
-        UPDATE companies SET
-            company_name = $1,
-            logo_url = $2 ,
-            company_description = $3,
-            industry = $4,
-            website_url = $5,
-            address = $6,
-            company_size = $7,
-            company_phone = $8,
-            country = $9,
-            certification_doc_url = $10
-        WHERE id = $11
-        RETURNING *`;
+      UPDATE companies SET
+          company_name = COALESCE($1, company_name),
+          logo_url = COALESCE($2, logo_url),
+          company_description = COALESCE($3, company_description),
+          industry = COALESCE($4, industry),
+          website_url = COALESCE($5, website_url),
+          address = COALESCE($6, address),
+          company_size = COALESCE($7, company_size),
+          company_phone = COALESCE($8, company_phone),
+          country = COALESCE($9, country),
+          certification_doc_url = COALESCE($10, certification_doc_url)
+      WHERE id = $11
+      RETURNING *`;
 
     const values = [
-      companyData.company_name?.trim(),
+      companyData.company_name,
       companyData.logo_url,
-      companyData.company_description?.trim(),
-      companyData.industry?.trim(),
+      companyData.company_description,
+      companyData.industry,
       companyData.website_url,
       companyData.address,
       companyData.company_size,

@@ -8,6 +8,8 @@ import freelanceSkillRoutes from "./features/freelance-skills/freelance-skills.r
 import profileRoutes from "./features/profile/profile.routes";
 import skillsRoutes from "./features/skills/skill.route";
 import projectCategoryRoutes from "./features/project-categories/project-categories.route";
+import categorySkillRoutes from "./features/category-skill/category-skill.route";
+import freelanceRoutes from "./features/freelance/freelance.route";
 import { HTTP_STATUS } from "./utils/constant";
 dotenv.config();
 
@@ -39,3 +41,5 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/freelance-skills/", freelanceSkillRoutes);
 app.use("/api/skills", skillsRoutes);
 app.use("/api/project-categories", projectCategoryRoutes);
+app.use("/api/category-skill", categorySkillRoutes);
+app.use("/api/freelances", freelanceRoutes);

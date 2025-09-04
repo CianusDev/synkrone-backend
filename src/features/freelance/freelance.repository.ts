@@ -103,6 +103,118 @@ export class FreelanceRepository {
   }
 
   /**
+   * Récupère une liste paginée de freelances avec recherche et filtres.
+   * @param params - { page, limit, search, skills, experience, tjmMin, tjmMax }
+   * @returns { data: Freelance[], total: number, page: number, limit: number }
+   */
+  async getFreelancesWithFilters(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    skills?: string[]; // tableau d'ID de skills ou de noms de skills
+    experience?: string[]; // niveaux d'expérience (beginner, intermediate, expert)
+    tjmMin?: number;
+    tjmMax?: number;
+  }): Promise<{
+    data: Freelance[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = params.page && params.page > 0 ? params.page : 1;
+    const limit = params.limit && params.limit > 0 ? params.limit : 10;
+    const offset = (page - 1) * limit;
+
+    // Construction dynamique du WHERE
+    let whereClauses: string[] = ["f.deleted_at IS NULL"];
+    let values: (string | number)[] = [];
+    let joins: string[] = [];
+
+    // Recherche texte sur nom, prénom, email, job_title
+    if (params.search) {
+      whereClauses.push(
+        "(LOWER(f.firstname) LIKE $" +
+          (values.length + 1) +
+          " OR LOWER(f.lastname) LIKE $" +
+          (values.length + 1) +
+          " OR LOWER(f.email) LIKE $" +
+          (values.length + 1) +
+          " OR LOWER(f.job_title) LIKE $" +
+          (values.length + 1) +
+          ")",
+      );
+      values.push(`%${params.search.toLowerCase()}%`);
+    }
+
+    // Filtre expérience
+    if (params.experience && params.experience.length > 0) {
+      whereClauses.push(
+        "f.experience = ANY($" + (values.length + 1) + "::text[])",
+      );
+      values.push(params.experience as unknown as string); // workaround for pg driver
+    }
+
+    // Filtre TJM min/max
+    if (typeof params.tjmMin === "number") {
+      whereClauses.push("f.tjm >= $" + (values.length + 1));
+      values.push(params.tjmMin);
+    }
+    if (typeof params.tjmMax === "number") {
+      whereClauses.push("f.tjm <= $" + (values.length + 1));
+      values.push(params.tjmMax);
+    }
+
+    // Filtre par compétences (skills)
+    if (params.skills && params.skills.length > 0) {
+      joins.push(
+        "INNER JOIN freelance_skills fs ON fs.freelance_id = f.id " +
+          "INNER JOIN skills s ON s.id = fs.skill_id",
+      );
+      whereClauses.push("s.id = ANY($" + (values.length + 1) + "::text[])");
+      values.push(params.skills as unknown as string); // workaround for pg driver
+    }
+
+    // Construction de la requête principale
+    const baseQuery = `
+      SELECT DISTINCT f.*
+      FROM freelances f
+      ${joins.join(" ")}
+      ${whereClauses.length > 0 ? "WHERE " + whereClauses.join(" AND ") : ""}
+      ORDER BY f.created_at DESC
+      LIMIT $${values.length + 1}
+      OFFSET $${values.length + 2}
+    `;
+    values.push(limit, offset);
+
+    // Construction de la requête de comptage
+    const countQuery = `
+      SELECT COUNT(DISTINCT f.id) AS total
+      FROM freelances f
+      ${joins.join(" ")}
+      ${whereClauses.length > 0 ? "WHERE " + whereClauses.join(" AND ") : ""}
+    `;
+
+    try {
+      const dataResult = await db.query(baseQuery, values);
+      const countResult = await db.query(
+        countQuery,
+        values.slice(0, values.length - 2),
+      );
+      const total = parseInt(countResult.rows[0]?.total ?? "0", 10);
+
+      return {
+        data: dataResult.rows,
+        total,
+        page,
+        limit,
+      };
+    } catch (error) {
+      console.error("Error fetching freelances with filters:", error);
+      throw new Error("Database error");
+    }
+  }
+
+  /**
    * Récupère un freelance par son email
    * @param email - L'email du freelance à récupérer
    * @returns Le freelance correspondant ou null si non trouvé
