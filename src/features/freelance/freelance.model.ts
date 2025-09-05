@@ -1,3 +1,5 @@
+import { FreelanceSkills } from "../freelance-skills/freelance-skills.model";
+
 export enum Availability {
   AVAILABLE = "available",
   UNAVAILABLE = "unavailable",
@@ -30,6 +32,7 @@ export interface Freelance {
   city?: string;
   phone?: string;
   block_duration: number;
+  skills?: FreelanceSkills[];
   is_first_login?: boolean;
   deleted_at: Date | null;
   blocked_at: Date | null;

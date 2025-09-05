@@ -82,6 +82,49 @@ export class FreelanceController {
     }
   }
 
+  // POST /freelances/filter : liste paginée, recherche, filtres complexes via body
+  async filterFreelances(req: Request, res: Response) {
+    try {
+      // On valide le body avec Zod (mêmes règles que pour GET, mais sur req.body)
+      const parsed = getFreelancesWithFiltersSchema.parse(req.body);
+
+      // skills et experience peuvent être string ou array (selon body)
+      const skills =
+        parsed.skills && Array.isArray(parsed.skills)
+          ? parsed.skills
+          : parsed.skills
+            ? [parsed.skills]
+            : undefined;
+      const experience =
+        parsed.experience && Array.isArray(parsed.experience)
+          ? parsed.experience
+          : parsed.experience
+            ? [parsed.experience]
+            : undefined;
+
+      const result = await this.service.getFreelancesWithFilters({
+        page: parsed.page,
+        limit: parsed.limit,
+        search: parsed.search,
+        skills,
+        experience,
+        tjmMin: parsed.tjmMin,
+        tjmMax: parsed.tjmMax,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          ...result,
+          totalPages: result.totalPages,
+        },
+        message: "Liste des freelances récupérée avec succès (POST filter)",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
   // POST /freelances : création d'un freelance
   async createFreelance(req: Request, res: Response) {
     try {

@@ -29,7 +29,7 @@ export class SkillService {
   }
 
   async getAllSkills(
-    filter: { name?: string } = {},
+    filter: { name?: string; category_id?: string } = {},
     pagination: { page?: number; limit?: number } = {},
   ): Promise<{ data: Skill[]; total: number }> {
     return this.skillRepository.getAllSkills(filter, pagination);

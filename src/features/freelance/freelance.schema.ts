@@ -46,6 +46,7 @@ export const freelanceIdSchema = z.object({
 });
 
 // Schéma pour la recherche, pagination et filtres sur la liste des freelances
+// Utilisé pour GET (query params) et POST (body) /freelances/filter
 export const getFreelancesWithFiltersSchema = z.object({
   page: z
     .string()

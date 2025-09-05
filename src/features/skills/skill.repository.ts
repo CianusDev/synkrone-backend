@@ -21,7 +21,7 @@ export class SkillRepository {
   }
 
   async getAllSkills(
-    filter: { name?: string },
+    filter: { name?: string; category_id?: string },
     pagination: { page?: number; limit?: number },
   ): Promise<{ data: Skill[]; total: number }> {
     let baseQuery = "SELECT * FROM skills";
@@ -33,6 +33,11 @@ export class SkillRepository {
     if (filter.name) {
       where.push(`LOWER(name) LIKE $${paramIdx}`);
       params.push(`%${filter.name.toLowerCase()}%`);
+      paramIdx++;
+    }
+    if (filter.category_id) {
+      where.push(`category_id = $${paramIdx}`);
+      params.push(filter.category_id);
       paramIdx++;
     }
 

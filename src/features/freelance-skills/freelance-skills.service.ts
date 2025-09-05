@@ -95,25 +95,24 @@ export class FreelanceSkillsService {
     return updated;
   }
 
-  async getFreelanceSkillsByFreelanceId(
-    freelanceId: string,
-  ): Promise<FreelanceSkills[]> {
+  async getFreelanceSkillsByFreelanceId(freelanceId: string): Promise<any[]> {
     const freelanceSkills =
       await this.freelanceSkillsRepository.getFreelanceSkillsByFreelanceId(
         freelanceId,
       );
-    for (const skill of freelanceSkills) {
-      const skillDetails = await this.skillRepository.getSkillById(
-        skill.skill_id,
-      );
-      if (!skillDetails) {
-        throw new NotFoundError(
-          `Compétence avec l'ID ${skill.skill_id} non trouvée.`,
-        );
+    const skills = [];
+    for (const fs of freelanceSkills) {
+      const skill = await this.skillRepository.getSkillById(fs.skill_id);
+      if (skill) {
+        skills.push({
+          ...skill,
+          level: fs.level ?? null,
+          freelance_skill_id: fs.id ?? null,
+          created_at: fs.created_at,
+        });
       }
-      skill.skills?.push(skillDetails);
     }
-    return freelanceSkills;
+    return skills;
   }
 
   async deleteFreelanceSkills(id: string): Promise<void> {

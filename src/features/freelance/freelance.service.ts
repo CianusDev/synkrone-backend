@@ -1,11 +1,20 @@
 import { FreelanceRepository } from "./freelance.repository";
 import { Freelance } from "./freelance.model";
+import { FreelanceSkillsService } from "../freelance-skills/freelance-skills.service";
+import { FreelanceSkillsRepository } from "../freelance-skills/freelance-skills.repository";
+import { SkillRepository } from "../skills/skill.repository";
+import { FreelanceSkills } from "../freelance-skills/freelance-skills.model";
 
 export class FreelanceService {
   private readonly repository: FreelanceRepository;
+  private readonly freelanceSkillsService: FreelanceSkillsService;
 
   constructor() {
     this.repository = new FreelanceRepository();
+    this.freelanceSkillsService = new FreelanceSkillsService(
+      new FreelanceSkillsRepository(),
+      new SkillRepository(),
+    );
   }
 
   async createFreelance(data: Partial<Freelance>): Promise<Freelance> {
@@ -14,11 +23,21 @@ export class FreelanceService {
   }
 
   async getFreelanceById(id: string): Promise<Freelance | null> {
-    return this.repository.getFreelanceById(id);
+    const freelance = await this.repository.getFreelanceById(id);
+    if (!freelance) return null;
+    const skills =
+      await this.freelanceSkillsService.getFreelanceSkillsByFreelanceId(id);
+    return { ...freelance, skills };
   }
 
   async getFreelanceByEmail(email: string): Promise<Freelance | null> {
-    return this.repository.getFreelanceByEmail(email);
+    const freelance = await this.repository.getFreelanceByEmail(email);
+    if (!freelance) return null;
+    const skills =
+      await this.freelanceSkillsService.getFreelanceSkillsByFreelanceId(
+        freelance.id,
+      );
+    return { ...freelance, skills };
   }
 
   async updateFreelanceProfile(
@@ -65,8 +84,19 @@ export class FreelanceService {
   }> {
     const result = await this.repository.getFreelancesWithFilters(params);
     const totalPages = Math.ceil(result.total / (result.limit || 1));
+    // Enrich each freelance with their skills
+    const dataWithSkills = await Promise.all(
+      result.data.map(async (freelance) => {
+        const skills =
+          await this.freelanceSkillsService.getFreelanceSkillsByFreelanceId(
+            freelance.id,
+          );
+        return { ...freelance, skills };
+      }),
+    );
     return {
       ...result,
+      data: dataWithSkills,
       totalPages,
     };
   }

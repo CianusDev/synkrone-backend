@@ -48,10 +48,13 @@ export class SkillController {
    */
   async getAllSkills(req: Request, res: Response) {
     try {
-      const { name, page, limit } = req.query;
-      const filter: { name?: string } = {};
+      const { name, page, limit, category_id } = req.query;
+      const filter: { name?: string; category_id?: string } = {};
       if (typeof name === "string" && name.trim() !== "") {
         filter.name = name.trim();
+      }
+      if (typeof category_id === "string" && category_id.trim() !== "") {
+        filter.category_id = category_id.trim();
       }
       const pagination: { page?: number; limit?: number } = {};
       if (page && !isNaN(Number(page))) pagination.page = Number(page);

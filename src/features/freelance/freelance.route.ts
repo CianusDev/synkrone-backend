@@ -7,8 +7,11 @@ const controller = new FreelanceController();
 // Créer un freelance
 router.post("/", (req, res) => controller.createFreelance(req, res));
 
-// Récupérer la liste paginée des freelances avec recherche et filtres
+// Récupérer la liste paginée des freelances avec recherche et filtres (GET simple)
 router.get("/", (req, res) => controller.getFreelances(req, res));
+
+// Récupérer la liste paginée des freelances avec recherche et filtres complexes (POST)
+router.post("/filter", (req, res) => controller.filterFreelances(req, res));
 
 // Récupérer un freelance par ID
 router.get("/:id", (req, res) => controller.getFreelanceById(req, res));
