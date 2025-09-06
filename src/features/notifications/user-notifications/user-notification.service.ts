@@ -3,7 +3,9 @@ import { UserNotification } from "./user-notification.model";
 import { Notification } from "../notification.model";
 import { io } from "../../../server";
 import { NotificationRepository } from "../notification.repository";
+import { SOKET_EVENTS } from "../../../utils/constant";
 
+const socketEvent = SOKET_EVENTS;
 export class UserNotificationService {
   private readonly repository: UserNotificationRepository;
 
@@ -36,7 +38,7 @@ export class UserNotificationService {
 
     // Émet la notification temps réel à l'utilisateur concerné
     if (notification) {
-      io.to(userId).emit("notification:new", {
+      io.to(userId).emit(socketEvent.notifications.new, {
         ...userNotification,
         notification,
       });

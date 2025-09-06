@@ -10,6 +10,7 @@
     "db:categorie_and_skills": "ts-node src/scripts/db/skills-and-categories.ts",
     "db:project_categories": "npx ts-node src/scripts/db/insert-project-categories.ts",
     "db:insert_freelances": "npx ts-node src/scripts/db/insert-freelances.ts",
+    "db:company_and_projets": "npx ts-node src/scripts/db/company_seed.ts",
     "db:truncate": "npx ts-node src/scripts/db/truncate_all.ts",
     "db:init": "ts-node src/scripts/db/init.ts init",
     "db:reset": "ts-node src/scripts/db/init.ts reset",
