@@ -157,34 +157,6 @@ CREATE INDEX idx_otps_type ON otps(type);
 CREATE INDEX idx_otps_expires_at ON otps(expires_at);
 
 -- =============================================
--- TRIGGERS POUR updated_at
--- =============================================
-
--- Fonction générique pour mettre à jour updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
--- DELIMITER //
-
-
-
-CREATE TRIGGER update_freelances_updated_at
-    BEFORE UPDATE ON freelances
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
--- DELIMITER //
-
-
-
-CREATE TRIGGER update_companies_updated_at
-    BEFORE UPDATE ON companies
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
--- DELIMITER //
-
--- =============================================
 -- TABLE ADMIN_SESSIONS
 -- =============================================
 
@@ -818,20 +790,33 @@ CREATE TABLE payments (
 );
 
 -- =============================================
--- TABLE NOTIFICATIONS
+-- TABLE NOTIFICATIONS (message global ou ciblé)
 -- =============================================
 
 CREATE TYPE notification_type_enum AS ENUM ('project', 'application', 'payment', 'message', 'system');
 
 CREATE TABLE notifications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL,
-    title VARCHAR(200),
-    message TEXT,
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
     type notification_type_enum,
-    is_read BOOLEAN DEFAULT FALSE,
+    is_global BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL
+);
+
+-- =============================================
+-- TABLE USER_NOTIFICATIONS (liaison notification <-> user)
+-- =============================================
+
+CREATE TABLE user_notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    notification_id UUID NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL,
+    UNIQUE (user_id, notification_id)
 );
 
 -- =============================================
@@ -956,8 +941,13 @@ CREATE INDEX idx_payments_invoice_id ON payments(invoice_id);
 CREATE INDEX idx_payments_status ON payments(status);
 
 -- notifications
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_type ON notifications(type);
+CREATE INDEX idx_notifications_is_global ON notifications(is_global);
+
+-- user_notifications
+CREATE INDEX idx_user_notifications_user_id ON user_notifications(user_id);
+CREATE INDEX idx_user_notifications_notification_id ON user_notifications(notification_id);
+CREATE INDEX idx_user_notifications_is_read ON user_notifications(is_read);
 
 -- messages
 CREATE INDEX idx_messages_sender_id ON messages(sender_id);
@@ -986,33 +976,18 @@ CREATE INDEX idx_reports_status ON reports(status);
 -- media
 CREATE INDEX idx_media_uploaded_by ON media(uploaded_by);
 
+
 -- =============================================
--- TRIGGERS POUR updated_at SUR LES NOUVELLES TABLES
+-- Fonction générique pour mettre à jour updated_at
 -- =============================================
 
-CREATE TRIGGER update_projects_updated_at
-    BEFORE UPDATE ON projects
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_project_categories_updated_at
-    BEFORE UPDATE ON project_categories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_category_skills_updated_at
-    BEFORE UPDATE ON category_skills
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_skills_updated_at
-    BEFORE UPDATE ON skills
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_notifications_updated_at
-    BEFORE UPDATE ON notifications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_messages_updated_at
-    BEFORE UPDATE ON messages
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 -- =============================================
 -- AJOUT DE created_at/updated_at SUR LES TABLES IMPORTANTES (SUGGESTION)
@@ -1053,3 +1028,45 @@ COMMENT ON TABLE message_media IS 'Fichiers attachés aux messages';
 COMMENT ON TABLE project_invitations IS 'Invitations envoyées aux freelances pour postuler à un projet';
 COMMENT ON TABLE litigations IS 'Litiges ouverts entre freelances et entreprises';
 COMMENT ON TABLE reports IS 'Signalements faits par les utilisateurs contre d''autres utilisateurs';
+COMMENT ON TABLE notifications IS 'Notifications globales ou ciblées (message, type, is_global)';
+COMMENT ON TABLE user_notifications IS 'Lien entre utilisateur et notification (ciblage, lu/non lu)';
+
+-- =============================================
+-- TRIGGERS POUR updated_at (À placer à la fin du fichier)
+-- =============================================
+
+CREATE TRIGGER update_freelances_updated_at
+    BEFORE UPDATE ON freelances
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_companies_updated_at
+    BEFORE UPDATE ON companies
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_category_skills_updated_at
+    BEFORE UPDATE ON category_skills
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_skills_updated_at
+    BEFORE UPDATE ON skills
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_projects_updated_at
+    BEFORE UPDATE ON projects
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_project_categories_updated_at
+    BEFORE UPDATE ON project_categories
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_notifications_updated_at
+    BEFORE UPDATE ON notifications
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_notifications_updated_at
+    BEFORE UPDATE ON user_notifications
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_messages_updated_at
+    BEFORE UPDATE ON messages
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

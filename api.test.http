@@ -1,0 +1,32 @@
+### Créer une notification
+POST http://localhost:3000/notifications
+Content-Type: application/json
+
+{
+  "user_id": "e3b0c442-98fc-1fc2-9c9a-0e2e3c9e8b0a", // Remplace par un UUID utilisateur valide
+  "title": "Bienvenue sur la plateforme",
+  "message": "Votre inscription a été validée.",
+  "type": "system"
+}
+
+### Récupérer toutes les notifications d'un utilisateur (avec pagination)
+GET http://localhost:3000/notifications?user_id=e3b0c442-98fc-1fc2-9c9a-0e2e3c9e8b0a&page=1&limit=10
+
+### Récupérer une notification par ID
+GET http://localhost:3000/notifications/REPLACE_WITH_NOTIFICATION_ID
+
+### Mettre à jour une notification
+PATCH http://localhost:3000/notifications/REPLACE_WITH_NOTIFICATION_ID
+Content-Type: application/json
+
+{
+  "title": "Titre modifié",
+  "message": "Message modifié",
+  "type": "system"
+}
+
+### Marquer une notification comme lue
+PATCH http://localhost:3000/notifications/REPLACE_WITH_NOTIFICATION_ID/read
+
+### Supprimer une notification
+DELETE http://localhost:3000/notifications/REPLACE_WITH_NOTIFICATION_ID

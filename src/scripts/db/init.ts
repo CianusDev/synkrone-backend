@@ -272,8 +272,7 @@ async function executeBlockByBlock(
     `📦 ${sortedBlocks.length} blocs SQL triés et prêts à être exécutés`,
   );
 
-  // Commencer une nouvelle transaction
-  await client.query("BEGIN");
+  // On n'utilise plus de transaction globale ici pour garantir la création des tables même si un bloc échoue
 
   let successCount = 0;
   let skipCount = 0;
@@ -299,40 +298,16 @@ async function executeBlockByBlock(
         );
       }
     } catch (error) {
-      // Certaines erreurs peuvent être ignorées (ex: extension déjà existante)
-      const errorMessage = (error as Error).message.toLowerCase();
-
-      if (
-        errorMessage.includes("already exists") ||
-        errorMessage.includes("déjà existant") ||
-        errorMessage.includes("extension") ||
-        (errorMessage.includes("type") &&
-          errorMessage.includes("already exists")) ||
-        (errorMessage.includes("function") &&
-          errorMessage.includes("already exists")) ||
-        (errorMessage.includes("view") &&
-          errorMessage.includes("already exists")) ||
-        (errorMessage.includes("policy") &&
-          errorMessage.includes("already exists"))
-      ) {
-        console.log(`⚠️  Ignoré (déjà existant): ${block.substring(0, 60)}...`);
-        skipCount++;
-        continue;
-      }
-
-      // Afficher plus de contexte en cas d'erreur
+      // Afficher toutes les erreurs SQL, même celles qui pourraient être ignorées
       console.error(`❌ Erreur lors de l'exécution du bloc SQL:`);
       console.error(`📍 Bloc ${i + 1}/${sortedBlocks.length}:`);
       console.error(
         `📄 SQL: ${block.substring(0, 200)}${block.length > 200 ? "..." : ""}`,
       );
       console.error(`🔍 Détails de l'erreur:`, error);
-      throw error;
+      // Ne pas throw, continuer l'exécution des autres blocs
     }
   }
-
-  // Valider la transaction
-  await client.query("COMMIT");
 
   console.log("✅ Base de données initialisée avec succès (bloc par bloc)!");
   console.log(`📊 Statistiques:`);
@@ -369,6 +344,7 @@ async function verifyTables(): Promise<void> {
     "invoices",
     "payments",
     "notifications",
+    "user_notifications",
     "messages",
     "message_media",
     "project_invitations",
@@ -491,6 +467,7 @@ async function resetDatabase(): Promise<void> {
       "DROP TABLE IF EXISTS invoices CASCADE;",
       "DROP TABLE IF EXISTS payments CASCADE;",
       "DROP TABLE IF EXISTS notifications CASCADE;",
+      "DROP TABLE IF EXISTS user_notifications CASCADE;",
       "DROP TABLE IF EXISTS messages CASCADE;",
       "DROP TABLE IF EXISTS project_invitations CASCADE;",
       "DROP TABLE IF EXISTS litigations CASCADE;",

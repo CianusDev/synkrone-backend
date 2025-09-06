@@ -1,0 +1,156 @@
+Parfait, merci pour la précision !
+
+Donc dans ton cas, certaines notifications seront :
+
+* **Générales** → envoyées à *tous* les freelances (ex : "Nouvelle fonctionnalité disponible").
+* **Ciblées** → envoyées à *certains utilisateurs seulement* (ex : "Un client vous a envoyé un message", "Projet correspondant à votre profil").
+
+---
+
+## ✅ Structure à adopter pour gérer **notifications générales et ciblées**
+
+On reste sur la **même base de 2 tables**, mais on l’adapte légèrement :
+
+### 1. Table `notifications` (message global)
+
+```sql
+CREATE TABLE notifications (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50), -- ex: "system", "project", "message", etc.
+    is_global BOOLEAN DEFAULT FALSE, -- true si pour tout le monde
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 2. Table `user_notifications` (lien utilisateur-notification)
+
+```sql
+CREATE TABLE user_notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    notification_id INT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (notification_id) REFERENCES notifications(id)
+);
+```
+
+---
+
+## 🧠 Logique à appliquer
+
+### ➤ Si notification **ciblée** :
+
+* Tu crées la notification dans `notifications`
+* Tu insères les **utilisateurs ciblés** dans `user_notifications`
+
+Ex :
+
+```sql
+INSERT INTO notifications (title, message, type, is_global)
+VALUES ('Nouveau projet pour vous', 'Un projet correspond à votre profil...', 'project', FALSE)
+RETURNING id;
+```
+
+Puis, avec l’ID retourné (`notification_id`), tu fais :
+
+```sql
+-- Exemple pour 3 freelances ciblés
+INSERT INTO user_notifications (user_id, notification_id)
+VALUES
+(101, notification_id),
+(102, notification_id),
+(105, notification_id);
+```
+
+---
+
+### ➤ Si notification **générale** :
+
+* Tu crées une **seule notification** avec `is_global = true`
+* **Tu ne crées aucune ligne** dans `user_notifications` tout de suite
+* Côté affichage :
+
+  * Tu fais une requête :
+
+    ```sql
+    SELECT * FROM notifications
+    WHERE is_global = true
+    ORDER BY created_at DESC
+    LIMIT 20;
+    ```
+  * Si tu veux gérer le **"lu/non lu"** même pour ces notifs globales :
+
+    * Tu crées une ligne dans `user_notifications` **lorsque l'utilisateur ouvre la notif** (ou la première fois qu'il la voit)
+    * Ou tu pré-génères les lignes en tâche de fond (batch asynchrone)
+
+---
+
+## 🧩 Variante : Notification "semi-globale"
+
+Parfois, tu veux viser :
+
+* **Tous les freelances d’un pays**
+* **Tous les freelances avec un skill**
+* **Tous les freelances actifs cette semaine**
+
+Dans ce cas :
+
+1. Tu crées la notif dans `notifications`
+2. Tu fais un `SELECT` pour trouver les `user_id` correspondants
+3. Tu fais un **batch insert** dans `user_notifications`
+
+---
+
+## ⚠️ Points d’attention
+
+* **Batch insert** : Si tu cibles 1000 users, ne fais pas une insertion par requête SQL. Utilise un `INSERT ... VALUES (...), (...), ...` ou une file de traitement (job queue).
+* **Indexation** :
+
+  * `user_notifications(user_id)`
+  * `user_notifications(notification_id)`
+  * `user_notifications(is_read)` (optionnel)
+* **Lecture efficace** :
+  Pour l'utilisateur :
+
+  ```sql
+  SELECT n.*
+  FROM notifications n
+  LEFT JOIN user_notifications u ON n.id = u.notification_id AND u.user_id = :user_id
+  WHERE u.user_id IS NOT NULL OR n.is_global = true
+  ORDER BY n.created_at DESC
+  LIMIT 20;
+  ```
+
+---
+
+## 🔚 Conclusion
+
+Tu as un système **souple et scalable** :
+
+| Type de notif        | Où c’est stocké ?                              | Quand tu ajoutes les users ?      |
+| -------------------- | ---------------------------------------------- | --------------------------------- |
+| Notification ciblée  | `notifications` + `user_notifications`         | immédiatement (batch insert)      |
+| Notification globale | `notifications` seulement (`is_global = true`) | jamais ou au moment de la lecture |
+
+---
+
+Si tu veux je peux t’écrire :
+
+* Un exemple de script PHP, Node, Laravel, ou autre pour insérer ces notifs
+* Des exemples de requêtes pour affichage côté utilisateur
+
+Tu travailles avec quel stack (langage + base de données) ?
+
+
+
+
+SELECT n.*, un.is_read
+FROM notifications n
+LEFT JOIN user_notifications un
+  ON n.id = un.notification_id AND un.user_id = :user_id
+WHERE un.user_id = :user_id OR n.is_global = true
+ORDER BY n.created_at DESC
+LIMIT 20;

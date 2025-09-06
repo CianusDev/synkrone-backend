@@ -1,0 +1,74 @@
+#  convventions
+model.ts` (database model)
+- `repository.ts` (data access)
+- `service.ts` (business logic)
+- `controller.ts` (request handling)
+- `route.ts` (routing)
+- `schema.ts` (validation, optional)
+
+
+
+1. **Model (`freelance.model.ts`)**
+- Exports TypeScript interfaces and enums for the entity.
+- Example:
+  ```synkrone-backend/src/features/freelance/freelance.model.ts#L1-38
+  export interface Freelance { ... }
+  export enum Availability { ... }
+  export enum ExprerienceLevel { ... }
+  ```
+
+### 2. **Repository (`freelance.repository.ts`)**
+- Class with methods for database operations (CRUD, filters).
+- Uses a `db` instance for SQL queries.
+- Example:
+  ```synkrone-backend/src/features/freelance/freelance.repository.ts#L1-181
+  export class FreelanceRepository {
+    async createFreelance(...) { ... }
+    async getFreelanceById(...) { ... }
+    async updateFreelanceProfile(...) { ... }
+    // etc.
+  }
+  ```
+
+### 3. **Service (`freelance.service.ts`)**
+- Class that uses the repository for business logic.
+- May call other services/repositories for related data.
+- Example:
+  ```synkrone-backend/src/features/freelance/freelance.service.ts#L1-87
+  export class FreelanceService {
+    private readonly repository: FreelanceRepository;
+    async createFreelance(...) { ... }
+    async getFreelanceById(...) { ... }
+    // etc.
+  }
+  ```
+
+### 4. **Controller (`freelance.controller.ts`)**
+- Class with Express route handlers.
+- Validates input with Zod schemas.
+- Handles errors and sends JSON responses.
+- Example:
+  ```synkrone-backend/src/features/freelance/freelance.controller.ts#L1-163
+  export class FreelanceController {
+    async getFreelances(req, res) { ... }
+    async createFreelance(req, res) { ... }
+    // etc.
+  }
+  ```
+
+### 5. **Route (`freelance.route.ts`)**
+- Sets up Express routes and binds them to controller methods.
+- Example:
+  ```synkrone-backend/src/features/freelance/freelance.route.ts#L1-26
+  router.post("/", (req, res) => controller.createFreelance(req, res));
+  router.get("/", (req, res) => controller.getFreelances(req, res));
+  // etc.
+  ```
+
+### 6. **Schema (`freelance.schema.ts`)**
+- Zod schemas for validation of requests.
+- Example:
+  ```synkrone-backend/src/features/freelance/freelance.schema.ts#L1-97
+  export const createFreelanceSchema = z.object({ ... });
+  export const updateFreelanceProfileSchema = z.object({ ... });
+  // etc.
