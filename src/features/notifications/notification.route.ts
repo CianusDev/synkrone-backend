@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { NotificationController } from "./notification.controller";
+import { AuthAdminMiddleware } from "../../middlewares/auth-admin.middleware";
 
 const router = Router();
 const controller = new NotificationController();
+router.use(AuthAdminMiddleware);
 
 // Créer une notification
 router.post("/", (req, res) => controller.createNotification(req, res));
@@ -13,8 +15,7 @@ router.get("/", (req, res) => controller.getNotifications(req, res));
 // Récupérer une notification par ID
 router.get("/:id", (req, res) => controller.getNotificationById(req, res));
 
-// Marquer une notification comme lue
-router.patch("/:id/read", (req, res) => controller.markAsRead(req, res));
+// (La logique de marquage comme lue est désormais dans user-notifications)
 
 // Mettre à jour une notification
 router.patch("/:id", (req, res) => controller.updateNotification(req, res));

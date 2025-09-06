@@ -820,6 +820,22 @@ CREATE TABLE user_notifications (
 );
 
 -- =============================================
+-- TABLE CONVERSATIONS
+-- =============================================
+
+CREATE TABLE conversations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    freelance_id UUID NOT NULL REFERENCES freelances(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    application_id UUID REFERENCES applications(id) ON DELETE SET NULL,
+    contract_id UUID REFERENCES contracts(id) ON DELETE SET NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL
+);
+
+
+
+-- =============================================
 -- TABLE MESSAGES
 -- =============================================
 
@@ -954,7 +970,11 @@ CREATE INDEX idx_messages_sender_id ON messages(sender_id);
 CREATE INDEX idx_messages_receiver_id ON messages(receiver_id);
 CREATE INDEX idx_messages_project_id ON messages(project_id);
 
-
+-- conversations
+CREATE INDEX idx_conversations_freelance_id ON conversations(freelance_id);
+CREATE INDEX idx_conversations_company_id ON conversations(company_id);
+CREATE INDEX idx_conversations_application_id ON conversations(application_id);
+CREATE INDEX idx_conversations_contract_id ON conversations(contract_id);
 
 -- project_invitations
 CREATE INDEX idx_project_invitations_project_id ON project_invitations(project_id);

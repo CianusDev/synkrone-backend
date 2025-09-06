@@ -14,6 +14,7 @@ export class NotificationService {
    * @returns La notification créée
    */
   async createNotification(data: Partial<Notification>): Promise<Notification> {
+    // Crée uniquement la notification (pas de logique utilisateur ici)
     return this.repository.createNotification(data);
   }
 
@@ -32,9 +33,7 @@ export class NotificationService {
    * @returns Liste paginée des notifications
    */
   async getNotifications(params: {
-    user_id?: string;
     type?: string;
-    is_read?: boolean;
     page?: number;
     limit?: number;
   }): Promise<{
@@ -43,8 +42,8 @@ export class NotificationService {
     page: number;
     limit: number;
   }> {
-    // Pour l’instant, on ne filtre que par user_id (comme dans le repository)
-    return this.repository.getNotificationsByUserId(params.user_id!, {
+    // Récupère toutes les notifications (filtrage par type possible à ajouter)
+    return this.repository.getNotifications({
       page: params.page,
       limit: params.limit,
     });
@@ -56,17 +55,7 @@ export class NotificationService {
    * @param options - Options de pagination et de filtrage
    * @returns Liste paginée des notifications
    */
-  async getNotificationsByUserId(
-    userId: string,
-    options?: { page?: number; limit?: number; isRead?: boolean },
-  ): Promise<{
-    data: Notification[];
-    total: number;
-    page: number;
-    limit: number;
-  }> {
-    return this.repository.getNotificationsByUserId(userId, options);
-  }
+  // La récupération des notifications d'un utilisateur se fait désormais via user-notifications
 
   /**
    * Met à jour une notification (ex: marquer comme lue)
@@ -95,16 +84,5 @@ export class NotificationService {
    * @param id - L'ID de la notification
    * @returns La notification mise à jour ou null si non trouvée
    */
-  async markAsRead(id: string): Promise<Notification | null> {
-    return this.repository.updateNotification(id, { is_read: true });
-  }
-
-  /**
-   * Marque toutes les notifications d'un utilisateur comme lues
-   * @param userId - L'ID de l'utilisateur
-   * @returns Le nombre de notifications mises à jour
-   */
-  async markAllAsRead(userId: string): Promise<number> {
-    return this.repository.markAllAsRead(userId);
-  }
+  // La logique de marquage comme lu est désormais dans user-notifications
 }

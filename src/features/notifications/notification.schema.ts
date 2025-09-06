@@ -4,18 +4,19 @@ import { NotificationTypeEnum } from "./notification.model";
 // Enum for notification types (should match your DB enum)
 export const notificationTypeEnum = z.enum(NotificationTypeEnum);
 
-// Schéma pour la création d'une notification
+// Schéma pour la création d'une notification (admin)
+// user_id supprimé, ajout de is_global
 export const createNotificationSchema = z.object({
-  user_id: z.string().uuid({ message: "user_id doit être un UUID valide." }),
   title: z
     .string()
     .min(1, "Le titre est requis.")
     .max(200, "200 caractères max."),
   message: z.string().min(1, "Le message est requis."),
   type: notificationTypeEnum,
+  is_global: z.boolean().default(false),
 });
 
-// Schéma pour la mise à jour d'une notification
+// Schéma pour la mise à jour d'une notification (admin)
 export const updateNotificationSchema = z.object({
   title: z
     .string()
@@ -24,7 +25,7 @@ export const updateNotificationSchema = z.object({
     .optional(),
   message: z.string().min(1, "Le message est requis.").optional(),
   type: notificationTypeEnum.optional(),
-  is_read: z.boolean().optional(),
+  is_global: z.boolean().optional(),
 });
 
 // Schéma pour l'ID de notification (UUID)
@@ -32,11 +33,10 @@ export const notificationIdSchema = z.object({
   id: z.uuid({ message: "ID de notification invalide (UUID attendu)." }),
 });
 
-// Schéma pour la récupération des notifications (filtrage, pagination)
+// Schéma pour la récupération des notifications (filtrage, pagination, admin)
 export const getNotificationsSchema = z.object({
-  user_id: z.uuid({ message: "user_id doit être un UUID valide." }).optional(),
   type: notificationTypeEnum.optional(),
-  is_read: z.boolean().optional(),
+  is_global: z.boolean().optional(),
   page: z
     .string()
     .transform((val) => parseInt(val, 10))

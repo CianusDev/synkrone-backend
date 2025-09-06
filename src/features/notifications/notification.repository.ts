@@ -16,17 +16,16 @@ export class NotificationRepository {
   ): Promise<Notification> {
     const query = `
       INSERT INTO notifications (
-        user_id, title, message, type, is_read
+        title, message, type, is_global
       ) VALUES (
-        $1, $2, $3, $4, $5
+        $1, $2, $3, $4
       ) RETURNING *
     `;
     const values = [
-      notification.user_id,
       notification.title,
       notification.message,
       notification.type,
-      notification.is_read ?? false,
+      notification.is_global ?? false,
     ];
 
     try {
@@ -55,15 +54,11 @@ export class NotificationRepository {
   }
 
   /**
-   * Get all notifications for a user (optionally paginated).
-   * @param user_id - User UUID
+   * Get all notifications (optionally paginated).
    * @param options - Pagination options
    * @returns Array of notifications
    */
-  async getNotificationsByUserId(
-    user_id: string,
-    options?: { page?: number; limit?: number },
-  ): Promise<{
+  async getNotifications(options?: { page?: number; limit?: number }): Promise<{
     data: Notification[];
     total: number;
     page: number;
@@ -75,16 +70,15 @@ export class NotificationRepository {
 
     const query = `
       SELECT * FROM notifications
-      WHERE user_id = $1
       ORDER BY created_at DESC
-      LIMIT $2 OFFSET $3
+      LIMIT $1 OFFSET $2
     `;
     const countQuery = `
-      SELECT COUNT(*) AS total FROM notifications WHERE user_id = $1
+      SELECT COUNT(*) AS total FROM notifications
     `;
     try {
-      const dataResult = await db.query(query, [user_id, limit, offset]);
-      const countResult = await db.query(countQuery, [user_id]);
+      const dataResult = await db.query(query, [limit, offset]);
+      const countResult = await db.query(countQuery);
       const total = parseInt(countResult.rows[0]?.total ?? "0", 10);
 
       return {
@@ -94,7 +88,7 @@ export class NotificationRepository {
         limit,
       };
     } catch (error) {
-      console.error("Error fetching notifications for user:", error);
+      console.error("Error fetching notifications:", error);
       throw new Error("Database error");
     }
   }
@@ -150,9 +144,9 @@ export class NotificationRepository {
       fields.push(`type = $${idx++}`);
       values.push(mergedNotification.type);
     }
-    if (mergedNotification.is_read !== undefined) {
-      fields.push(`is_read = $${idx++}`);
-      values.push(mergedNotification.is_read);
+    if (mergedNotification.is_global !== undefined) {
+      fields.push(`is_global = $${idx++}`);
+      values.push(mergedNotification.is_global);
     }
     if (mergedNotification.updated_at !== undefined) {
       fields.push(`updated_at = $${idx++}`);
@@ -198,23 +192,5 @@ export class NotificationRepository {
     }
   }
 
-  /**
-   * Marque toutes les notifications d'un utilisateur comme lues
-   * @param userId - L'ID de l'utilisateur
-   * @returns Le nombre de notifications mises à jour
-   */
-  async markAllAsRead(userId: string): Promise<number> {
-    const query = `
-      UPDATE notifications
-      SET is_read = TRUE, updated_at = NOW()
-      WHERE user_id = $1 AND is_read = FALSE
-    `;
-    try {
-      const result = await db.query(query, [userId]);
-      return result.rowCount ?? 0;
-    } catch (error) {
-      console.error("Error marking all notifications as read:", error);
-      throw new Error("Database error");
-    }
-  }
+  // La gestion du marquage comme lu est maintenant dans user-notifications
 }

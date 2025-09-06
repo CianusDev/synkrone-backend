@@ -114,26 +114,7 @@ export class NotificationController {
     }
   }
 
-  // PATCH /notifications/:id/read
-  async markAsRead(req: Request, res: Response) {
-    try {
-      const { id } = notificationIdSchema.parse(req.params);
-      const updated = await this.service.markAsRead(id);
-      if (!updated) {
-        return res.status(404).json({
-          success: false,
-          message: "Notification non trouvée",
-        });
-      }
-      res.status(200).json({
-        success: true,
-        data: updated,
-        message: "Notification marquée comme lue",
-      });
-    } catch (error) {
-      this.handleError(error, res);
-    }
-  }
+  // La logique de marquage comme lu est désormais dans user-notifications
 
   // DELETE /notifications/:id
   async deleteNotification(req: Request, res: Response) {

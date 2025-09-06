@@ -11,6 +11,7 @@ import projectCategoryRoutes from "./features/project-categories/project-categor
 import categorySkillRoutes from "./features/category-skill/category-skill.route";
 import freelanceRoutes from "./features/freelance/freelance.route";
 import notificationRoutes from "./features/notifications/notification.route";
+import userNotificationRoutes from "./features/notifications/user-notifications/user-notification.route";
 import { HTTP_STATUS } from "./utils/constant";
 dotenv.config();
 
@@ -45,3 +46,4 @@ app.use("/api/project-categories", projectCategoryRoutes);
 app.use("/api/category-skill", categorySkillRoutes);
 app.use("/api/freelances", freelanceRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/user-notifications", userNotificationRoutes);

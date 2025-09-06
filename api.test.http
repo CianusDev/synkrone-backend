@@ -1,32 +1,37 @@
-### Créer une notification
+### Créer une notification (admin uniquement)
 POST http://localhost:3000/notifications
 Content-Type: application/json
+Authorization: Bearer REPLACE_WITH_ADMIN_TOKEN
 
 {
-  "user_id": "e3b0c442-98fc-1fc2-9c9a-0e2e3c9e8b0a", // Remplace par un UUID utilisateur valide
   "title": "Bienvenue sur la plateforme",
   "message": "Votre inscription a été validée.",
-  "type": "system"
+  "type": "system",
+  "is_global": true
 }
 
-### Récupérer toutes les notifications d'un utilisateur (avec pagination)
-GET http://localhost:3000/notifications?user_id=e3b0c442-98fc-1fc2-9c9a-0e2e3c9e8b0a&page=1&limit=10
+### Récupérer toutes les notifications (admin uniquement, pagination)
+GET http://localhost:3000/notifications?page=1&limit=10
+Authorization: Bearer REPLACE_WITH_ADMIN_TOKEN
 
-### Récupérer une notification par ID
+### Récupérer une notification par ID (admin uniquement)
 GET http://localhost:3000/notifications/REPLACE_WITH_NOTIFICATION_ID
+Authorization: Bearer REPLACE_WITH_ADMIN_TOKEN
 
-### Mettre à jour une notification
+### Mettre à jour une notification (admin uniquement)
 PATCH http://localhost:3000/notifications/REPLACE_WITH_NOTIFICATION_ID
 Content-Type: application/json
+Authorization: Bearer REPLACE_WITH_ADMIN_TOKEN
 
 {
   "title": "Titre modifié",
   "message": "Message modifié",
-  "type": "system"
+  "type": "system",
+  "is_global": true
 }
 
-### Marquer une notification comme lue
-PATCH http://localhost:3000/notifications/REPLACE_WITH_NOTIFICATION_ID/read
+<!-- Le marquage comme lu se fait désormais via /user-notifications, pas via /notifications -->
 
-### Supprimer une notification
+### Supprimer une notification (admin uniquement)
 DELETE http://localhost:3000/notifications/REPLACE_WITH_NOTIFICATION_ID
+Authorization: Bearer REPLACE_WITH_ADMIN_TOKEN

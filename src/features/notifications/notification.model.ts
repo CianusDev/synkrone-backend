@@ -8,11 +8,10 @@ export enum NotificationTypeEnum {
 
 export interface Notification {
   id: string;
-  user_id: string;
-  title?: string;
-  message?: string;
+  title: string;
+  message: string;
   type: NotificationTypeEnum;
-  is_read: boolean;
+  is_global: boolean;
   created_at: Date;
   updated_at: Date | null;
 }
