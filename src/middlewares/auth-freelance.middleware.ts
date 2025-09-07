@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { HTTP_STATUS } from "../utils/constant";
-import { verifyFreelanceToken } from "../utils/utils";
+import { verifyUserToken } from "../utils/utils";
 import { FreelanceRepository } from "../features/freelance/freelance.repository";
 const freelanceRepository = new FreelanceRepository();
 
@@ -19,9 +19,9 @@ export const AuthFreelanceMiddleware: RequestHandler = async (
     });
   }
 
-  const { freelance } = verifyFreelanceToken(token);
+  const { user, role } = verifyUserToken(token);
 
-  if (!freelance) {
+  if (role !== "freelance" || !user) {
     return res.status(HTTP_STATUS.UNAUTHORIZED).json({
       success: false,
       message: "Token invalide ou expiré. Accès refusé.",
@@ -30,7 +30,7 @@ export const AuthFreelanceMiddleware: RequestHandler = async (
 
   try {
     const existingFreelance = await freelanceRepository.getFreelanceById(
-      freelance?.id || "",
+      user?.id || "",
     );
     if (!existingFreelance) {
       return res.status(HTTP_STATUS.FORBIDDEN).json({
@@ -46,6 +46,6 @@ export const AuthFreelanceMiddleware: RequestHandler = async (
   }
 
   // Ajoute la propriété freelance dynamiquement
-  (req as any).freelance = freelance;
+  (req as any).freelance = user;
   next();
 };

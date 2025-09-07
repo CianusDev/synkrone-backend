@@ -395,7 +395,7 @@ export class ProfileService {
       ].includes(data.company_size)
     ) {
       throw new ValidationError(
-        "La taille de l'entreprise doit être 'startup', 'sme' ou 'large_company'",
+        "La taille de l'entreprise doit être l'une des valeurs définies",
       );
     }
   }

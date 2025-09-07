@@ -66,6 +66,106 @@ export class CompanyRepository {
   }
 
   /**
+   * Récupère une liste paginée d'entreprises avec recherche et filtres.
+   * @param params - { page, limit, search, country, industry, is_verified, company_size, ... }
+   * @returns { data: Company[], total: number, page: number, limit: number }
+   */
+  async getCompaniesWithFilters(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    country?: string;
+    industry?: string;
+    is_verified?: boolean;
+    company_size?: string;
+    company_name?: string;
+  }): Promise<{
+    data: Company[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = params.page && params.page > 0 ? params.page : 1;
+    const limit = params.limit && params.limit > 0 ? params.limit : 10;
+    const offset = (page - 1) * limit;
+
+    let whereClauses: string[] = [];
+    let values: (string | number | boolean)[] = [];
+
+    // Recherche texte sur company_name, company_email, industry
+    if (params.search) {
+      whereClauses.push(
+        "(LOWER(company_name) LIKE $" +
+          (values.length + 1) +
+          " OR LOWER(company_email) LIKE $" +
+          (values.length + 1) +
+          " OR LOWER(industry) LIKE $" +
+          (values.length + 1) +
+          ")",
+      );
+      values.push(`%${params.search.toLowerCase()}%`);
+    }
+
+    if (params.country) {
+      whereClauses.push(`country = $${values.length + 1}`);
+      values.push(params.country);
+    }
+    if (params.industry) {
+      whereClauses.push(`industry = $${values.length + 1}`);
+      values.push(params.industry);
+    }
+    if (typeof params.is_verified === "boolean") {
+      whereClauses.push(`is_verified = $${values.length + 1}`);
+      values.push(params.is_verified);
+    }
+    if (params.company_size) {
+      whereClauses.push(`company_size = $${values.length + 1}`);
+      values.push(params.company_size);
+    }
+    if (params.company_name) {
+      whereClauses.push(`company_name ILIKE $${values.length + 1}`);
+      values.push(`%${params.company_name}%`);
+    }
+
+    // Construction de la requête principale
+    const baseQuery = `
+      SELECT *
+      FROM companies
+      ${whereClauses.length > 0 ? "WHERE " + whereClauses.join(" AND ") : ""}
+      ORDER BY created_at DESC
+      LIMIT $${values.length + 1}
+      OFFSET $${values.length + 2}
+    `;
+    values.push(limit, offset);
+
+    // Construction de la requête de comptage
+    const countQuery = `
+      SELECT COUNT(*) AS total
+      FROM companies
+      ${whereClauses.length > 0 ? "WHERE " + whereClauses.join(" AND ") : ""}
+    `;
+
+    try {
+      const dataResult = await db.query(baseQuery, values);
+      const countResult = await db.query(
+        countQuery,
+        values.slice(0, values.length - 2),
+      );
+      const total = parseInt(countResult.rows[0]?.total ?? "0", 10);
+
+      return {
+        data: dataResult.rows,
+        total,
+        page,
+        limit,
+      };
+    } catch (error) {
+      console.error("Error fetching companies with filters:", error);
+      throw new Error("Database error");
+    }
+  }
+
+  /**
    * Met à jour les informations d'une entreprise
    * @param id - L'ID de l'entreprise à mettre à jour
    * @param companyData - Les données à mettre à jour

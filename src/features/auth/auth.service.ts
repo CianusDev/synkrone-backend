@@ -10,8 +10,7 @@ import {
 } from "./auth.schema";
 import {
   comparePassword,
-  createCompanyToken,
-  createFreelanceToken,
+  createUserToken,
   createResetOTPToken,
   generateCodeOTP,
   hashPassword,
@@ -25,6 +24,9 @@ import { Request } from "express";
 import { CompanyRepository } from "../company/company.repository";
 import { HTTP_STATUS } from "../../utils/constant";
 import { envConfig } from "../../config/env.config";
+import { NotificationRepository } from "../notifications/notification.repository";
+import { NotificationTypeEnum } from "../notifications/notification.model";
+import { UserNotificationService } from "../notifications/user-notifications/user-notification.service";
 
 // Définir des types d'erreur personnalisés
 class AuthError extends Error {
@@ -66,6 +68,7 @@ export class AuthService {
   private readonly companyRepository: CompanyRepository;
   private readonly otpRepository: OtpRepository;
   private readonly userSessionRepository: UserSessionRepository;
+  private readonly userNotificationService: UserNotificationService;
 
   // OTP validity period in milliseconds (10 minutes)
   private readonly OTP_VALIDITY_PERIOD = 10 * 60 * 1000;
@@ -78,6 +81,7 @@ export class AuthService {
     this.companyRepository = new CompanyRepository();
     this.otpRepository = new OtpRepository();
     this.userSessionRepository = new UserSessionRepository();
+    this.userNotificationService = new UserNotificationService();
   }
 
   /**
@@ -280,6 +284,22 @@ export class AuthService {
         OtpType.EMAIL_VERIFICATION,
       );
 
+      // Notification de bienvenue
+      const notificationRepo = new NotificationRepository();
+      const welcomeNotification = await notificationRepo.createNotification({
+        title: "Bienvenue sur la plateforme !",
+        message: `Bonjour ${newFreelance.firstname}, votre compte a bien été créé. Nous vous souhaitons la bienvenue !`,
+        type: NotificationTypeEnum.system,
+        is_global: false,
+      });
+      if (welcomeNotification) {
+        await this.userNotificationService.createUserNotification(
+          newFreelance.id,
+          welcomeNotification.id,
+          false,
+        );
+      }
+
       return newFreelance;
     } catch (error) {
       // Propagation des erreurs personnalisées
@@ -340,7 +360,7 @@ export class AuthService {
       );
 
       // Création du token JWT pour l'authentification
-      const token = createFreelanceToken(freelance);
+      const token = createUserToken(freelance, "freelance");
 
       // Retourne les informations de connexion
       return {
@@ -637,7 +657,7 @@ export class AuthService {
       );
 
       // Création du token JWT pour l'authentification
-      const token = createCompanyToken(company);
+      const token = createUserToken(company, "company");
 
       // Retourne les informations de connexion
       return {
@@ -708,6 +728,22 @@ export class AuthService {
         },
         OtpType.EMAIL_VERIFICATION,
       );
+
+      // Notification de bienvenue
+      const notificationRepo = new NotificationRepository();
+      const welcomeNotification = await notificationRepo.createNotification({
+        title: "Bienvenue sur la plateforme !",
+        message: `Bonjour ${newCompany.company_name || "Entreprise"}, votre compte a bien été créé. Nous vous souhaitons la bienvenue !`,
+        type: NotificationTypeEnum.system,
+        is_global: false,
+      });
+      if (welcomeNotification) {
+        await this.userNotificationService.createUserNotification(
+          newCompany.id,
+          welcomeNotification.id,
+          false,
+        );
+      }
 
       return newCompany;
     } catch (error) {

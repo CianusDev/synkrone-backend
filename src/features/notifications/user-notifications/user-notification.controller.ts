@@ -30,10 +30,12 @@ export class UserNotificationController {
     });
   }
 
-  // GET /user-notifications?user_id=...&page=...&limit=...
+  // GET /user-notifications?page=...&limit=...
   async getUserNotifications(req: Request, res: Response) {
     try {
-      const { user_id, page, limit } = req.query;
+      const user_id = (req as any)?.user.id || "";
+
+      const { page, limit } = req.query;
       if (!user_id || typeof user_id !== "string") {
         return res.status(400).json({
           success: false,
@@ -67,7 +69,9 @@ export class UserNotificationController {
           message: "L'identifiant de la notification utilisateur est requis",
         });
       }
+      console.log("Marquage de la notification comme lue :", id);
       const updated = await this.service.markAsRead(id);
+      console.log("Notification marquée comme lue :", updated);
       if (!updated) {
         return res.status(404).json({
           success: false,

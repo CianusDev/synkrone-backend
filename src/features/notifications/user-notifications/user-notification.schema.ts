@@ -23,7 +23,6 @@ export const updateUserNotificationSchema = z.object({
 
 // Schéma pour la récupération des notifications utilisateur (filtrage, pagination)
 export const getUserNotificationsQuerySchema = z.object({
-  user_id: z.uuid({ message: "user_id doit être un UUID valide." }),
   page: z
     .string()
     .transform((val) => parseInt(val, 10))

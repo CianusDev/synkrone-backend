@@ -4,7 +4,7 @@ import { AdminSessionRepository } from "../admin-session/admin-session.repositor
 import { Request } from "express";
 import {
   comparePassword,
-  createAdminToken,
+  createUserToken,
   hashPassword,
 } from "../../utils/utils";
 import { loginAdminSchema } from "./auth-admin.schema";
@@ -139,7 +139,7 @@ export class AuthAdminService {
       );
 
       // Création du token JWT pour l'authentification
-      const token = createAdminToken(admin);
+      const token = createUserToken(admin, "admin");
 
       // Retourne les informations de connexion
       return {

@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { HTTP_STATUS } from "../utils/constant";
-import { verifyCompanyToken } from "../utils/utils";
+import { verifyUserToken } from "../utils/utils";
 import { CompanyRepository } from "../features/company/company.repository";
 const companyRepository = new CompanyRepository();
 
@@ -15,11 +15,11 @@ export const AuthCompanyMiddleware: RequestHandler = async (req, res, next) => {
     });
   }
 
-  const { company } = verifyCompanyToken(token);
+  const { user, role } = verifyUserToken(token);
 
-  console.log("Decoded company from token:", company);
+  // console.log("Decoded company from token:", user);
 
-  if (!company) {
+  if (role !== "company" || !user) {
     return res.status(HTTP_STATUS.UNAUTHORIZED).json({
       success: false,
       message: "Token invalide ou expiré. Accès refusé.",
@@ -28,7 +28,7 @@ export const AuthCompanyMiddleware: RequestHandler = async (req, res, next) => {
 
   try {
     const existingCompany = await companyRepository.getCompanyById(
-      company?.id || "",
+      user?.id || "",
     );
     if (!existingCompany) {
       return res.status(HTTP_STATUS.FORBIDDEN).json({
@@ -44,6 +44,6 @@ export const AuthCompanyMiddleware: RequestHandler = async (req, res, next) => {
   }
 
   // Ajoute la propriété company dynamiquement
-  (req as any).company = company;
+  (req as any).company = user;
   next();
 };

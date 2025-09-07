@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { HTTP_STATUS } from "../utils/constant";
-import { verifyAdminToken } from "../utils/utils";
+import { verifyUserToken } from "../utils/utils";
 import { AdminRepository } from "../features/admin/admin.repository";
 const adminRepository = new AdminRepository();
 
@@ -15,11 +15,11 @@ export const AuthAdminMiddleware: RequestHandler = async (req, res, next) => {
     });
   }
 
-  const { admin } = verifyAdminToken(token);
+  const { user, role } = verifyUserToken(token);
 
-  console.log("Decoded admin from token:", admin);
+  // console.log("Decoded admin from token:", user);
 
-  if (!admin) {
+  if (role !== "admin" || !user) {
     return res.status(HTTP_STATUS.UNAUTHORIZED).json({
       success: false,
       message: "Token invalide ou expiré. Accès refusé.",
@@ -27,7 +27,7 @@ export const AuthAdminMiddleware: RequestHandler = async (req, res, next) => {
   }
 
   try {
-    const existingAdmin = await adminRepository.getAdminById(admin?.id || "");
+    const existingAdmin = await adminRepository.getAdminById(user?.id || "");
     if (!existingAdmin) {
       return res.status(HTTP_STATUS.FORBIDDEN).json({
         success: false,
@@ -42,6 +42,6 @@ export const AuthAdminMiddleware: RequestHandler = async (req, res, next) => {
   }
 
   // Ajoute la propriété admin dynamiquement
-  (req as any).admin = admin;
+  (req as any).admin = user;
   next();
 };

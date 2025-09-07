@@ -16,6 +16,7 @@
     "db:reset": "ts-node src/scripts/db/init.ts reset",
     "db:verify": "ts-node src/scripts/db/init.ts verify",
     "test:smtp": "ts-node src/scripts/test/test-smtp.ts",
+    "test:send-welcome": "ts-node src/scripts/test/send-welcome-realtime.ts",
     "test:smtp:connection": "ts-node src/scripts/test/test-smtp.ts connection"
   },
   "keywords": [],

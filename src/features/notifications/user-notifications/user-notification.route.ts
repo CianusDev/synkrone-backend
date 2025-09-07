@@ -7,10 +7,11 @@ import {
   markAllAsReadQuerySchema,
   userNotificationIdSchema,
 } from "./user-notification.schema";
+import { AuthMiddleware } from "../../../middlewares/auth.middleware";
 
 const router = Router();
 const controller = new UserNotificationController();
-router.use(AuthFreelanceMiddleware, AuthCompanyMiddleware);
+router.use(AuthMiddleware);
 // GET /user-notifications?user_id=...&page=...&limit=...
 router.get("/", async (req, res) => {
   // Validation de la query

@@ -137,7 +137,7 @@ export class UserNotificationRepository {
     const query = `
       UPDATE user_notifications
       SET is_read = TRUE, updated_at = NOW()
-      WHERE id = $1
+      WHERE notification_id = $1
       RETURNING *
     `;
     try {
@@ -157,7 +157,7 @@ export class UserNotificationRepository {
   async deleteUserNotification(userNotificationId: string): Promise<boolean> {
     const query = `
       DELETE FROM user_notifications
-      WHERE id = $1
+      WHERE notification_id = $1
     `;
     try {
       const result = await db.query(query, [userNotificationId]);

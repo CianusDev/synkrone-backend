@@ -48,123 +48,46 @@ export const comparePassword = async (
 };
 
 /**
- * Crée un token JWT pour un utilisateur
- * @param freelance - Le freelance pour lequel créer le token
- * @param secret - La clé secrète utilisée pour signer le token
- * @param expiresIn - Durée de validité du token (par défaut: '7d')
+ * Crée un token JWT pour un utilisateur (Freelance, Company, Admin)
+ * @param user - L'utilisateur pour lequel créer le token
+ * @param role - Le rôle de l'utilisateur ('freelance', 'company', 'admin')
+ * @param expiresIn - Durée de validité du token (par défaut: '7d' pour freelance/company, '1d' pour admin)
  * @returns Le token JWT signé
  */
-export const createFreelanceToken = (
-  freelance: Freelance,
-  expiresIn: StringValue = "7d",
+export const createUserToken = (
+  user: Freelance | Company | Admin,
+  role: "freelance" | "company" | "admin",
+  expiresIn?: StringValue,
 ): string => {
   try {
-    const options: SignOptions = { expiresIn };
-    return jwt.sign({ freelance }, secret, options);
+    let defaultExpiresIn: StringValue = "7d";
+    if (role === "admin") defaultExpiresIn = "1d";
+    const options: SignOptions = { expiresIn: expiresIn || defaultExpiresIn };
+    return jwt.sign({ user, role }, secret, options);
   } catch (error) {
-    throw new Error("Erreur lors de la création du token de freelance");
+    throw new Error("Erreur lors de la création du token utilisateur");
   }
 };
 
 /**
- * Vérifie un token JWT et retourne le freelance décodé
+ * Vérifie un token JWT et retourne l'utilisateur décodé et son rôle
  * @param token - Le token JWT à vérifier
- * @param secret - La clé secrète utilisée pour vérifier le token
- * @returns L'utilisateur décodé ou null si le token est invalide
+ * @returns L'utilisateur décodé et son rôle ou null si le token est invalide
  */
-export const verifyFreelanceToken = (
+export const verifyUserToken = (
   token: string,
-): { freelance: Freelance | null } => {
+): {
+  user: Freelance | Company | Admin | null;
+  role: "freelance" | "company" | "admin" | null;
+} => {
   try {
     const decoded = jwt.verify(token, secret) as {
-      freelance: Freelance | null;
+      user: Freelance | Company | Admin;
+      role: "freelance" | "company" | "admin";
     };
-    return { freelance: decoded.freelance };
+    return { user: decoded.user, role: decoded.role };
   } catch (error) {
-    return { freelance: null };
-  }
-};
-
-// export const expireToken = (token: string): boolean => {
-//   try {
-//     // Créer un token expiré immédiatement
-//     const blacklistedPayload = jwt.verify(token, secret) as any;
-
-//     // Régénérer un token avec la même payload mais qui expire immédiatement
-//     jwt.sign(blacklistedPayload, secret, { expiresIn: 0 });
-
-//     return true;
-//   } catch (error) {
-//     // Si le token est déjà invalide ou expiré
-//     return false;
-//   }
-// };
-
-/**
- * Crée un token JWT pour une entreprise
- * @param company - L'entreprise pour laquelle créer le token
- * @param expiresIn - Durée de validité du token (par défaut: '7d')
- * @returns Le token JWT signé
- */
-export const createCompanyToken = (
-  company: Company,
-  expiresIn: StringValue = "7d",
-): string => {
-  try {
-    const options: SignOptions = { expiresIn };
-    return jwt.sign({ company }, secret, options);
-  } catch (error) {
-    throw new Error("Erreur lors de la création du token d'entreprise");
-  }
-};
-
-/**
- * Vérifie un token JWT et retourne l'entreprise décodée
- * @param token - Le token JWT à vérifier
- * @param secret - La clé secrète utilisée pour vérifier le token
- * @returns L'entreprise décodée ou null si le token est invalide
- */
-export const verifyCompanyToken = (
-  token: string,
-): { company: Company | null } => {
-  try {
-    const decoded = jwt.verify(token, secret) as { company: Company | null };
-    return { company: decoded.company };
-  } catch (error) {
-    return { company: null };
-  }
-};
-
-/**
- * Crée un token JWT pour un administrateur
- * @param admin - L'administrateur pour lequel créer le token
- * @param expiresIn - Durée de validité du token (par défaut: '7d')
- * @returns Le token JWT signé
- */
-export const createAdminToken = (
-  admin: Admin,
-  expiresIn: StringValue = "1d",
-): string => {
-  try {
-    const options: SignOptions = { expiresIn };
-    return jwt.sign(admin, secret, options);
-  } catch (error) {
-    throw new Error("Erreur lors de la création du token d'administrateur");
-  }
-};
-
-/**
- * Vérifie un token JWT et retourne l'administrateur décodé
- * @param token - Le token JWT à vérifier
- * @param secret - La clé secrète utilisée pour vérifier le token
- * @returns L'administrateur décodé ou null si le token est invalide
- */
-export const verifyAdminToken = (token: string): { admin: Admin | null } => {
-  try {
-    const decoded = jwt.verify(token, secret) as Admin;
-    return { admin: decoded };
-  } catch (error) {
-    return { admin: null };
+    return { user: null, role: null };
   }
 };
 

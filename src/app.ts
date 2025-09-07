@@ -13,7 +13,17 @@ import freelanceRoutes from "./features/freelance/freelance.route";
 import notificationRoutes from "./features/notifications/notification.route";
 import userNotificationRoutes from "./features/notifications/user-notifications/user-notification.route";
 import projectRoutes from "./features/projects/projects.route";
-import { HTTP_STATUS } from "./utils/constant";
+import { HTTP_STATUS, SOKET_EVENTS } from "./utils/constant";
+import applicationsRoutes from "./features/applications/applications.route";
+import projectInvitationRoutes from "./features/project-invitations/project-invitations.route";
+import contractsRoutes from "./features/contracts/contracts.route";
+import { io } from "./server";
+import { FreelanceRepository } from "./features/freelance/freelance.repository";
+import { CompanyRepository } from "./features/company/company.repository";
+import { NotificationRepository } from "./features/notifications/notification.repository";
+import { NotificationTypeEnum } from "./features/notifications/notification.model";
+import { UserNotificationRepository } from "./features/notifications/user-notifications/user-notification.repository";
+import { AuthAdminMiddleware } from "./middlewares/auth-admin.middleware";
 dotenv.config();
 
 export const app = express();
@@ -30,6 +40,163 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+// Dans un contrôleur Express
+app.get("/test-notif/:userId", (req, res) => {
+  const userId = req.params.userId;
+  io.to(userId).emit("notification:new", {
+    notification: {
+      title: "Test manuel",
+      message: "Ceci est un test manuel",
+    },
+  });
+  res.send("Notification envoyée !");
+});
+
+// Endpoint pour envoyer les notifications de bienvenue (Admin uniquement)
+app.post(
+  "/api/admin/send-welcome-notifications",
+  // AuthAdminMiddleware,
+  async (req, res) => {
+    try {
+      console.log("🚀 Démarrage de l'envoi des notifications de bienvenue...");
+
+      // Initialisation des repositories
+      const freelanceRepo = new FreelanceRepository();
+      const companyRepo = new CompanyRepository();
+      const notificationRepo = new NotificationRepository();
+      const userNotificationRepo = new UserNotificationRepository();
+
+      // Fonction pour créer une notification utilisateur avec temps réel
+      const createUserNotificationWithRealtime = async (
+        userId: string,
+        notificationId: string,
+        isRead: boolean = false,
+      ) => {
+        // 1. Créer la liaison user-notification dans la base de données
+        const userNotification =
+          await userNotificationRepo.createUserNotification(
+            userId,
+            notificationId,
+            isRead,
+          );
+
+        // 2. Récupérer la notification complète
+        const notification =
+          await notificationRepo.getNotificationById(notificationId);
+
+        // 3. Émettre l'événement Socket.IO en temps réel
+        if (notification) {
+          io.to(userId).emit(SOKET_EVENTS.notifications.new, {
+            ...userNotification,
+            notification,
+          });
+          console.log(
+            `🔔 Notification émise en temps réel pour l'utilisateur ${userId}`,
+          );
+        }
+
+        return userNotification;
+      };
+
+      // 1. Récupérer tous les freelances
+      const freelances = await freelanceRepo.getFreelancesWithFilters({
+        limit: 10000,
+        page: 1,
+      });
+
+      // 2. Récupérer toutes les companies
+      const companies = await companyRepo.getCompaniesWithFilters({
+        limit: 10000,
+        page: 1,
+      });
+
+      // 3. Créer la notification de bienvenue
+      const notification = await notificationRepo.createNotification({
+        title: "Bienvenue sur la plateforme !",
+        message:
+          "Votre compte a bien été créé. Nous vous souhaitons la bienvenue sur Synkrone.",
+        type: NotificationTypeEnum.system,
+        is_global: false,
+      });
+
+      if (!notification) {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          success: false,
+          message: "Erreur lors de la création de la notification",
+        });
+      }
+
+      // 4. Compteurs pour le récapitulatif
+      let freelanceSuccess = 0;
+      let freelanceErrors = 0;
+      let companySuccess = 0;
+      let companyErrors = 0;
+
+      // 5. Envoyer la notification à tous les freelances
+      for (const freelance of freelances.data) {
+        try {
+          await createUserNotificationWithRealtime(
+            freelance.id,
+            notification.id,
+            false,
+          );
+          freelanceSuccess++;
+        } catch (err) {
+          console.error(`❌ Erreur pour freelance ${freelance.email}:`, err);
+          freelanceErrors++;
+        }
+      }
+
+      // 6. Envoyer la notification à toutes les companies
+      for (const company of companies.data) {
+        try {
+          await createUserNotificationWithRealtime(
+            company.id,
+            notification.id,
+            false,
+          );
+          companySuccess++;
+        } catch (err) {
+          console.error(
+            `❌ Erreur pour company ${company.company_email}:`,
+            err,
+          );
+          companyErrors++;
+        }
+      }
+
+      // 7. Retourner le récapitulatif
+      res.status(HTTP_STATUS.OK).json({
+        success: true,
+        message: "Notifications de bienvenue envoyées",
+        data: {
+          notification_id: notification.id,
+          freelances: {
+            total: freelances.data.length,
+            success: freelanceSuccess,
+            errors: freelanceErrors,
+          },
+          companies: {
+            total: companies.data.length,
+            success: companySuccess,
+            errors: companyErrors,
+          },
+          total_sent: freelanceSuccess + companySuccess,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "❌ Erreur globale lors de l'envoi des notifications:",
+        error,
+      );
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Erreur interne du serveur",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+);
 
 app.get("/health", (_, res: Response) => {
   res.status(HTTP_STATUS.OK).json({
@@ -49,3 +216,6 @@ app.use("/api/freelances", freelanceRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/user-notifications", userNotificationRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/project-invitations", projectInvitationRoutes);
+app.use("/api/applications", applicationsRoutes);
+app.use("/api/contracts", contractsRoutes);
