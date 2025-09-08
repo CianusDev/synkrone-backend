@@ -26,8 +26,8 @@ CREATE TABLE projects (
     description TEXT,
     budget_min DECIMAL(12,2),
     budget_max DECIMAL(12,2),
-    location VARCHAR(255) NULL,
     deadline DATE,
+    duration_days INTEGER CHECK (duration_days >= 0),
     status project_status_enum DEFAULT 'draft',
     type_work type_work_enum,
     category_id UUID REFERENCES project_categories(id) ON DELETE SET NULL,
@@ -63,8 +63,8 @@ export interface Project {
   description?: string;
   budgetMin?: number;
   budgetMax?: number;
-  location?: string;
   deadline?: string; // ISO date string
+  durationDays?: number;
   status: ProjectStatus;
   typeWork?: TypeWork;
   categoryId?: string;
@@ -107,8 +107,8 @@ Toutes les routes sont protégées par le middleware :
   "description": "Développement d'une app mobile",
   "budgetMin": 10000,
   "budgetMax": 15000,
-  "location": "Paris, France",
   "deadline": "2024-09-30",
+  "durationDays": 60,
   "typeWork": "remote",
   "categoryId": "uuid-category",
   "companyId": "uuid-company"
@@ -119,8 +119,8 @@ Toutes les routes sont protégées par le middleware :
 - `title` : string, requis
 - `budgetMin` : number, positif
 - `budgetMax` : number, positif
-- `location` : string, optionnel
 - `deadline` : date future
+- `durationDays` : number, positif (durée en jours)
 - `typeWork` : enum
 - `categoryId` : UUID optionnel
 - `companyId` : UUID (injecté par le middleware)
@@ -133,7 +133,7 @@ Toutes les routes sont protégées par le middleware :
   "description": "Nouvelle description",
   "budgetMin": 11000,
   "budgetMax": 16000,
-  "location": "Lyon, France"
+  "durationDays": 45
 }
 ```
 

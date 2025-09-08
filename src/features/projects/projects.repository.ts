@@ -37,19 +37,20 @@ export class ProjectsRepository {
     typeWork?: TypeWork;
     categoryId?: string;
     companyId: string;
+    durationDays?: number;
   }): Promise<Project> {
     const result = await query<Project>(
       `INSERT INTO projects (
-        title, description, budget_min, budget_max, location, deadline, status, type_work, category_id, company_id
+        title, description, budget_min, budget_max, deadline, duration_days, status, type_work, category_id, company_id
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", location, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"`,
+      RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", deadline, duration_days, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"`,
       [
         data.title,
         data.description ?? null,
         data.budgetMin ?? null,
         data.budgetMax ?? null,
-        data.location ?? null,
         data.deadline ?? null,
+        data.durationDays ?? null,
         data.status ?? ProjectStatus.DRAFT,
         data.typeWork ?? null,
         data.categoryId ?? null,
@@ -64,10 +65,11 @@ export class ProjectsRepository {
    */
   async getProjectById(id: string): Promise<Project | null> {
     const result = await query<Project>(
-      `SELECT id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", location, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"
+      `SELECT id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", deadline, duration_days AS "durationDays", status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"
        FROM projects WHERE id = $1`,
       [id],
     );
+
     return result.rows[0] ?? null;
   }
 
@@ -98,13 +100,13 @@ export class ProjectsRepository {
       fields.push(`budget_max = $${idx++}`);
       values.push(data.budgetMax);
     }
-    if (data.location !== undefined) {
-      fields.push(`location = $${idx++}`);
-      values.push(data.location);
-    }
     if (data.deadline !== undefined) {
       fields.push(`deadline = $${idx++}`);
       values.push(data.deadline);
+    }
+    if (data.durationDays !== undefined) {
+      fields.push(`duration_days = $${idx++}`);
+      values.push(data.durationDays);
     }
     if (data.status !== undefined) {
       fields.push(`status = $${idx++}`);
@@ -128,7 +130,7 @@ export class ProjectsRepository {
     const queryText = `
       UPDATE projects SET ${fields.join(", ")}
       WHERE id = $1
-      RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", location, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"
+      RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", deadline, duration_days, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"
     `;
     const result = await query<Project>(queryText, [id, ...values]);
     return result.rows[0] ?? null;
@@ -159,7 +161,30 @@ export class ProjectsRepository {
     limit: number;
     offset: number;
   }> {
-    let queryText = `SELECT id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", location, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt" FROM projects`;
+    let queryText = `
+      SELECT
+        p.id,
+        p.title,
+        p.description,
+        p.budget_min AS "budgetMin",
+        p.budget_max AS "budgetMax",
+        p.deadline,
+        p.duration_days,
+        p.status,
+        p.type_work AS "typeWork",
+        p.category_id AS "categoryId",
+        p.company_id AS "companyId",
+        p.created_at AS "createdAt",
+        p.updated_at AS "updatedAt",
+        p.published_at AS "publishedAt",
+        (
+          SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id
+        ) AS "applicationsCount",
+        (
+          SELECT COUNT(*) FROM project_invitations i WHERE i.project_id = p.id
+        ) AS "invitationsCount"
+      FROM projects p
+    `;
     let countQuery = `SELECT COUNT(*) AS total FROM projects`;
     const conditions = [];
     const whereValues = [];
@@ -227,5 +252,33 @@ export class ProjectsRepository {
       limit: params?.limit ?? 10,
       offset: params?.offset ?? 0,
     };
+  }
+
+  /**
+   * Récupère les projets récemment publiés
+   */
+  async getRecentlyPublishedProjects(limit: number = 5): Promise<Project[]> {
+    const result = await query<Project>(
+      `SELECT
+        id,
+        title,
+        description,
+        budget_min AS "budgetMin",
+        budget_max AS "budgetMax",
+        deadline,
+        duration_days AS "durationDays",
+        status,
+        type_work AS "typeWork",
+        category_id AS "categoryId",
+        company_id AS "companyId",
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
+      FROM projects
+      WHERE status = 'published'
+      ORDER BY created_at DESC
+      LIMIT $1`,
+      [limit],
+    );
+    return result.rows;
   }
 }

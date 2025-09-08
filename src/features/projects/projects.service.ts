@@ -1,11 +1,14 @@
 import { ProjectsRepository } from "./projects.repository";
 import { Project, ProjectStatus, TypeWork } from "./projects.model";
+import { ProjectSkillsService } from "../project-skills/project-skills.service";
 
 export class ProjectsService {
   private readonly repository: ProjectsRepository;
+  private readonly projectSkillsService: ProjectSkillsService;
 
   constructor() {
     this.repository = new ProjectsRepository();
+    this.projectSkillsService = new ProjectSkillsService();
   }
 
   /**
@@ -72,7 +75,20 @@ export class ProjectsService {
    * Récupère un projet par son id
    */
   async getProjectById(id: string): Promise<Project | null> {
-    return this.repository.getProjectById(id);
+    // Récupère le projet principal
+    const project = await this.repository.getProjectById(id);
+    if (!project) return null;
+
+    // Récupère les compétences du projet via ProjectSkillsService
+    const skills = await this.projectSkillsService.getSkillsByProjectId(id);
+    project.skills = skills;
+
+    // Récupère les projets récemment publiés (hors celui en cours)
+    const recentProjects =
+      await this.repository.getRecentlyPublishedProjects(5);
+    project.recentProjects = recentProjects.filter((p) => p.id !== id);
+
+    return project;
   }
 
   /**

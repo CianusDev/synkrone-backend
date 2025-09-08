@@ -667,12 +667,14 @@ CREATE TABLE projects (
     budget_min DECIMAL(12,2),
     budget_max DECIMAL(12,2),
     deadline DATE,
+    duration_days INTEGER CHECK (duration_days >= 0),
     status project_status_enum DEFAULT 'draft',
     type_work type_work_enum,
     category_id UUID REFERENCES project_categories(id) ON DELETE SET NULL,
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL
+    published_at TIMESTAMP NULL
 );
 
 -- =============================================

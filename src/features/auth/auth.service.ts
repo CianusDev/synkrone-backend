@@ -670,6 +670,13 @@ export class AuthService {
           is_verified: company.is_verified,
           is_first_login: company.is_first_login,
           company_phone: company.company_phone,
+          website_url: company.website_url,
+          country: company.country,
+          city: company.city,
+          address: company.address,
+          company_description: company.company_description,
+          industry: company.industry,
+          company_size: company.company_size,
           // Ne pas retourner le mot de passe hashé ou d'autres informations sensibles
         },
         sessionId: newSessionId,

@@ -91,7 +91,11 @@ export class ProjectsController {
 
       res.status(200).json({
         success: true,
-        data: result.data,
+        data: result.data.map((project) => ({
+          ...project,
+          applicationsCount: project.applicationsCount ?? 0,
+          invitationsCount: project.invitationsCount ?? 0,
+        })),
         total: result.total,
         limit: result.limit,
         offset: result.offset,

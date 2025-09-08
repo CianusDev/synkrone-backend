@@ -13,7 +13,6 @@ export const createProjectSchema = z.object({
     .number()
     .positive("Le budget maximum doit être positif.")
     .optional(),
-  location: z.string().max(255).optional(),
   deadline: z
     .string()
     .refine(
@@ -21,6 +20,7 @@ export const createProjectSchema = z.object({
       "La deadline doit être une date future.",
     )
     .optional(),
+  durationDays: z.number().int().nonnegative().optional(),
   status: z.enum(ProjectStatus).optional(),
   typeWork: z.enum(TypeWork).optional(),
   categoryId: z.uuid().optional(),
@@ -39,7 +39,6 @@ export const updateProjectSchema = z.object({
     .number()
     .positive("Le budget maximum doit être positif.")
     .optional(),
-  location: z.string().max(255).optional(),
   deadline: z
     .string()
     .refine(
@@ -47,6 +46,7 @@ export const updateProjectSchema = z.object({
       "La deadline doit être une date future.",
     )
     .optional(),
+  durationDays: z.number().int().nonnegative().optional(),
   status: z.enum(ProjectStatus).optional(),
   typeWork: z.enum(TypeWork).optional(),
   categoryId: z.uuid().optional(),

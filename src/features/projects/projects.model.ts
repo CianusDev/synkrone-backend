@@ -1,3 +1,5 @@
+import { ProjectSkillWithDetails } from "../project-skills/project-skills.model";
+
 export enum ProjectStatus {
   DRAFT = "draft",
   PUBLISHED = "published",
@@ -24,4 +26,10 @@ export interface Project {
   companyId: string;
   createdAt: string;
   updatedAt?: string;
+  publishedAt?: string;
+  durationDays?: number;
+  applicationsCount?: number;
+  invitationsCount?: number;
+  skills?: ProjectSkillWithDetails[];
+  recentProjects?: Project[];
 }
