@@ -1,4 +1,5 @@
 import { ProjectSkillWithDetails } from "../project-skills/project-skills.model";
+import { Company } from "../company/company.model";
 
 export enum ProjectStatus {
   DRAFT = "draft",
@@ -32,4 +33,5 @@ export interface Project {
   invitationsCount?: number;
   skills?: ProjectSkillWithDetails[];
   recentProjects?: Project[];
+  company?: Company;
 }

@@ -137,6 +137,7 @@ export class ProjectsService {
     }
     // Mettre à jour le statut
     return this.repository.updateProject(id, {
+      publishedAt: new Date().toISOString(),
       status: ProjectStatus.PUBLISHED,
     });
   }
@@ -157,6 +158,7 @@ export class ProjectsService {
     companyId?: string;
     categoryId?: string;
     search?: string;
+    page?: number;
     limit?: number;
     offset?: number;
   }): Promise<{
@@ -165,12 +167,41 @@ export class ProjectsService {
     limit: number;
     offset: number;
     totalPages: number;
+    page?: number;
   }> {
-    const result = await this.repository.listProjects(params);
-    const totalPages = Math.ceil(result.total / (result.limit || 1));
+    // Conversion page vers offset si page est fourni
+    let finalOffset = params?.offset ?? 0;
+    const finalLimit = params?.limit ?? 10;
+
+    if (params?.page && params.page > 0) {
+      finalOffset = (params.page - 1) * finalLimit;
+    }
+
+    const result = await this.repository.listProjects({
+      ...params,
+      limit: finalLimit,
+      offset: finalOffset,
+    });
+
+    // Ajouter les skills à chaque projet
+    const projectsWithSkills = await Promise.all(
+      result.data.map(async (project) => {
+        const skills = await this.projectSkillsService.getSkillsByProjectId(
+          project.id,
+        );
+        return { ...project, skills };
+      }),
+    );
+
+    const totalPages = Math.ceil(result.total / finalLimit);
+    const currentPage =
+      params?.page ?? Math.floor(finalOffset / finalLimit) + 1;
+
     return {
       ...result,
+      data: projectsWithSkills,
       totalPages,
+      page: currentPage,
     };
   }
 }

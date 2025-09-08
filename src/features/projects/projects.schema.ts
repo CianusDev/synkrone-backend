@@ -65,6 +65,12 @@ export const getProjectsWithFiltersSchema = z.object({
   companyId: z.uuid().optional(),
   categoryId: z.uuid().optional(),
   search: z.string().optional(),
+  page: z
+    .union([
+      z.string().transform((val) => parseInt(val, 10)),
+      z.number().int().positive(),
+    ])
+    .optional(),
   limit: z
     .union([
       z.string().transform((val) => parseInt(val, 10)),

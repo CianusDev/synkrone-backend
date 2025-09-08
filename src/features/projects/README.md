@@ -160,18 +160,19 @@ Toutes les routes sont protégées par le middleware :
 - Récupère automatiquement les projets de l'entreprise connectée via le token
 - Support des mêmes paramètres de pagination et filtres que `/projects`
 - Le `companyId` est automatiquement extrait du token d'authentification
-- Paramètres disponibles : `limit`, `offset`, `search`, `status`, `typeWork`, `categoryId`
+- Paramètres disponibles : `page`, `limit`, `offset`, `search`, `status`, `typeWork`, `categoryId`
 
 ---
 
 ## 📄 Pagination & Recherche
 
-- Paramètres `limit`, `offset`, `search`, `status`, `typeWork`, `companyId`, `categoryId`
+- Paramètres `page`, `limit`, `offset`, `search`, `status`, `typeWork`, `companyId`, `categoryId`
 - Réponse inclut :
   - `data` : liste des projets
   - `total` : nombre total de projets trouvés
   - `limit` : taille de page
   - `offset` : offset
+  - `page` : numéro de page actuelle
   - `totalPages` : nombre total de pages
 
 ---
@@ -213,6 +214,7 @@ Toutes les routes sont protégées par le middleware :
   "total": 42,
   "limit": 10,
   "offset": 0,
+  "page": 1,
   "totalPages": 5,
   "message": "Liste des projets récupérée avec succès"
 }

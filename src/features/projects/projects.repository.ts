@@ -61,12 +61,45 @@ export class ProjectsRepository {
   }
 
   /**
-   * Récupère un projet par son id
+   * Récupère un projet par son id avec les informations de l'entreprise
    */
   async getProjectById(id: string): Promise<Project | null> {
-    const result = await query<Project>(
-      `SELECT id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", deadline, duration_days AS "durationDays", status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"
-       FROM projects WHERE id = $1`,
+    const result = await query<any>(
+      `SELECT
+        p.id,
+        p.title,
+        p.description,
+        p.budget_min AS "budgetMin",
+        p.budget_max AS "budgetMax",
+        p.deadline,
+        p.duration_days AS "durationDays",
+        p.status,
+        p.type_work AS "typeWork",
+        p.category_id AS "categoryId",
+        p.company_id AS "companyId",
+        p.created_at AS "createdAt",
+        p.updated_at AS "updatedAt",
+        json_build_object(
+          'id', c.id,
+          'company_name', c.company_name,
+          'company_email', c.company_email,
+          'logo_url', c.logo_url,
+          'company_description', c.company_description,
+          'industry', c.industry,
+          'website_url', c.website_url,
+          'address', c.address,
+          'company_size', c.company_size,
+          'is_certified', c.is_certified,
+          'is_verified', c.is_verified,
+          'country', c.country,
+          'city', c.city,
+          'company_phone', c.company_phone,
+          'created_at', c.created_at,
+          'updated_at', c.updated_at
+        ) AS company
+       FROM projects p
+       INNER JOIN companies c ON p.company_id = c.id
+       WHERE p.id = $1`,
       [id],
     );
 
@@ -124,14 +157,18 @@ export class ProjectsRepository {
       fields.push(`company_id = $${idx++}`);
       values.push(data.companyId);
     }
+    if (data.publishedAt !== undefined) {
+      fields.push(`published_at = $${idx++}`);
+      values.push(data.publishedAt);
+    }
 
     if (fields.length === 0) return this.getProjectById(id);
 
     const queryText = `
-      UPDATE projects SET ${fields.join(", ")}
-      WHERE id = $1
-      RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", deadline, duration_days, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"
-    `;
+       UPDATE projects SET ${fields.join(", ")}
+       WHERE id = $1
+       RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", deadline, duration_days, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", published_at AS "publishedAt", created_at AS "createdAt", updated_at AS "updatedAt"
+     `;
     const result = await query<Project>(queryText, [id, ...values]);
     return result.rows[0] ?? null;
   }
@@ -182,34 +219,53 @@ export class ProjectsRepository {
         ) AS "applicationsCount",
         (
           SELECT COUNT(*) FROM project_invitations i WHERE i.project_id = p.id
-        ) AS "invitationsCount"
+        ) AS "invitationsCount",
+        json_build_object(
+          'id', c.id,
+          'company_name', c.company_name,
+          'company_email', c.company_email,
+          'logo_url', c.logo_url,
+          'company_description', c.company_description,
+          'industry', c.industry,
+          'website_url', c.website_url,
+          'address', c.address,
+          'company_size', c.company_size,
+          'is_certified', c.is_certified,
+          'is_verified', c.is_verified,
+          'country', c.country,
+          'city', c.city,
+          'company_phone', c.company_phone,
+          'created_at', c.created_at,
+          'updated_at', c.updated_at
+        ) AS company
       FROM projects p
+      INNER JOIN companies c ON p.company_id = c.id
     `;
-    let countQuery = `SELECT COUNT(*) AS total FROM projects`;
+    let countQuery = `SELECT COUNT(*) AS total FROM projects p INNER JOIN companies c ON p.company_id = c.id`;
     const conditions = [];
     const whereValues = [];
     let paramIdx = 1;
 
     // Construction des conditions WHERE
     if (params?.status) {
-      conditions.push(`status = $${paramIdx++}`);
+      conditions.push(`p.status = $${paramIdx++}`);
       whereValues.push(params.status);
     }
     if (params?.typeWork) {
-      conditions.push(`type_work = $${paramIdx++}`);
+      conditions.push(`p.type_work = $${paramIdx++}`);
       whereValues.push(params.typeWork);
     }
     if (params?.companyId) {
-      conditions.push(`company_id = $${paramIdx++}`);
+      conditions.push(`p.company_id = $${paramIdx++}`);
       whereValues.push(params.companyId);
     }
     if (params?.categoryId) {
-      conditions.push(`category_id = $${paramIdx++}`);
+      conditions.push(`p.category_id = $${paramIdx++}`);
       whereValues.push(params.categoryId);
     }
     if (params?.search) {
       conditions.push(
-        `(title ILIKE $${paramIdx} OR description ILIKE $${paramIdx + 1})`,
+        `(p.title ILIKE $${paramIdx} OR p.description ILIKE $${paramIdx + 1})`,
       );
       whereValues.push(`%${params.search}%`);
       whereValues.push(`%${params.search}%`);
@@ -225,7 +281,7 @@ export class ProjectsRepository {
     }
 
     // Ordre
-    queryText += " ORDER BY created_at DESC";
+    queryText += " ORDER BY p.created_at DESC";
 
     // Pagination
     const finalQueryValues = [...whereValues];
@@ -255,27 +311,46 @@ export class ProjectsRepository {
   }
 
   /**
-   * Récupère les projets récemment publiés
+   * Récupère les projets récemment publiés avec les informations de l'entreprise
    */
   async getRecentlyPublishedProjects(limit: number = 5): Promise<Project[]> {
     const result = await query<Project>(
       `SELECT
-        id,
-        title,
-        description,
-        budget_min AS "budgetMin",
-        budget_max AS "budgetMax",
-        deadline,
-        duration_days AS "durationDays",
-        status,
-        type_work AS "typeWork",
-        category_id AS "categoryId",
-        company_id AS "companyId",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
-      FROM projects
-      WHERE status = 'published'
-      ORDER BY created_at DESC
+        p.id,
+        p.title,
+        p.description,
+        p.budget_min AS "budgetMin",
+        p.budget_max AS "budgetMax",
+        p.deadline,
+        p.duration_days AS "durationDays",
+        p.status,
+        p.type_work AS "typeWork",
+        p.category_id AS "categoryId",
+        p.company_id AS "companyId",
+        p.created_at AS "createdAt",
+        p.updated_at AS "updatedAt",
+        json_build_object(
+          'id', c.id,
+          'company_name', c.company_name,
+          'company_email', c.company_email,
+          'logo_url', c.logo_url,
+          'company_description', c.company_description,
+          'industry', c.industry,
+          'website_url', c.website_url,
+          'address', c.address,
+          'company_size', c.company_size,
+          'is_certified', c.is_certified,
+          'is_verified', c.is_verified,
+          'country', c.country,
+          'city', c.city,
+          'company_phone', c.company_phone,
+          'created_at', c.created_at,
+          'updated_at', c.updated_at
+        ) AS company
+      FROM projects p
+      INNER JOIN companies c ON p.company_id = c.id
+      WHERE p.status = 'published'
+      ORDER BY p.created_at DESC
       LIMIT $1`,
       [limit],
     );

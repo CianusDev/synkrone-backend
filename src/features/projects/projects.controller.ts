@@ -48,6 +48,7 @@ export class ProjectsController {
         companyId: parsed.companyId,
         categoryId: parsed.categoryId,
         search: parsed.search,
+        page: parsed.page,
         limit: parsed.limit,
         offset: parsed.offset,
       });
@@ -58,6 +59,7 @@ export class ProjectsController {
         total: result.total,
         limit: result.limit,
         offset: result.offset,
+        page: result.page,
         totalPages: result.totalPages,
         message: "Liste des projets récupérée avec succès",
       });
@@ -85,6 +87,7 @@ export class ProjectsController {
         companyId: company.id, // Forcer le companyId à celui de l'entreprise connectée
         categoryId: parsed.categoryId,
         search: parsed.search,
+        page: parsed.page,
         limit: parsed.limit,
         offset: parsed.offset,
       });
@@ -99,6 +102,7 @@ export class ProjectsController {
         total: result.total,
         limit: result.limit,
         offset: result.offset,
+        page: result.page,
         totalPages: result.totalPages,
         message: "Liste de vos projets récupérée avec succès",
       });
