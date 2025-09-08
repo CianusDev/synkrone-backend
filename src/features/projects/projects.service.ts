@@ -14,7 +14,9 @@ export class ProjectsService {
   async createProject(data: {
     title: string;
     description?: string;
-    budget?: number;
+    budgetMin?: number;
+    budgetMax?: number;
+    location?: string;
     deadline?: string;
     status?: ProjectStatus;
     typeWork?: TypeWork;
@@ -37,9 +39,21 @@ export class ProjectsService {
       throw new Error("Entreprise non trouvée");
     }
 
-    // 3. Vérifier le budget
-    if (data.budget !== undefined && data.budget <= 0) {
-      throw new Error("Le budget doit être positif");
+    // 3. Vérifier les budgets
+    if (data.budgetMin !== undefined && data.budgetMin <= 0) {
+      throw new Error("Le budget minimum doit être positif");
+    }
+    if (data.budgetMax !== undefined && data.budgetMax <= 0) {
+      throw new Error("Le budget maximum doit être positif");
+    }
+    if (
+      data.budgetMin !== undefined &&
+      data.budgetMax !== undefined &&
+      data.budgetMax < data.budgetMin
+    ) {
+      throw new Error(
+        "Le budget maximum doit être supérieur ou égal au budget minimum",
+      );
     }
 
     // 4. Vérifier la deadline
@@ -69,6 +83,26 @@ export class ProjectsService {
     data: Partial<Omit<Project, "id" | "createdAt" | "updatedAt">>,
   ): Promise<Project | null> {
     // Logique métier additionnelle possible ici
+    // Validation des budgets si présents
+    if (data.budgetMin !== undefined && data.budgetMin <= 0) {
+      throw new Error("Le budget minimum doit être positif");
+    }
+    if (data.budgetMax !== undefined && data.budgetMax <= 0) {
+      throw new Error("Le budget maximum doit être positif");
+    }
+    if (
+      data.budgetMin !== undefined &&
+      data.budgetMax !== undefined &&
+      data.budgetMax < data.budgetMin
+    ) {
+      throw new Error(
+        "Le budget maximum doit être supérieur ou égal au budget minimum",
+      );
+    }
+    // Validation de la deadline si présente
+    if (data.deadline && new Date(data.deadline) < new Date()) {
+      throw new Error("La deadline doit être une date future");
+    }
     return this.repository.updateProject(id, data);
   }
 

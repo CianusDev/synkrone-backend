@@ -66,6 +66,43 @@ export class ProjectsController {
     }
   }
 
+  // GET /projects/my-projects : projets de l'entreprise connectée
+  async getMyProjects(req: Request & { company?: Company }, res: Response) {
+    try {
+      const company = req.company; // Injecté par le middleware AuthCompanyMiddleware
+      if (!company) {
+        return res.status(401).json({
+          success: false,
+          message: "Entreprise non authentifiée",
+        });
+      }
+
+      const parsed = getProjectsWithFiltersSchema.parse(req.query);
+
+      const result = await this.service.listProjects({
+        status: parsed.status,
+        typeWork: parsed.typeWork,
+        companyId: company.id, // Forcer le companyId à celui de l'entreprise connectée
+        categoryId: parsed.categoryId,
+        search: parsed.search,
+        limit: parsed.limit,
+        offset: parsed.offset,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        totalPages: result.totalPages,
+        message: "Liste de vos projets récupérée avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
   // GET /projects/:id
   async getProjectById(req: Request, res: Response) {
     try {

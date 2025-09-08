@@ -5,7 +5,15 @@ import { ProjectStatus, TypeWork } from "./projects.model";
 export const createProjectSchema = z.object({
   title: z.string().min(1, "Le titre est requis."),
   description: z.string().optional(),
-  budget: z.number().positive("Le budget doit être positif.").optional(),
+  budgetMin: z
+    .number()
+    .positive("Le budget minimum doit être positif.")
+    .optional(),
+  budgetMax: z
+    .number()
+    .positive("Le budget maximum doit être positif.")
+    .optional(),
+  location: z.string().max(255).optional(),
   deadline: z
     .string()
     .refine(
@@ -23,7 +31,15 @@ export const createProjectSchema = z.object({
 export const updateProjectSchema = z.object({
   title: z.string().min(1, "Le titre est requis.").optional(),
   description: z.string().optional(),
-  budget: z.number().positive("Le budget doit être positif.").optional(),
+  budgetMin: z
+    .number()
+    .positive("Le budget minimum doit être positif.")
+    .optional(),
+  budgetMax: z
+    .number()
+    .positive("Le budget maximum doit être positif.")
+    .optional(),
+  location: z.string().max(255).optional(),
   deadline: z
     .string()
     .refine(

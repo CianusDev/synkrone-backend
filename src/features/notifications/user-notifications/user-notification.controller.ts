@@ -69,9 +69,9 @@ export class UserNotificationController {
           message: "L'identifiant de la notification utilisateur est requis",
         });
       }
-      console.log("Marquage de la notification comme lue :", id);
+      // console.log("Marquage de la notification comme lue :", id);
       const updated = await this.service.markAsRead(id);
-      console.log("Notification marquée comme lue :", updated);
+      // console.log("Notification marquée comme lue :", updated);
       if (!updated) {
         return res.status(404).json({
           success: false,
@@ -99,6 +99,7 @@ export class UserNotificationController {
         });
       }
       const deleted = await this.service.deleteUserNotification(id);
+      console.log("Notification deleted :", deleted);
       if (!deleted) {
         return res.status(404).json({
           success: false,

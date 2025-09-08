@@ -24,7 +24,9 @@ CREATE TABLE projects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(200) NOT NULL,
     description TEXT,
-    budget DECIMAL(12,2),
+    budget_min DECIMAL(12,2),
+    budget_max DECIMAL(12,2),
+    location VARCHAR(255) NULL,
     deadline DATE,
     status project_status_enum DEFAULT 'draft',
     type_work type_work_enum,
@@ -59,7 +61,9 @@ export interface Project {
   id: string;
   title: string;
   description?: string;
-  budget?: number;
+  budgetMin?: number;
+  budgetMax?: number;
+  location?: string;
   deadline?: string; // ISO date string
   status: ProjectStatus;
   typeWork?: TypeWork;
@@ -84,6 +88,7 @@ Toutes les routes sont protégées par le middleware :
 | Méthode | URL                        | Description                        | Authentification |
 |---------|----------------------------|------------------------------------|------------------|
 | GET     | `/projects`                | Liste paginée des projets          | company          |
+| GET     | `/projects/my-projects`    | Projets de l'entreprise connectée  | company          |
 | GET     | `/projects/:id`            | Récupère un projet par son id      | company          |
 | POST    | `/projects`                | Crée un projet                     | company          |
 | PATCH   | `/projects/:id`            | Met à jour un projet               | company          |
@@ -100,7 +105,9 @@ Toutes les routes sont protégées par le middleware :
 {
   "title": "Application mobile React Native",
   "description": "Développement d'une app mobile",
-  "budget": 12000,
+  "budgetMin": 10000,
+  "budgetMax": 15000,
+  "location": "Paris, France",
   "deadline": "2024-09-30",
   "typeWork": "remote",
   "categoryId": "uuid-category",
@@ -110,7 +117,9 @@ Toutes les routes sont protégées par le middleware :
 
 - Validation par Zod (`createProjectSchema`)
 - `title` : string, requis
-- `budget` : number, positif
+- `budgetMin` : number, positif
+- `budgetMax` : number, positif
+- `location` : string, optionnel
 - `deadline` : date future
 - `typeWork` : enum
 - `categoryId` : UUID optionnel
@@ -121,7 +130,10 @@ Toutes les routes sont protégées par le middleware :
 ```json
 {
   "title": "Nouveau titre",
-  "description": "Nouvelle description"
+  "description": "Nouvelle description",
+  "budgetMin": 11000,
+  "budgetMax": 16000,
+  "location": "Lyon, France"
 }
 ```
 
@@ -136,7 +148,19 @@ Toutes les routes sont protégées par le middleware :
 `PATCH /projects/:id/publish`
 
 - Change le statut du projet à `published`
-- Vérifie que le projet existe et n’est pas déjà publié
+- Vérifie que le projet existe et n'est pas déjà publié
+
+---
+
+## 📋 Récupération des projets de l'entreprise connectée
+
+**Endpoint** :  
+`GET /projects/my-projects`
+
+- Récupère automatiquement les projets de l'entreprise connectée via le token
+- Support des mêmes paramètres de pagination et filtres que `/projects`
+- Le `companyId` est automatiquement extrait du token d'authentification
+- Paramètres disponibles : `limit`, `offset`, `search`, `status`, `typeWork`, `categoryId`
 
 ---
 

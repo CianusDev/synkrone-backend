@@ -9,6 +9,9 @@ router.use(AuthCompanyMiddleware);
 // Liste paginée des projets avec recherche et filtres (GET)
 router.get("/", (req, res) => controller.getProjects(req, res));
 
+// Récupérer les projets de l'entreprise connectée (GET)
+router.get("/my-projects", (req, res) => controller.getMyProjects(req, res));
+
 // Récupérer un projet par ID
 router.get("/:id", (req, res) => controller.getProjectById(req, res));
 

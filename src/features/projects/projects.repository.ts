@@ -29,7 +29,9 @@ export class ProjectsRepository {
   async createProject(data: {
     title: string;
     description?: string;
-    budget?: number;
+    budgetMin?: number;
+    budgetMax?: number;
+    location?: string;
     deadline?: string;
     status?: ProjectStatus;
     typeWork?: TypeWork;
@@ -38,13 +40,15 @@ export class ProjectsRepository {
   }): Promise<Project> {
     const result = await query<Project>(
       `INSERT INTO projects (
-        title, description, budget, deadline, status, type_work, category_id, company_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, title, description, budget, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"`,
+        title, description, budget_min, budget_max, location, deadline, status, type_work, category_id, company_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", location, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"`,
       [
         data.title,
         data.description ?? null,
-        data.budget ?? null,
+        data.budgetMin ?? null,
+        data.budgetMax ?? null,
+        data.location ?? null,
         data.deadline ?? null,
         data.status ?? ProjectStatus.DRAFT,
         data.typeWork ?? null,
@@ -60,7 +64,7 @@ export class ProjectsRepository {
    */
   async getProjectById(id: string): Promise<Project | null> {
     const result = await query<Project>(
-      `SELECT id, title, description, budget, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"
+      `SELECT id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", location, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"
        FROM projects WHERE id = $1`,
       [id],
     );
@@ -86,9 +90,17 @@ export class ProjectsRepository {
       fields.push(`description = $${idx++}`);
       values.push(data.description);
     }
-    if (data.budget !== undefined) {
-      fields.push(`budget = $${idx++}`);
-      values.push(data.budget);
+    if (data.budgetMin !== undefined) {
+      fields.push(`budget_min = $${idx++}`);
+      values.push(data.budgetMin);
+    }
+    if (data.budgetMax !== undefined) {
+      fields.push(`budget_max = $${idx++}`);
+      values.push(data.budgetMax);
+    }
+    if (data.location !== undefined) {
+      fields.push(`location = $${idx++}`);
+      values.push(data.location);
     }
     if (data.deadline !== undefined) {
       fields.push(`deadline = $${idx++}`);
@@ -116,7 +128,7 @@ export class ProjectsRepository {
     const queryText = `
       UPDATE projects SET ${fields.join(", ")}
       WHERE id = $1
-      RETURNING id, title, description, budget, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"
+      RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", location, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"
     `;
     const result = await query<Project>(queryText, [id, ...values]);
     return result.rows[0] ?? null;
@@ -147,55 +159,66 @@ export class ProjectsRepository {
     limit: number;
     offset: number;
   }> {
-    let queryText = `SELECT id, title, description, budget, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt" FROM projects`;
+    let queryText = `SELECT id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", location, deadline, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt" FROM projects`;
     let countQuery = `SELECT COUNT(*) AS total FROM projects`;
     const conditions = [];
-    const values = [];
-    let idx = 1;
+    const whereValues = [];
+    let paramIdx = 1;
 
+    // Construction des conditions WHERE
     if (params?.status) {
-      conditions.push(`status = $${idx++}`);
-      values.push(params.status);
+      conditions.push(`status = $${paramIdx++}`);
+      whereValues.push(params.status);
     }
     if (params?.typeWork) {
-      conditions.push(`type_work = $${idx++}`);
-      values.push(params.typeWork);
+      conditions.push(`type_work = $${paramIdx++}`);
+      whereValues.push(params.typeWork);
     }
     if (params?.companyId) {
-      conditions.push(`company_id = $${idx++}`);
-      values.push(params.companyId);
+      conditions.push(`company_id = $${paramIdx++}`);
+      whereValues.push(params.companyId);
     }
     if (params?.categoryId) {
-      conditions.push(`category_id = $${idx++}`);
-      values.push(params.categoryId);
+      conditions.push(`category_id = $${paramIdx++}`);
+      whereValues.push(params.categoryId);
     }
     if (params?.search) {
-      conditions.push(`(title ILIKE $${idx} OR description ILIKE $${idx})`);
-      values.push(`%${params.search}%`);
-      idx++;
+      conditions.push(
+        `(title ILIKE $${paramIdx} OR description ILIKE $${paramIdx + 1})`,
+      );
+      whereValues.push(`%${params.search}%`);
+      whereValues.push(`%${params.search}%`);
+      paramIdx += 2;
     }
-    if (conditions.length) {
-      queryText += " WHERE " + conditions.join(" AND ");
-      countQuery += " WHERE " + conditions.join(" AND ");
+
+    // Ajout des conditions WHERE
+    let whereClause = "";
+    if (conditions.length > 0) {
+      whereClause = " WHERE " + conditions.join(" AND ");
+      queryText += whereClause;
+      countQuery += whereClause;
     }
+
+    // Ordre
     queryText += " ORDER BY created_at DESC";
 
+    // Pagination
+    const finalQueryValues = [...whereValues];
     if (params?.limit) {
-      queryText += ` LIMIT $${idx++}`;
-      values.push(params.limit);
+      queryText += ` LIMIT $${paramIdx++}`;
+      finalQueryValues.push(params.limit.toString());
     }
     if (params?.offset) {
-      queryText += ` OFFSET $${idx++}`;
-      values.push(params.offset);
+      queryText += ` OFFSET $${paramIdx++}`;
+      finalQueryValues.push(params.offset.toString());
     }
 
-    const result = await query<Project>(queryText, values);
-    // Pour le count, on retire limit/offset
-    const countValues = values.slice(
-      0,
-      idx - (params?.limit ? 1 : 0) - (params?.offset ? 1 : 0),
-    );
-    const countResult = await query(countQuery, countValues);
+    // Exécution des requêtes
+    const [result, countResult] = await Promise.all([
+      query<Project>(queryText, finalQueryValues),
+      query(countQuery, whereValues), // Utilise seulement les paramètres WHERE, pas limit/offset
+    ]);
+
     const total = parseInt(countResult.rows[0]?.total ?? "0", 10);
 
     return {

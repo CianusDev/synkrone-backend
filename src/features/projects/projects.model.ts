@@ -14,7 +14,9 @@ export interface Project {
   id: string;
   title: string;
   description?: string;
-  budget?: number;
+  budgetMin?: number;
+  budgetMax?: number;
+  location?: string;
   deadline?: string; // ISO date string
   status: ProjectStatus;
   typeWork?: TypeWork;
