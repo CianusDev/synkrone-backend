@@ -34,4 +34,5 @@ export interface Project {
   skills?: ProjectSkillWithDetails[];
   recentProjects?: Project[];
   company?: Company;
+  isApplied?: boolean; // <-- Ajouté
 }

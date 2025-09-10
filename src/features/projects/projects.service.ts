@@ -1,14 +1,17 @@
 import { ProjectsRepository } from "./projects.repository";
 import { Project, ProjectStatus, TypeWork } from "./projects.model";
 import { ProjectSkillsService } from "../project-skills/project-skills.service";
+import { ApplicationsRepository } from "../applications/applications.repository";
 
 export class ProjectsService {
   private readonly repository: ProjectsRepository;
   private readonly projectSkillsService: ProjectSkillsService;
+  private readonly applicationsRepository: ApplicationsRepository;
 
   constructor() {
     this.repository = new ProjectsRepository();
     this.projectSkillsService = new ProjectSkillsService();
+    this.applicationsRepository = new ApplicationsRepository();
   }
 
   /**
@@ -74,7 +77,10 @@ export class ProjectsService {
   /**
    * Récupère un projet par son id
    */
-  async getProjectById(id: string): Promise<Project | null> {
+  async getProjectById(
+    id: string,
+    freelanceId?: string,
+  ): Promise<Project | null> {
     // Récupère le projet principal
     const project = await this.repository.getProjectById(id);
     if (!project) return null;
@@ -82,6 +88,18 @@ export class ProjectsService {
     // Récupère les compétences du projet via ProjectSkillsService
     const skills = await this.projectSkillsService.getSkillsByProjectId(id);
     project.skills = skills;
+
+    // Ajout de isApplied si freelanceId fourni
+    if (freelanceId) {
+      const applications =
+        await this.applicationsRepository.getApplicationsWithFilters({
+          projectId: id,
+          freelanceId,
+          limit: 1,
+          page: 1,
+        });
+      project.isApplied = applications.total > 0;
+    }
 
     // Récupère les projets récemment publiés (hors celui en cours)
     const recentProjects =
@@ -161,6 +179,7 @@ export class ProjectsService {
     page?: number;
     limit?: number;
     offset?: number;
+    freelanceId?: string; // <-- Ajouté
   }): Promise<{
     data: Project[];
     total: number;
@@ -169,7 +188,6 @@ export class ProjectsService {
     totalPages: number;
     page?: number;
   }> {
-    // Conversion page vers offset si page est fourni
     let finalOffset = params?.offset ?? 0;
     const finalLimit = params?.limit ?? 10;
 
@@ -193,13 +211,30 @@ export class ProjectsService {
       }),
     );
 
+    // Ajout de isApplied si freelanceId fourni
+    let projectsWithApplied = projectsWithSkills;
+    if (params?.freelanceId) {
+      projectsWithApplied = await Promise.all(
+        projectsWithSkills.map(async (project) => {
+          const applications =
+            await this.applicationsRepository.getApplicationsWithFilters({
+              projectId: project.id,
+              freelanceId: params.freelanceId,
+              limit: 1,
+              page: 1,
+            });
+          return { ...project, isApplied: applications.total > 0 };
+        }),
+      );
+    }
+
     const totalPages = Math.ceil(result.total / finalLimit);
     const currentPage =
       params?.page ?? Math.floor(finalOffset / finalLimit) + 1;
 
     return {
       ...result,
-      data: projectsWithSkills,
+      data: projectsWithApplied,
       totalPages,
       page: currentPage,
     };

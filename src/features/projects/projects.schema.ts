@@ -83,4 +83,5 @@ export const getProjectsWithFiltersSchema = z.object({
       z.number().int().nonnegative(),
     ])
     .optional(),
+  freelanceId: z.uuid().optional(),
 });

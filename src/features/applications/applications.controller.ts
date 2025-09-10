@@ -10,6 +10,7 @@ import {
 } from "./applications.schema";
 import { ZodError } from "zod";
 import { ApplicationStatus } from "./applications.model";
+import { Freelance } from "../freelance/freelance.model";
 
 export class ApplicationsController {
   private readonly service: ApplicationsService;
@@ -40,10 +41,18 @@ export class ApplicationsController {
   }
 
   // POST /applications : créer une candidature
-  async createApplication(req: Request, res: Response) {
+  async createApplication(
+    req: Request & { freelance?: Freelance },
+    res: Response,
+  ) {
     try {
+      const freelance_id = req.freelance?.id;
       // Utilisation de safeParse pour une gestion plus robuste
-      const result = createApplicationSchema.safeParse(req.body);
+      const result = createApplicationSchema.safeParse({
+        ...req.body,
+        freelance_id,
+      });
+      console.log({ freelance_id });
       if (!result.success) {
         return res.status(400).json({
           success: false,
@@ -52,6 +61,7 @@ export class ApplicationsController {
         });
       }
       const data = result.data;
+      console.log("Creating application with data:", data);
       const application = await this.service.createApplication({
         ...data,
         cover_letter: data.cover_letter ?? undefined,

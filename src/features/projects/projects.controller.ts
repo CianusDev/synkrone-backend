@@ -51,6 +51,7 @@ export class ProjectsController {
         page: parsed.page,
         limit: parsed.limit,
         offset: parsed.offset,
+        freelanceId: parsed.freelanceId, // Pour vérifier si le freelance a postulé ou a été invité
       });
 
       res.status(200).json({
@@ -115,7 +116,9 @@ export class ProjectsController {
   async getProjectById(req: Request, res: Response) {
     try {
       const { id } = projectIdSchema.parse(req.params);
-      const project = await this.service.getProjectById(id);
+      const freelanceId = req.query.freelanceId as string | undefined;
+
+      const project = await this.service.getProjectById(id, freelanceId);
       if (!project) {
         return res.status(404).json({
           success: false,
