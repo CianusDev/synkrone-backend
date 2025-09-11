@@ -203,6 +203,58 @@ export const emailTemplates = {
       L'équipe Synkrone
     `,
   }),
+
+  // Template pour notifier qu'un freelance a postulé à un projet
+  freelanceApplied: (
+    projectTitle: string,
+    freelanceName: string,
+    companyName?: string,
+    applicationDate?: string,
+    path?: string,
+  ) => ({
+    subject: `Nouveau candidat pour votre projet "${projectTitle}" - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Un freelance a postulé à votre projet</h2>
+        <p>
+          ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+        </p>
+        <p>
+          Le freelance <strong>${freelanceName}</strong> vient de postuler à votre projet <strong>"${projectTitle}"</strong>.
+        </p>
+        ${
+          applicationDate
+            ? `<p>Date de candidature : <strong>${applicationDate}</strong></p>`
+            : ""
+        }
+        <p>
+          Connectez-vous à votre tableau de bord Synkrone pour consulter son profil et gérer les candidatures.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Voir les candidatures
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Un freelance a postulé à votre projet - Synkrone
+
+      ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+
+      Le freelance ${freelanceName} vient de postuler à votre projet "${projectTitle}".
+
+      ${applicationDate ? `Date de candidature : ${applicationDate}` : ""}
+
+      Connectez-vous à votre tableau de bord Synkrone pour consulter son profil et gérer les candidatures :
+      ${envConfig.frontendUrl}/dashboard/projects
+
+      L'équipe Synkrone
+    `,
+  }),
 };
 
 export default {

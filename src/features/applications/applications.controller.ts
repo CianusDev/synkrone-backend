@@ -121,6 +121,50 @@ export class ApplicationsController {
     }
   }
 
+  // PATCH /applications/:id/withdraw : retirer une candidature
+  async withdrawApplication(
+    req: Request & { freelance?: Freelance },
+    res: Response,
+  ) {
+    try {
+      const { id } = applicationIdSchema.parse(req.params);
+      const freelanceId = req.freelance?.id;
+      if (!freelanceId) {
+        return res.status(401).json({
+          success: false,
+          message: "Freelance non authentifié",
+        });
+      }
+
+      const result = await this.service.withdrawApplication(id, freelanceId);
+      if (!result) {
+        return res.status(404).json({
+          success: false,
+          message: "Candidature non trouvée ou non autorisée",
+        });
+      }
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: "Candidature retirée avec succès",
+      });
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        error.message ===
+          "Impossible de retirer une candidature déjà acceptée ou rejetée."
+      ) {
+        return res.status(409).json({
+          success: false,
+          message: error.message,
+        });
+      }
+      this.handleError(error, res);
+    }
+  }
+
   // GET /applications/project/:projectId : candidatures d'un projet avec filtres et pagination
   async getApplicationsByProjectId(req: Request, res: Response) {
     try {

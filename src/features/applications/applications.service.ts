@@ -2,16 +2,25 @@ import { ApplicationsRepository } from "./applications.repository";
 import { Application, ApplicationStatus } from "./applications.model";
 import { FreelanceRepository } from "../freelance/freelance.repository";
 import { ProjectsRepository } from "../projects/projects.repository";
+import { Freelance } from "../freelance/freelance.model";
+import { NotificationRepository } from "../notifications/notification.repository";
+import { UserNotificationRepository } from "../notifications/user-notifications/user-notification.repository";
+import { NotificationTypeEnum } from "../notifications/notification.model";
+import { UserNotificationService } from "../notifications/user-notifications/user-notification.service";
 
 export class ApplicationsService {
   private readonly repository: ApplicationsRepository;
   private readonly freelanceRepository: FreelanceRepository;
   private readonly projectsRepository: ProjectsRepository;
+  private readonly userNotificationService: UserNotificationService;
+  private readonly notificationRepository = new NotificationRepository();
 
   constructor() {
     this.repository = new ApplicationsRepository();
     this.freelanceRepository = new FreelanceRepository();
     this.projectsRepository = new ProjectsRepository();
+    this.userNotificationService = new UserNotificationService();
+    this.notificationRepository = new NotificationRepository();
   }
 
   /**
@@ -44,7 +53,41 @@ export class ApplicationsService {
     );
     if (!freelance) throw new Error("Freelance introuvable.");
 
-    // 3. Créer la candidature
+    // Notification de bienvenue
+    // const notificationRepo = new NotificationRepository();
+    // const welcomeNotification = await notificationRepo.createNotification({
+    //   title: "Bienvenue sur la plateforme !",
+    //   message: `Bonjour ${newFreelance.firstname}, votre compte a bien été créé. Nous vous souhaitons la bienvenue !`,
+    //   type: NotificationTypeEnum.system,
+    //   is_global: false,
+    // });
+    // if (welcomeNotification) {
+    //   await this.userNotificationService.createUserNotification(
+    //     newFreelance.id,
+    //     welcomeNotification.id,
+    //     false,
+    //   );
+    // }
+
+    if (project && project.company?.id) {
+      const notification = await this.notificationRepository.createNotification(
+        {
+          title: "Nouvelle candidature reçue",
+          message: `Le freelance {{${freelance.firstname}}} {{${freelance.lastname}}} a postulé au projet {{${project.title}}}.`,
+          type: NotificationTypeEnum.application,
+          is_global: false,
+        },
+      );
+      if (notification) {
+        await this.userNotificationService.createUserNotification(
+          project.company.id,
+          notification.id,
+          false,
+        );
+      }
+    }
+
+    // 3.
     return this.repository.createApplication(data);
   }
 
@@ -53,8 +96,19 @@ export class ApplicationsService {
    * @param id - Application UUID
    * @returns The application or null if not found
    */
-  async getApplicationById(id: string): Promise<Application | null> {
-    return this.repository.getApplicationById(id);
+  async getApplicationById(id: string): Promise<any | null> {
+    const application = await this.repository.getApplicationById(id);
+    if (!application) return null;
+    // Remplacer freelance_id par l'objet freelance
+    const freelance = await this.freelanceRepository.getFreelanceById(
+      application.freelance_id,
+    );
+    // Exclure le mot de passe hashé
+    const { password_hashed, ...freelanceSafe } = freelance || {};
+    return {
+      ...application,
+      freelance: freelanceSafe,
+    };
   }
 
   /**
@@ -62,10 +116,56 @@ export class ApplicationsService {
    * @param freelanceId - Freelance UUID
    * @returns Array of applications
    */
-  async getApplicationsByFreelanceId(
+  async getApplicationsByFreelanceId(freelanceId: string): Promise<any[]> {
+    const applications =
+      await this.repository.getApplicationsByFreelanceId(freelanceId);
+    const freelance =
+      await this.freelanceRepository.getFreelanceById(freelanceId);
+    const { password_hashed, ...freelanceSafe } = freelance || {};
+    return applications.map((app) => ({
+      ...app,
+      freelance: freelanceSafe,
+    }));
+  }
+
+  // Retirer une candidature (changer le statut à 'withdrawn' si le freelance est bien le propriétaire)
+  // Retirer une candidature (changer le statut à 'withdrawn' si le freelance est bien le propriétaire et si le statut le permet)
+  async withdrawApplication(
+    id: string,
     freelanceId: string,
-  ): Promise<Application[]> {
-    return this.repository.getApplicationsByFreelanceId(freelanceId);
+  ): Promise<(Application & { freelance: Partial<Freelance> }) | null> {
+    console.log({ freelanceId, id });
+    const application = await this.repository.getApplicationById(id);
+    console.log({ application });
+    if (!application || application.freelance_id !== freelanceId) {
+      return null; // Non trouvé ou non autorisé
+    }
+    // Empêcher le retrait si la candidature est déjà acceptée ou rejetée
+    if (
+      application.status === ApplicationStatus.ACCEPTED ||
+      application.status === ApplicationStatus.REJECTED
+    ) {
+      // On pourrait retourner une erreur spécifique ici
+      throw new Error(
+        "Impossible de retirer une candidature déjà acceptée ou rejetée.",
+      );
+    }
+    // console.log({ application });
+    // Mettre à jour le statut
+    const updated = await this.repository.updateApplicationStatus(
+      id,
+      ApplicationStatus.WITHDRAWN,
+      new Date(),
+    );
+    if (!updated) return null;
+    // Retourner la candidature mise à jour avec l'objet freelance (sans password_hashed)
+    const freelance =
+      await this.freelanceRepository.getFreelanceById(freelanceId);
+    const { password_hashed, ...freelanceSafe } = freelance || {};
+    return {
+      ...updated,
+      freelance: freelanceSafe,
+    };
   }
 
   /**
@@ -73,8 +173,22 @@ export class ApplicationsService {
    * @param projectId - Project UUID
    * @returns Array of applications
    */
-  async getApplicationsByProjectId(projectId: string): Promise<Application[]> {
-    return this.repository.getApplicationsByProjectId(projectId);
+  async getApplicationsByProjectId(projectId: string): Promise<any[]> {
+    const applications =
+      await this.repository.getApplicationsByProjectId(projectId);
+    // Pour chaque application, inclure l'objet freelance
+    return await Promise.all(
+      applications.map(async (app) => {
+        const freelance = await this.freelanceRepository.getFreelanceById(
+          app.freelance_id,
+        );
+        const { password_hashed, ...freelanceSafe } = freelance || {};
+        return {
+          ...app,
+          freelance: freelanceSafe,
+        };
+      }),
+    );
   }
 
   /**
@@ -121,8 +235,22 @@ export class ApplicationsService {
   }> {
     const result = await this.repository.getApplicationsWithFilters(params);
     const totalPages = Math.ceil(result.total / (result.limit || 1));
+    // Pour chaque application, inclure l'objet freelance
+    const dataWithFreelance = await Promise.all(
+      result.data.map(async (app) => {
+        const freelance = await this.freelanceRepository.getFreelanceById(
+          app.freelance_id,
+        );
+        const { password_hashed, ...freelanceSafe } = freelance || {};
+        return {
+          ...app,
+          freelance: freelanceSafe,
+        };
+      }),
+    );
     return {
       ...result,
+      data: dataWithFreelance,
       totalPages,
     };
   }

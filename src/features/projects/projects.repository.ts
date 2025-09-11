@@ -62,6 +62,7 @@ export class ProjectsRepository {
 
   /**
    * Récupère un projet par son id avec les informations de l'entreprise
+   * Ajoute aussi le nombre total de candidatures et d'invitations
    */
   async getProjectById(id: string): Promise<Project | null> {
     const result = await query<any>(
@@ -79,6 +80,13 @@ export class ProjectsRepository {
         p.company_id AS "companyId",
         p.created_at AS "createdAt",
         p.updated_at AS "updatedAt",
+        p.published_at AS "publishedAt",
+        (
+          SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id AND a.status = 'submitted'
+        ) AS "applicationsCount",
+        (
+          SELECT COUNT(*) FROM project_invitations i WHERE i.project_id = p.id
+        ) AS "invitationsCount",
         json_build_object(
           'id', c.id,
           'company_name', c.company_name,
@@ -215,7 +223,7 @@ export class ProjectsRepository {
         p.updated_at AS "updatedAt",
         p.published_at AS "publishedAt",
         (
-          SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id
+          SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id AND a.status = 'submitted'
         ) AS "applicationsCount",
         (
           SELECT COUNT(*) FROM project_invitations i WHERE i.project_id = p.id

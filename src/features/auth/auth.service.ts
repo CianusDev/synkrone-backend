@@ -1,32 +1,32 @@
+import { Request } from "express";
 import z from "zod";
-import { FreelanceRepository } from "../freelance/freelance.repository";
-import { Freelance } from "../freelance/freelance.model";
+import { envConfig } from "../../config/env.config";
+import { emailTemplates, sendEmail } from "../../config/smtp-email";
+import { HTTP_STATUS } from "../../utils/constant";
+import {
+  comparePassword,
+  createResetOTPToken,
+  createUserToken,
+  generateCodeOTP,
+  hashPassword,
+  verifyResetOTPToken,
+} from "../../utils/utils";
 import { Company } from "../company/company.model";
+import { CompanyRepository } from "../company/company.repository";
+import { Freelance } from "../freelance/freelance.model";
+import { FreelanceRepository } from "../freelance/freelance.repository";
+import { NotificationTypeEnum } from "../notifications/notification.model";
+import { NotificationRepository } from "../notifications/notification.repository";
+import { UserNotificationService } from "../notifications/user-notifications/user-notification.service";
+import { OtpType } from "../otp/otp.model";
+import { OtpRepository } from "../otp/otp.repository";
+import { UserSessionRepository } from "../user-session/user-session.repository";
 import {
   loginSchema,
   registerCompanySchema,
   registerFreelanceSchema,
   verifyEmailSchema,
 } from "./auth.schema";
-import {
-  comparePassword,
-  createUserToken,
-  createResetOTPToken,
-  generateCodeOTP,
-  hashPassword,
-  verifyResetOTPToken,
-} from "../../utils/utils";
-import { emailTemplates, sendEmail } from "../../config/smtp-email";
-import { OtpRepository } from "../otp/otp.repository";
-import { OtpType } from "../otp/otp.model";
-import { UserSessionRepository } from "../user-session/user-session.repository";
-import { Request } from "express";
-import { CompanyRepository } from "../company/company.repository";
-import { HTTP_STATUS } from "../../utils/constant";
-import { envConfig } from "../../config/env.config";
-import { NotificationRepository } from "../notifications/notification.repository";
-import { NotificationTypeEnum } from "../notifications/notification.model";
-import { UserNotificationService } from "../notifications/user-notifications/user-notification.service";
 
 // Définir des types d'erreur personnalisés
 class AuthError extends Error {
@@ -184,23 +184,23 @@ export class AuthService {
    * @param codeId CodeId OTP à vérifier
    * @returns true si l'OTP est valide, sinon throw une erreur
    */
-  private async verifyOTPByCodeId(
-    email: string,
-    codeId: string,
-  ): Promise<boolean> {
-    const otp = await this.otpRepository.isValidOtpByCodeID(codeId);
+  // private async verifyOTPByCodeId(
+  //   email: string,
+  //   codeId: string,
+  // ): Promise<boolean> {
+  //   const otp = await this.otpRepository.isValidOtpByCodeID(codeId);
 
-    if (!otp) {
-      throw new ValidationError(
-        "Code de vérification invalide ou expiré ! Veuillez réessayer.",
-      );
-    }
+  //   if (!otp) {
+  //     throw new ValidationError(
+  //       "Code de vérification invalide ou expiré ! Veuillez réessayer.",
+  //     );
+  //   }
 
-    // Suppression de l'OTP après vérification (bonne pratique de sécurité)
-    await this.otpRepository.deleteOtpByEmail(email);
+  //   // Suppression de l'OTP après vérification (bonne pratique de sécurité)
+  //   await this.otpRepository.deleteOtpByEmail(email);
 
-    return true;
-  }
+  //   return true;
+  // }
 
   /**
    * Méthode pour gérer la création ou mise à jour de session utilisateur

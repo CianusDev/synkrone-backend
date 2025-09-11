@@ -2,6 +2,7 @@ import { ProjectsRepository } from "./projects.repository";
 import { Project, ProjectStatus, TypeWork } from "./projects.model";
 import { ProjectSkillsService } from "../project-skills/project-skills.service";
 import { ApplicationsRepository } from "../applications/applications.repository";
+import { ApplicationStatus } from "../applications/applications.model";
 
 export class ProjectsService {
   private readonly repository: ProjectsRepository;
@@ -81,15 +82,15 @@ export class ProjectsService {
     id: string,
     freelanceId?: string,
   ): Promise<Project | null> {
-    // Récupère le projet principal
+    // Récupère le projet principal (avec counts)
     const project = await this.repository.getProjectById(id);
     if (!project) return null;
 
-    // Récupère les compétences du projet via ProjectSkillsService
+    // Récupère les compétences du projet
     const skills = await this.projectSkillsService.getSkillsByProjectId(id);
     project.skills = skills;
 
-    // Ajout de isApplied si freelanceId fourni
+    // Ajout de isApplied et applicationId si freelanceId fourni
     if (freelanceId) {
       const applications =
         await this.applicationsRepository.getApplicationsWithFilters({
@@ -97,8 +98,12 @@ export class ProjectsService {
           freelanceId,
           limit: 1,
           page: 1,
+          status: ApplicationStatus.SUBMITTED,
         });
       project.isApplied = applications.total > 0;
+      project.applicationId = project.isApplied
+        ? applications.data[0]?.id
+        : undefined;
     }
 
     // Récupère les projets récemment publiés (hors celui en cours)
@@ -106,6 +111,7 @@ export class ProjectsService {
       await this.repository.getRecentlyPublishedProjects(5);
     project.recentProjects = recentProjects.filter((p) => p.id !== id);
 
+    // Les champs applicationsCount et invitationsCount sont déjà présents
     return project;
   }
 
