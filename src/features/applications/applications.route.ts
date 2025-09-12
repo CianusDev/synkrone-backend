@@ -33,6 +33,16 @@ router.get("/project/:projectId", AuthAdminOrCompanyMiddleware, (req, res) =>
   controller.getApplicationsByProjectId(req, res),
 );
 
+// Accepter une candidature (admin ou company)
+router.patch("/:id/accept", AuthAdminOrCompanyMiddleware, (req, res) =>
+  controller.acceptApplication(req, res),
+);
+
+// Rejeter une candidature (admin ou company)
+router.patch("/:id/reject", AuthAdminOrCompanyMiddleware, (req, res) =>
+  controller.rejectApplication(req, res),
+);
+
 // Mettre à jour le statut d'une candidature (admin ou company)
 router.patch("/:id/status", AuthAdminOrCompanyMiddleware, (req, res) =>
   controller.updateApplicationStatus(req, res),

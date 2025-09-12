@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ProjectStatus, TypeWork } from "./projects.model";
+import { ExprerienceLevel } from "../freelance/freelance.model";
 
 // Schéma pour la création d'un projet
 export const createProjectSchema = z.object({
@@ -25,6 +26,9 @@ export const createProjectSchema = z.object({
   typeWork: z.enum(TypeWork).optional(),
   categoryId: z.uuid().optional(),
   companyId: z.uuid({ message: "companyId doit être un UUID." }),
+  allowMultipleApplications: z.boolean().optional(),
+  levelExperience: z.enum(ExprerienceLevel).optional(),
+  tjmProposed: z.number().positive().optional(),
 });
 
 // Schéma pour la mise à jour d'un projet
@@ -51,6 +55,10 @@ export const updateProjectSchema = z.object({
   typeWork: z.enum(TypeWork).optional(),
   categoryId: z.uuid().optional(),
   companyId: z.uuid({ message: "companyId doit être un UUID." }).optional(),
+  publishedAt: z.string().optional(),
+  allowMultipleApplications: z.boolean().optional(),
+  levelExperience: z.enum(ExprerienceLevel).optional(),
+  tjmProposed: z.number().positive().optional(),
 });
 
 // Schéma pour la validation de l'ID (UUID)
@@ -65,6 +73,8 @@ export const getProjectsWithFiltersSchema = z.object({
   companyId: z.uuid().optional(),
   categoryId: z.uuid().optional(),
   search: z.string().optional(),
+  levelExperience: z.enum(ExprerienceLevel).optional(),
+  allowMultipleApplications: z.boolean().optional(),
   page: z
     .union([
       z.string().transform((val) => parseInt(val, 10)),

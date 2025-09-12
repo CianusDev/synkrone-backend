@@ -667,13 +667,16 @@ CREATE TABLE projects (
     budget_min DECIMAL(12,2),
     budget_max DECIMAL(12,2),
     deadline DATE,
+    level_experience experience_level_enum,
+    tjm_proposed DECIMAL(10,2) CHECK (tjm_proposed > 0),
+    allow_multiple_applications BOOLEAN DEFAULT FALSE,
     duration_days INTEGER CHECK (duration_days >= 0),
     status project_status_enum DEFAULT 'draft',
     type_work type_work_enum,
     category_id UUID REFERENCES project_categories(id) ON DELETE SET NULL,
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL
+    updated_at TIMESTAMP NULL,
     published_at TIMESTAMP NULL
 );
 
@@ -752,6 +755,7 @@ CREATE TABLE deliverables (
 CREATE TABLE deliverable_media (
     deliverable_id UUID NOT NULL REFERENCES deliverables(id) ON DELETE CASCADE,
     media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+    deleted_at TIMESTAMP NULL;
     PRIMARY KEY (deliverable_id, media_id)
 );
 
@@ -846,14 +850,15 @@ CREATE TABLE messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sender_id UUID NOT NULL,
     receiver_id UUID NOT NULL,
-    subject VARCHAR(200),
     content TEXT,
     is_read BOOLEAN DEFAULT FALSE,
     sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+    reply_to_message_id UUID REFERENCES messages(id) ON DELETE SET NULL
     conversation_id UUID,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL
+    updated_at TIMESTAMP NULL;
+    deleted_at TIMESTAMP NULL;
 );
 
 -- =============================================
@@ -863,6 +868,7 @@ CREATE TABLE messages (
 CREATE TABLE message_media (
     message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
     media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+    deleted_at TIMESTAMP NULL;
     PRIMARY KEY (message_id, media_id)
 );
 
@@ -972,6 +978,7 @@ CREATE INDEX idx_user_notifications_is_read ON user_notifications(is_read);
 CREATE INDEX idx_messages_sender_id ON messages(sender_id);
 CREATE INDEX idx_messages_receiver_id ON messages(receiver_id);
 CREATE INDEX idx_messages_project_id ON messages(project_id);
+CREATE INDEX idx_messages_reply_to_message_id ON messages(reply_to_message_id);
 
 -- conversations
 CREATE INDEX idx_conversations_freelance_id ON conversations(freelance_id);

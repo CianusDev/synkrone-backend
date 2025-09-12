@@ -190,7 +190,6 @@ export class ApplicationsService {
       }),
     );
   }
-
   /**
    * Update the status of an application
    * @param id - Application UUID
@@ -203,6 +202,93 @@ export class ApplicationsService {
     status: ApplicationStatus,
     responseDate?: Date,
   ): Promise<Application | null> {
+    // Find the application
+    const application = await this.repository.getApplicationById(id);
+    if (!application) {
+      return null;
+    }
+
+    // Optionally, send notification if status is ACCEPTED or REJECTED
+    if (
+      (status === ApplicationStatus.ACCEPTED ||
+        status === ApplicationStatus.REJECTED) &&
+      application.project_id
+    ) {
+      const project = await this.projectsRepository.getProjectById(
+        application.project_id,
+      );
+      const freelance = await this.freelanceRepository.getFreelanceById(
+        application.freelance_id,
+      );
+
+      if (project && project.company?.id && freelance) {
+        let notificationTitle = "";
+        let notificationMessage = "";
+
+        if (status === ApplicationStatus.ACCEPTED) {
+          notificationTitle = "Candidature acceptée";
+          notificationMessage = `Votre candidature au projet "${project.title}" a été acceptée.`;
+        } else if (status === ApplicationStatus.REJECTED) {
+          notificationTitle = "Candidature refusée";
+          notificationMessage = `Votre candidature au projet "${project.title}" a été refusée.`;
+        }
+
+        const notification =
+          await this.notificationRepository.createNotification({
+            title: notificationTitle,
+            message: notificationMessage,
+            type: NotificationTypeEnum.application,
+            is_global: false,
+          });
+
+        if (notification) {
+          await this.userNotificationService.createUserNotification(
+            freelance.id,
+            notification.id,
+            false,
+          );
+        }
+      }
+    }
+
+    // Si on accepte une candidature, rejeter toutes les autres du même projet
+    if (status === ApplicationStatus.ACCEPTED) {
+      await this.repository.rejectOtherApplications(application.project_id, id);
+
+      // Notifier tous les freelances dont la candidature est rejetée automatiquement
+      const project = await this.projectsRepository.getProjectById(
+        application.project_id,
+      );
+      const projectTitle = project?.title || "ce projet";
+      const rejectedApps = await this.repository.getApplicationsByProjectId(
+        application.project_id,
+      );
+      for (const app of rejectedApps) {
+        if (app.id !== id && app.status === ApplicationStatus.REJECTED) {
+          // Récupère le freelance
+          const freelance = await this.freelanceRepository.getFreelanceById(
+            app.freelance_id,
+          );
+          if (freelance) {
+            const notification =
+              await this.notificationRepository.createNotification({
+                title: "Candidature refusée",
+                message: `Votre candidature au projet "${projectTitle}" a été refusée car une autre a été acceptée.`,
+                type: NotificationTypeEnum.application,
+                is_global: false,
+              });
+            if (notification) {
+              await this.userNotificationService.createUserNotification(
+                freelance.id,
+                notification.id,
+                false,
+              );
+            }
+          }
+        }
+      }
+    }
+
     return this.repository.updateApplicationStatus(id, status, responseDate);
   }
 

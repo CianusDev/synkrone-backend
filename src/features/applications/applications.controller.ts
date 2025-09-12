@@ -217,6 +217,56 @@ export class ApplicationsController {
     }
   }
 
+  // PATCH /applications/:id/accept : accepter une candidature
+  async acceptApplication(req: Request, res: Response) {
+    try {
+      const { id } = applicationIdSchema.parse(req.params);
+      const updated = await this.service.updateApplicationStatus(
+        id,
+        ApplicationStatus.ACCEPTED,
+        new Date(),
+      );
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          message: "Candidature non trouvée ou statut non mis à jour",
+        });
+      }
+      res.status(200).json({
+        success: true,
+        data: updated,
+        message: "Candidature acceptée avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  // PATCH /applications/:id/reject : rejeter une candidature
+  async rejectApplication(req: Request, res: Response) {
+    try {
+      const { id } = applicationIdSchema.parse(req.params);
+      const updated = await this.service.updateApplicationStatus(
+        id,
+        ApplicationStatus.REJECTED,
+        new Date(),
+      );
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          message: "Candidature non trouvée ou statut non mis à jour",
+        });
+      }
+      res.status(200).json({
+        success: true,
+        data: updated,
+        message: "Candidature rejetée avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
   // DELETE /applications/:id : supprimer une candidature
   async deleteApplication(req: Request, res: Response) {
     try {

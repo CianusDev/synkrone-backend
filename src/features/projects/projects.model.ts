@@ -1,6 +1,7 @@
 import { ProjectSkillWithDetails } from "../project-skills/project-skills.model";
 import { Company } from "../company/company.model";
 import { Application } from "../applications/applications.model";
+import { ExprerienceLevel } from "../freelance/freelance.model";
 
 export enum ProjectStatus {
   DRAFT = "draft",
@@ -30,6 +31,9 @@ export interface Project {
   updatedAt?: string;
   publishedAt?: string;
   durationDays?: number;
+  allowMultipleApplications?: boolean;
+  levelExperience?: ExprerienceLevel;
+  tjmProposed?: number;
   applicationsCount?: number;
   invitationsCount?: number;
   skills?: ProjectSkillWithDetails[];

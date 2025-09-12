@@ -130,6 +130,43 @@ export class ApplicationsRepository {
   }
 
   /**
+   * Rejette toutes les autres candidatures pour un projet sauf celle acceptée
+   * @param projectId - UUID du projet
+   * @param acceptedApplicationId - UUID de la candidature acceptée
+   */
+  async rejectOtherApplications(
+    projectId: string,
+    acceptedApplicationId: string,
+  ): Promise<void> {
+    const query = `
+      UPDATE applications
+      SET status = $1,
+          response_date = $2
+      WHERE project_id = $3
+        AND id != $4
+        AND status NOT IN ($5, $6, $7)
+    `;
+    const values = [
+      ApplicationStatus.REJECTED,
+      new Date(),
+      projectId,
+      acceptedApplicationId,
+      ApplicationStatus.REJECTED,
+      ApplicationStatus.ACCEPTED,
+      ApplicationStatus.WITHDRAWN,
+    ];
+    try {
+      await db.query(query, values);
+    } catch (error) {
+      console.error(
+        "Erreur lors du rejet des autres candidatures du projet :",
+        error,
+      );
+      throw new Error("Erreur de base de données");
+    }
+  }
+
+  /**
    * Supprime une candidature par son ID
    * @param id - UUID de la candidature
    * @returns true si supprimée, false sinon

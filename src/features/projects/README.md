@@ -32,8 +32,12 @@ CREATE TABLE projects (
     type_work type_work_enum,
     category_id UUID REFERENCES project_categories(id) ON DELETE SET NULL,
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    level_experience experience_level_enum,
+    tjm_proposed DECIMAL(10,2) CHECK (tjm_proposed > 0),
+    allow_multiple_applications BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL
+    updated_at TIMESTAMP NULL,
+    published_at TIMESTAMP NULL
 );
 ```
 
@@ -166,7 +170,7 @@ Toutes les routes sont protégées par le middleware :
 
 ## 📄 Pagination & Recherche
 
-- Paramètres `page`, `limit`, `offset`, `search`, `status`, `typeWork`, `companyId`, `categoryId`
+- Paramètres `page`, `limit`, `offset`, `search`, `status`, `typeWork`, `companyId`, `categoryId`, `levelExperience`, `allowMultipleApplications`
 - Réponse inclut :
   - `data` : liste des projets
   - `total` : nombre total de projets trouvés

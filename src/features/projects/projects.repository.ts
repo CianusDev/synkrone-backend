@@ -38,12 +38,15 @@ export class ProjectsRepository {
     categoryId?: string;
     companyId: string;
     durationDays?: number;
+    allowMultipleApplications?: boolean;
+    levelExperience?: string;
+    tjmProposed?: number;
   }): Promise<Project> {
     const result = await query<Project>(
       `INSERT INTO projects (
-        title, description, budget_min, budget_max, deadline, duration_days, status, type_work, category_id, company_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", deadline, duration_days, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", created_at AS "createdAt", updated_at AS "updatedAt"`,
+        title, description, budget_min, budget_max, deadline, duration_days, status, type_work, category_id, company_id, allow_multiple_applications, level_experience, tjm_proposed
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", deadline, duration_days, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", allow_multiple_applications AS "allowMultipleApplications", level_experience AS "levelExperience", tjm_proposed AS "tjmProposed", created_at AS "createdAt", updated_at AS "updatedAt", published_at AS "publishedAt"`,
       [
         data.title,
         data.description ?? null,
@@ -55,6 +58,9 @@ export class ProjectsRepository {
         data.typeWork ?? null,
         data.categoryId ?? null,
         data.companyId,
+        data.allowMultipleApplications ?? false,
+        data.levelExperience ?? null,
+        data.tjmProposed ?? null,
       ],
     );
     return result.rows[0];
@@ -78,6 +84,9 @@ export class ProjectsRepository {
         p.type_work AS "typeWork",
         p.category_id AS "categoryId",
         p.company_id AS "companyId",
+        p.allow_multiple_applications AS "allowMultipleApplications",
+        p.level_experience AS "levelExperience",
+        p.tjm_proposed AS "tjmProposed",
         p.created_at AS "createdAt",
         p.updated_at AS "updatedAt",
         p.published_at AS "publishedAt",
@@ -169,13 +178,25 @@ export class ProjectsRepository {
       fields.push(`published_at = $${idx++}`);
       values.push(data.publishedAt);
     }
+    if (data.allowMultipleApplications !== undefined) {
+      fields.push(`allow_multiple_applications = $${idx++}`);
+      values.push(data.allowMultipleApplications);
+    }
+    if (data.levelExperience !== undefined) {
+      fields.push(`level_experience = $${idx++}`);
+      values.push(data.levelExperience);
+    }
+    if (data.tjmProposed !== undefined) {
+      fields.push(`tjm_proposed = $${idx++}`);
+      values.push(data.tjmProposed);
+    }
 
     if (fields.length === 0) return this.getProjectById(id);
 
     const queryText = `
        UPDATE projects SET ${fields.join(", ")}
        WHERE id = $1
-       RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", deadline, duration_days, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", published_at AS "publishedAt", created_at AS "createdAt", updated_at AS "updatedAt"
+       RETURNING id, title, description, budget_min AS "budgetMin", budget_max AS "budgetMax", deadline, duration_days, status, type_work AS "typeWork", category_id AS "categoryId", company_id AS "companyId", allow_multiple_applications AS "allowMultipleApplications", level_experience AS "levelExperience", tjm_proposed AS "tjmProposed", published_at AS "publishedAt", created_at AS "createdAt", updated_at AS "updatedAt"
      `;
     const result = await query<Project>(queryText, [id, ...values]);
     return result.rows[0] ?? null;
@@ -200,6 +221,8 @@ export class ProjectsRepository {
     search?: string;
     limit?: number;
     offset?: number;
+    levelExperience?: string;
+    allowMultipleApplications?: boolean;
   }): Promise<{
     data: Project[];
     total: number;
@@ -219,6 +242,9 @@ export class ProjectsRepository {
         p.type_work AS "typeWork",
         p.category_id AS "categoryId",
         p.company_id AS "companyId",
+        p.allow_multiple_applications AS "allowMultipleApplications",
+        p.level_experience AS "levelExperience",
+        p.tjm_proposed AS "tjmProposed",
         p.created_at AS "createdAt",
         p.updated_at AS "updatedAt",
         p.published_at AS "publishedAt",
@@ -270,6 +296,14 @@ export class ProjectsRepository {
     if (params?.categoryId) {
       conditions.push(`p.category_id = $${paramIdx++}`);
       whereValues.push(params.categoryId);
+    }
+    if (params?.levelExperience) {
+      conditions.push(`p.level_experience = $${paramIdx++}`);
+      whereValues.push(params.levelExperience);
+    }
+    if (params?.allowMultipleApplications !== undefined) {
+      conditions.push(`p.allow_multiple_applications = $${paramIdx++}`);
+      whereValues.push(params.allowMultipleApplications);
     }
     if (params?.search) {
       conditions.push(
@@ -335,6 +369,9 @@ export class ProjectsRepository {
         p.type_work AS "typeWork",
         p.category_id AS "categoryId",
         p.company_id AS "companyId",
+        p.allow_multiple_applications AS "allowMultipleApplications",
+        p.level_experience AS "levelExperience",
+        p.tjm_proposed AS "tjmProposed",
         p.created_at AS "createdAt",
         p.updated_at AS "updatedAt",
         json_build_object(
