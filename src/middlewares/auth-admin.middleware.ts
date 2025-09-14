@@ -7,7 +7,7 @@ const adminRepository = new AdminRepository();
 export const AuthAdminMiddleware: RequestHandler = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-
+  console.log("AuthAdminMiddleware je fais ");
   if (!token) {
     return res.status(HTTP_STATUS.UNAUTHORIZED).json({
       success: false,

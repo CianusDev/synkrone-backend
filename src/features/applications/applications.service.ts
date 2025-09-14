@@ -7,6 +7,7 @@ import { NotificationRepository } from "../notifications/notification.repository
 import { UserNotificationRepository } from "../notifications/user-notifications/user-notification.repository";
 import { NotificationTypeEnum } from "../notifications/notification.model";
 import { UserNotificationService } from "../notifications/user-notifications/user-notification.service";
+import { ConversationService } from "../converstions/conversation.service";
 
 export class ApplicationsService {
   private readonly repository: ApplicationsRepository;
@@ -14,6 +15,7 @@ export class ApplicationsService {
   private readonly projectsRepository: ProjectsRepository;
   private readonly userNotificationService: UserNotificationService;
   private readonly notificationRepository = new NotificationRepository();
+  private readonly conversationService = new ConversationService();
 
   constructor() {
     this.repository = new ApplicationsRepository();
@@ -21,6 +23,7 @@ export class ApplicationsService {
     this.projectsRepository = new ProjectsRepository();
     this.userNotificationService = new UserNotificationService();
     this.notificationRepository = new NotificationRepository();
+    this.conversationService = new ConversationService();
   }
 
   /**
@@ -255,10 +258,19 @@ export class ApplicationsService {
     if (status === ApplicationStatus.ACCEPTED) {
       await this.repository.rejectOtherApplications(application.project_id, id);
 
-      // Notifier tous les freelances dont la candidature est rejetée automatiquement
+      // Créer la conversation entre le freelance et la company si elle n'existe pas déjà
       const project = await this.projectsRepository.getProjectById(
         application.project_id,
       );
+      if (project && project.company?.id) {
+        await this.conversationService.createOrGetConversation({
+          freelanceId: application.freelance_id,
+          companyId: project.company.id,
+          applicationId: application.id,
+        });
+      }
+
+      // Notifier tous les freelances dont la candidature est rejetée automatiquement
       const projectTitle = project?.title || "ce projet";
       const rejectedApps = await this.repository.getApplicationsByProjectId(
         application.project_id,

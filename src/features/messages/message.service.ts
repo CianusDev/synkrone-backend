@@ -38,17 +38,26 @@ export class MessageService {
       media = await this.getMediaForMessage(message.id);
     }
 
+    console.log("Media associés au message:", media);
     // Récupérer les infos utilisateur pour sender et receiver
-    const sender = await this.repository.getUserInfo(message.senderId);
-    const receiver = await this.repository.getUserInfo(message.receiverId);
+    const sender = await this.repository.getUserInfo(
+      // data.senderId ??
+      message.senderId,
+    );
+    const receiver = await this.repository.getUserInfo(
+      // data.receiverId ??
+      message.receiverId,
+    );
 
     // Ensure sender and receiver are not null
     if (!sender) {
-      throw new Error(`Sender user info not found for id: ${message.senderId}`);
+      throw new Error(
+        `Sender user info not found for id: ${message.senderId} ${data.senderId}`,
+      );
     }
     if (!receiver) {
       throw new Error(
-        `Receiver user info not found for id: ${message.receiverId}`,
+        `Receiver user info not found for id: ${message.receiverId} ${data.receiverId}`,
       );
     }
 

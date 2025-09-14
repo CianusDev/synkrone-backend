@@ -12,7 +12,7 @@ io.on("connection", (socket) => {
 
   // Vérifie le token pour n'importe quel type d'utilisateur
   const { user, role } = verifyUserToken(token);
-  console.log("Vérification du token pour le socket :", user);
+  // console.log("Vérification du token pour le socket :", user);
   const type = role;
 
   if (!user || !user.id) {
@@ -22,9 +22,9 @@ io.on("connection", (socket) => {
 
   // Place l'utilisateur dans une room dédiée à son user_id
   socket.join(user.id);
-  console.log(
-    `Utilisateur (${type}) ${user.id} connecté au socket de notifications`,
-  );
+  // console.log(
+  //   `Utilisateur (${type}) ${user.id} connecté au socket de notifications`,
+  // );
   setTimeout(() => {
     console.log("Rooms du socket après join :", Array.from(socket.rooms));
   }, 500);

@@ -175,7 +175,7 @@ Toutes les routes sont protégées par le middleware `AuthMiddleware` (freelance
 
 ---
 
-### Récupérer les messages d'une conversation (pagination)
+### Récupérer les messages d'une conversation (pagination, ordre chronologique)
 
 - **GET /:conversationId?limit=20&offset=0**
 
@@ -185,6 +185,9 @@ Toutes les routes sont protégées par le middleware `AuthMiddleware` (freelance
   **Query :**
   - `limit` : nombre de messages à récupérer (défaut 20)
   - `offset` : décalage pour la pagination (défaut 0)
+
+  **Ordre :**
+  - Les messages sont retournés **du plus ancien au plus récent** (ordre naturel d'un chat).
 
   **Réponse :**
   ```json

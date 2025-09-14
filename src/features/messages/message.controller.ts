@@ -12,12 +12,10 @@ export class MessageController {
       // Optionnel : vérifier que l'utilisateur est bien l'expéditeur du message
       const success = await this.service.softDeleteMessage(messageId);
       if (!success) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: "Message non trouvé ou déjà supprimé.",
-          });
+        return res.status(404).json({
+          success: false,
+          message: "Message non trouvé ou déjà supprimé.",
+        });
       }
       res.json({ success: true });
     } catch (error: any) {
@@ -53,9 +51,15 @@ export class MessageController {
   }
 
   // Créer un message
-  async sendMessage(req: Request, res: Response) {
+  async sendMessage(req: Request & { user?: { id: string } }, res: Response) {
     try {
-      const data = createMessageSchema.parse(req.body);
+      const userId = req.user?.id || "null";
+      console.log("req.user:", req.user);
+      console.log("sendMessage userId:", userId);
+      const data = createMessageSchema.parse({
+        ...req.body,
+        senderId: userId,
+      });
       const message = await this.service.sendMessage(data);
       res.status(201).json(message);
     } catch (error: any) {
@@ -69,24 +73,20 @@ export class MessageController {
       const { messageId } = req.params;
       const { content } = req.body;
       if (!content || typeof content !== "string" || content.trim() === "") {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Le contenu ne peut pas être vide.",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Le contenu ne peut pas être vide.",
+        });
       }
       const success = await this.service.updateMessageContent(
         messageId,
         content,
       );
       if (!success) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: "Message non trouvé ou déjà supprimé.",
-          });
+        return res.status(404).json({
+          success: false,
+          message: "Message non trouvé ou déjà supprimé.",
+        });
       }
       res.json({ success: true });
     } catch (error: any) {

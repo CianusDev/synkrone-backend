@@ -22,6 +22,8 @@ import projectInvitationRoutes from "./features/project-invitations/project-invi
 import projectRoutes from "./features/projects/projects.route";
 import skillsRoutes from "./features/skills/skill.route";
 import projectSkillsRoutes from "./features/project-skills/project-skills.route";
+import conversationsRoutes from "./features/converstions/conversation.route";
+import messagesRoutes from "./features/messages/message.route";
 import { io } from "./server";
 import { HTTP_STATUS, SOKET_EVENTS } from "./utils/constant";
 dotenv.config();
@@ -220,3 +222,5 @@ app.use("/api/project-invitations", projectInvitationRoutes);
 app.use("/api/applications", applicationsRoutes);
 app.use("/api/contracts", contractsRoutes);
 app.use("/api/project-skills", projectSkillsRoutes);
+app.use("/api/conversations", conversationsRoutes);
+app.use("/api/messages", messagesRoutes);

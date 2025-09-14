@@ -142,10 +142,12 @@ export class ConversationRepository {
   }
 
   /**
-   * Récupère toutes les conversations d'un utilisateur (freelance ou entreprise) avec détails
+   * Récupère toutes les conversations d'un utilisateur (freelance ou entreprise) avec détails et pagination
    */
   async getConversationsForUser(
     userId: string,
+    limit: number = 20,
+    offset: number = 0,
   ): Promise<ConversationWithDetails[]> {
     const query = `
        SELECT
@@ -174,9 +176,10 @@ export class ConversationRepository {
        WHERE c.freelance_id = $1 OR c.company_id = $1
        ORDER BY
          COALESCE(m.sent_at, c.created_at) DESC
+       LIMIT $2 OFFSET $3
      `;
     try {
-      const result = await db.query(query, [userId]);
+      const result = await db.query(query, [userId, limit, offset]);
       return result.rows.map((row) => ({
         conversation: {
           id: row.id,
