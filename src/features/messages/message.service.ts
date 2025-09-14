@@ -3,6 +3,8 @@ import { Message, MessageEvent, MessageWithUserInfo } from "./message.model";
 import { io } from "../../server";
 import { MessageMediaService } from "../media/message_media/message_media.service";
 import { ConversationService } from "../converstions/conversation.service";
+
+import { presenceService } from "../presence/presence.service";
 import { db } from "../../config/database";
 import { Media } from "../media/media.model";
 
@@ -72,13 +74,17 @@ export class MessageService {
       receiver,
     });
 
-    // Optionnel : Emit au sender pour accusé d’envoi
+    // Optionnel : Emit au sender pour accusé d'envoi
     io.to(message.senderId).emit(MessageEvent.Send, {
       ...message,
       media,
       sender,
       receiver,
     });
+
+    console.log(
+      `📤 Message ${message.id} envoyé de ${message.senderId} vers ${message.receiverId}`,
+    );
 
     return { ...message, media, sender, receiver };
   }
@@ -162,45 +168,165 @@ export class MessageService {
    * Marque un message comme lu et notifie l'expéditeur en realtime
    */
   async markAsRead(messageId: string, userId: string): Promise<boolean> {
+    // Vérifier d'abord si le message existe et appartient à l'utilisateur
+    const message = await this.repository.getMessageById(messageId);
+    if (!message) {
+      console.warn(`Message ${messageId} not found for markAsRead`);
+      return false;
+    }
+
+    // Vérifier que l'utilisateur est bien le destinataire du message
+    if (message.receiverId !== userId) {
+      console.warn(
+        `User ${userId} tried to mark message ${messageId} as read, but is not the receiver`,
+      );
+      return false;
+    }
+
+    // Si le message est déjà lu, pas besoin de continuer
+    if (message.isRead) {
+      console.log(`Message ${messageId} already marked as read`);
+      return true;
+    }
+
     const success = await this.repository.markAsRead(messageId, userId);
     if (success) {
-      const message = await this.repository.getMessageById(messageId);
-      if (message) {
-        // Mettre à jour le compteur de messages non lus pour cette conversation
-        try {
-          const newUnreadCount =
-            await this.conversationService.updateUnreadCount(
-              message.conversationId || "null",
-              userId,
-            );
+      console.log(`✅ Message ${messageId} marked as read by user ${userId}`);
 
-          // Notifier l'expéditeur que son message a été lu
-          io.to(message.senderId).emit(MessageEvent.Read, {
-            messageId,
-            userId,
-          });
+      // Mettre à jour le compteur de messages non lus pour cette conversation
+      try {
+        const newUnreadCount = await this.conversationService.updateUnreadCount(
+          message.conversationId || "null",
+          userId,
+        );
 
-          // Notifier le destinataire pour synchroniser les compteurs avec le nouveau count
-          io.to(userId).emit("message_marked_read", {
-            messageId,
-            conversationId: message.conversationId,
-            newUnreadCount,
-          });
-        } catch (error) {
-          console.error("Erreur lors de la mise à jour du compteur:", error);
-          // Continuer même si la mise à jour du compteur échoue
-          io.to(message.senderId).emit(MessageEvent.Read, {
-            messageId,
-            userId,
-          });
-          io.to(userId).emit("message_marked_read", {
-            messageId,
-            conversationId: message.conversationId,
-          });
-        }
+        // Notifier l'expéditeur que son message a été lu
+        io.to(message.senderId).emit(MessageEvent.Read, {
+          messageId,
+          userId,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Notifier le destinataire pour synchroniser les compteurs avec le nouveau count
+        io.to(userId).emit("message_marked_read", {
+          messageId,
+          conversationId: message.conversationId,
+          newUnreadCount,
+          timestamp: new Date().toISOString(),
+        });
+
+        console.log(
+          `📊 Updated unread count for conversation ${message.conversationId}: ${newUnreadCount}`,
+        );
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour du compteur:", error);
+        // Continuer même si la mise à jour du compteur échoue
+        io.to(message.senderId).emit(MessageEvent.Read, {
+          messageId,
+          userId,
+          timestamp: new Date().toISOString(),
+        });
+        io.to(userId).emit("message_marked_read", {
+          messageId,
+          conversationId: message.conversationId,
+          timestamp: new Date().toISOString(),
+        });
       }
+    } else {
+      console.error(
+        `❌ Failed to mark message ${messageId} as read for user ${userId}`,
+      );
     }
     return success;
+  }
+
+  /**
+   * Marque plusieurs messages comme lus en batch pour une conversation
+   * Plus efficace que markAsRead individuel pour de gros volumes
+   */
+  async markMultipleAsRead(
+    messageIds: string[],
+    userId: string,
+    conversationId?: string,
+  ): Promise<{ success: boolean; markedCount: number }> {
+    if (messageIds.length === 0) {
+      return { success: true, markedCount: 0 };
+    }
+
+    console.log(
+      `📖 Batch marking ${messageIds.length} messages as read for user ${userId}`,
+    );
+
+    try {
+      // Marquer tous les messages en batch dans le repository
+      const markedCount = await this.repository.markMultipleAsRead(
+        messageIds,
+        userId,
+      );
+
+      if (markedCount > 0) {
+        console.log(`✅ Successfully marked ${markedCount} messages as read`);
+
+        // Mettre à jour le compteur pour la conversation si fourni
+        if (conversationId) {
+          try {
+            const newUnreadCount =
+              await this.conversationService.updateUnreadCount(
+                conversationId,
+                userId,
+              );
+
+            // Notifier le destinataire pour synchroniser les compteurs
+            io.to(userId).emit("batch_messages_marked_read", {
+              messageIds,
+              conversationId,
+              newUnreadCount,
+              markedCount,
+              timestamp: new Date().toISOString(),
+            });
+
+            console.log(
+              `📊 Updated unread count for conversation ${conversationId}: ${newUnreadCount}`,
+            );
+          } catch (error) {
+            console.error(
+              "Erreur lors de la mise à jour du compteur (batch):",
+              error,
+            );
+          }
+        }
+
+        // Notifier les expéditeurs que leurs messages ont été lus
+        // Note: pour l'efficacité, on émet un seul événement groupé
+        const uniqueSenderIds = new Set<string>();
+        for (const messageId of messageIds) {
+          try {
+            const message = await this.repository.getMessageById(messageId);
+            if (message && message.senderId !== userId) {
+              uniqueSenderIds.add(message.senderId);
+            }
+          } catch (err) {
+            console.warn(`Could not get sender for message ${messageId}`);
+          }
+        }
+
+        // Émettre aux expéditeurs uniques
+        uniqueSenderIds.forEach((senderId) => {
+          io.to(senderId).emit("batch_messages_read", {
+            messageIds,
+            userId,
+            conversationId,
+            markedCount,
+            timestamp: new Date().toISOString(),
+          });
+        });
+      }
+
+      return { success: true, markedCount };
+    } catch (error) {
+      console.error("❌ Error in batch mark as read:", error);
+      return { success: false, markedCount: 0 };
+    }
   }
 
   /**

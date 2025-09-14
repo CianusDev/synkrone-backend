@@ -316,6 +316,46 @@ export class MessageRepository {
   }
 
   /**
+   * Marque plusieurs messages comme lus en batch
+   * @param messageIds - Les IDs des messages à marquer comme lus
+   * @param userId - L'ID du destinataire (sécurité)
+   * @returns Le nombre de messages marqués comme lus
+   */
+  async markMultipleAsRead(
+    messageIds: string[],
+    userId: string,
+  ): Promise<number> {
+    if (messageIds.length === 0) {
+      return 0;
+    }
+
+    // Construire la requête avec des placeholders pour tous les messageIds
+    const placeholders = messageIds
+      .map((_, index) => `$${index + 2}`)
+      .join(",");
+    const query = `
+      UPDATE messages
+      SET is_read = true
+      WHERE id IN (${placeholders})
+      AND receiver_id = $1
+      AND is_read = false
+      RETURNING id`;
+
+    try {
+      const values = [userId, ...messageIds];
+      const result = await db.query(query, values);
+      const markedCount = result.rowCount ?? 0;
+      console.log(
+        `📖 Marked ${markedCount} messages as read for user ${userId}`,
+      );
+      return markedCount;
+    } catch (error) {
+      console.error("Error marking multiple messages as read:", error);
+      throw new Error("Database error");
+    }
+  }
+
+  /**
    * Supprime logiquement un message (soft delete)
    * @param messageId - L'ID du message à supprimer
    * @returns true si suppression réussie, false sinon

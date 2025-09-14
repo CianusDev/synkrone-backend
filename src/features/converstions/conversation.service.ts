@@ -3,6 +3,8 @@ import {
   ConversationWithDetails,
 } from "./conversation.repository";
 import { Conversation } from "./conversation.model";
+import { io } from "../../server";
+import { MessageEvent } from "../messages/message.model";
 
 export class ConversationService {
   private readonly repository: ConversationRepository;
@@ -89,14 +91,132 @@ export class ConversationService {
 
   /**
    * Marque tous les messages non lus d'une conversation comme lus
+   * Émet les événements socket appropriés pour synchroniser les clients
    */
   async markAllMessagesAsReadInConversation(
     conversationId: string,
     userId: string,
   ): Promise<number> {
-    return this.repository.markAllMessagesAsReadInConversation(
-      conversationId,
-      userId,
-    );
+    try {
+      console.log(
+        `🎯 [ConversationService] markAllMessagesAsReadInConversation called for conversation: ${conversationId}, user: ${userId}`,
+      );
+
+      // 1. Récupérer les messages avant de les marquer (pour les IDs et expéditeurs)
+      const { db } = await import("../../config/database");
+      const messagesQuery = `
+        SELECT id, sender_id, receiver_id
+        FROM messages
+        WHERE conversation_id = $1
+        AND receiver_id = $2
+        AND is_read = false
+        AND deleted_at IS NULL
+      `;
+      const messagesResult = await db.query(messagesQuery, [
+        conversationId,
+        userId,
+      ]);
+      const unreadMessages = messagesResult.rows;
+
+      console.log(
+        `📋 Found ${unreadMessages.length} unread messages to mark`,
+        unreadMessages.map((m) => ({ id: m.id, sender: m.sender_id })),
+      );
+
+      if (unreadMessages.length === 0) {
+        console.log(
+          `ℹ️ No unread messages found in conversation ${conversationId} for user ${userId}`,
+        );
+        return 0;
+      }
+
+      // 2. Marquer les messages comme lus en base
+      const markedCount =
+        await this.repository.markAllMessagesAsReadInConversation(
+          conversationId,
+          userId,
+        );
+
+      console.log(
+        `✅ ${markedCount} messages marked as read in database for conversation ${conversationId}`,
+      );
+
+      if (markedCount > 0) {
+        // 3. Calculer le nouveau compteur de non-lus
+        const newUnreadCount = await this.repository.updateUnreadCount(
+          conversationId,
+          userId,
+        );
+
+        console.log(
+          `📊 New unread count for conversation ${conversationId}: ${newUnreadCount}`,
+        );
+
+        // 4. Préparer les données pour les événements
+        const messageIds = unreadMessages.map((msg) => msg.id);
+        const uniqueSenderIds = new Set(
+          unreadMessages.map((msg) => msg.sender_id),
+        );
+
+        console.log(
+          `📤 Preparing to notify - Message IDs: [${messageIds.join(", ")}]`,
+        );
+        console.log(
+          `👥 Unique sender IDs: [${Array.from(uniqueSenderIds).join(", ")}]`,
+        );
+
+        // 5. Notifier le destinataire (celui qui a marqué comme lu)
+        io.to(userId).emit("batch_messages_marked_read", {
+          messageIds,
+          conversationId,
+          newUnreadCount,
+          markedCount,
+          timestamp: new Date().toISOString(),
+        });
+
+        console.log(
+          `📬 Emitted 'batch_messages_marked_read' to receiver ${userId} - new count: ${newUnreadCount}`,
+        );
+
+        // 6. Notifier tous les expéditeurs uniques
+        uniqueSenderIds.forEach((senderId) => {
+          if (senderId !== userId) {
+            // Éviter de notifier l'utilisateur qui marque
+            const senderMessageIds = messageIds.filter((id) => {
+              const msg = unreadMessages.find((m) => m.id === id);
+              return msg && msg.sender_id === senderId;
+            });
+
+            io.to(senderId).emit("batch_messages_read", {
+              messageIds: senderMessageIds,
+              userId,
+              conversationId,
+              markedCount: senderMessageIds.length,
+              timestamp: new Date().toISOString(),
+            });
+
+            console.log(
+              `📬 Emitted 'batch_messages_read' to sender ${senderId} - ${senderMessageIds.length} messages [${senderMessageIds.join(", ")}]`,
+            );
+          } else {
+            console.log(
+              `⏭️ Skipping notification to ${senderId} (same as receiver)`,
+            );
+          }
+        });
+
+        console.log(
+          `✅ [ConversationService] Successfully processed ${markedCount} messages for conversation ${conversationId}`,
+        );
+      }
+
+      return markedCount;
+    } catch (error) {
+      console.error(
+        `❌ [ConversationService] Error in markAllMessagesAsReadInConversation:`,
+        error,
+      );
+      throw error;
+    }
   }
 }

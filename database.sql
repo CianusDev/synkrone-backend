@@ -808,6 +808,7 @@ CREATE TABLE notifications (
     message TEXT NOT NULL,
     type notification_type_enum,
     is_global BOOLEAN DEFAULT FALSE,
+    -- meta_data JSONB,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL
 );
