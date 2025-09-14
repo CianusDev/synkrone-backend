@@ -2,16 +2,19 @@ import { MessageRepository } from "./message.repository";
 import { Message, MessageEvent, MessageWithUserInfo } from "./message.model";
 import { io } from "../../server";
 import { MessageMediaService } from "../media/message_media/message_media.service";
+import { ConversationService } from "../converstions/conversation.service";
 import { db } from "../../config/database";
 import { Media } from "../media/media.model";
 
 export class MessageService {
   private readonly repository: MessageRepository;
   private readonly messageMediaService: MessageMediaService;
+  private readonly conversationService: ConversationService;
 
   constructor() {
     this.repository = new MessageRepository();
     this.messageMediaService = new MessageMediaService();
+    this.conversationService = new ConversationService();
   }
 
   /**
@@ -144,38 +147,57 @@ export class MessageService {
       limit,
       offset,
     );
-    // Pour chaque message, enrichir avec les médias associés (infos complètes)
+
+    // Le repository retourne déjà les infos utilisateur, on enrichit seulement avec les médias
     const enrichedMessages = await Promise.all(
       messages.map(async (msg) => {
         const media = await this.getMediaForMessage(msg.id);
-        const sender = await this.repository.getUserInfo(msg.senderId);
-        const receiver = await this.repository.getUserInfo(msg.receiverId);
-
-        // Ensure sender and receiver are not null to satisfy MessageWithUserInfo type
-        if (!sender) {
-          throw new Error(`Sender user info not found for id: ${msg.senderId}`);
-        }
-        if (!receiver) {
-          throw new Error(
-            `Receiver user info not found for id: ${msg.receiverId}`,
-          );
-        }
-
-        return { ...msg, media, sender, receiver };
+        return { ...msg, media };
       }),
     );
     return enrichedMessages;
   }
 
   /**
-   * Marque un message comme lu et notifie l’expéditeur en realtime
+   * Marque un message comme lu et notifie l'expéditeur en realtime
    */
   async markAsRead(messageId: string, userId: string): Promise<boolean> {
     const success = await this.repository.markAsRead(messageId, userId);
     if (success) {
       const message = await this.repository.getMessageById(messageId);
       if (message) {
-        io.to(message.senderId).emit(MessageEvent.Read, { messageId, userId });
+        // Mettre à jour le compteur de messages non lus pour cette conversation
+        try {
+          const newUnreadCount =
+            await this.conversationService.updateUnreadCount(
+              message.conversationId || "null",
+              userId,
+            );
+
+          // Notifier l'expéditeur que son message a été lu
+          io.to(message.senderId).emit(MessageEvent.Read, {
+            messageId,
+            userId,
+          });
+
+          // Notifier le destinataire pour synchroniser les compteurs avec le nouveau count
+          io.to(userId).emit("message_marked_read", {
+            messageId,
+            conversationId: message.conversationId,
+            newUnreadCount,
+          });
+        } catch (error) {
+          console.error("Erreur lors de la mise à jour du compteur:", error);
+          // Continuer même si la mise à jour du compteur échoue
+          io.to(message.senderId).emit(MessageEvent.Read, {
+            messageId,
+            userId,
+          });
+          io.to(userId).emit("message_marked_read", {
+            messageId,
+            conversationId: message.conversationId,
+          });
+        }
       }
     }
     return success;

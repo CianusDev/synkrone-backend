@@ -42,14 +42,19 @@ export class ConversationController {
    * Crée ou récupère une conversation (évite les doublons)
    * POST /conversations
    */
-  async createOrGetConversation(req: Request, res: Response) {
+  async createOrGetConversation(
+    req: Request & { user?: { id: string } },
+    res: Response,
+  ) {
     try {
       const parsed = createConversationSchema.safeParse(req.body);
       if (!parsed.success) {
         return this.handleError(parsed.error, res);
       }
+      const currentUserId = req?.user?.id;
       const conversation = await this.service.createOrGetConversation(
         parsed.data,
+        currentUserId,
       );
       return res.status(201).json(conversation);
     } catch (error) {
@@ -114,19 +119,59 @@ export class ConversationController {
    * Trouve une conversation existante entre un freelance et une entreprise
    * GET /conversations/find?freelanceId=...&companyId=...
    */
-  async findConversation(req: Request, res: Response) {
+  async findConversation(
+    req: Request & { user?: { id: string } },
+    res: Response,
+  ) {
     try {
       const parsed = findConversationSchema.safeParse(req.query);
       if (!parsed.success) {
         return this.handleError(parsed.error, res);
       }
+      const currentUserId = req?.user?.id;
       const conversation = await this.service.findConversation(
         parsed.data.freelanceId,
         parsed.data.companyId,
+        currentUserId,
       );
       if (!conversation)
         return res.status(404).json({ error: "Conversation not found" });
       return res.json(conversation);
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * Marque tous les messages non lus d'une conversation comme lus
+   * POST /conversations/:id/mark-all-read
+   */
+  async markAllMessagesAsRead(
+    req: Request & { user?: { id: string } },
+    res: Response,
+  ) {
+    const { id: conversationId } = req.params;
+    const userId = req?.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Utilisateur non authentifié",
+      });
+    }
+
+    try {
+      const markedCount =
+        await this.service.markAllMessagesAsReadInConversation(
+          conversationId,
+          userId,
+        );
+
+      return res.json({
+        success: true,
+        message: `${markedCount} messages marqués comme lus`,
+        markedCount,
+      });
     } catch (error) {
       return this.handleError(error, res);
     }

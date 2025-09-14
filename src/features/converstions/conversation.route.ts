@@ -26,4 +26,9 @@ router.get("/find", AuthAdminMiddleware, (req, res) =>
   controller.findConversation(req, res),
 );
 
+// Marque tous les messages d'une conversation comme lus
+router.post("/:id/mark-all-read", AuthMiddleware, (req, res) =>
+  controller.markAllMessagesAsRead(req, res),
+);
+
 export default router;

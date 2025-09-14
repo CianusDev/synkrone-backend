@@ -16,16 +16,19 @@ export class ConversationService {
    */
   async createOrGetConversation(
     data: Partial<Conversation>,
+    currentUserId?: string,
   ): Promise<ConversationWithDetails> {
     let conversation = await this.repository.findConversation(
       data.freelanceId!,
       data.companyId!,
+      currentUserId,
     );
     if (!conversation) {
       const created = await this.repository.createConversation(data);
       conversation = await this.repository.findConversation(
         created.freelanceId,
         created.companyId,
+        currentUserId,
       );
     }
     return conversation!;
@@ -44,8 +47,13 @@ export class ConversationService {
   async findConversation(
     freelanceId: string,
     companyId: string,
+    currentUserId?: string,
   ): Promise<ConversationWithDetails | null> {
-    return this.repository.findConversation(freelanceId, companyId);
+    return this.repository.findConversation(
+      freelanceId,
+      companyId,
+      currentUserId,
+    );
   }
 
   /**
@@ -60,5 +68,35 @@ export class ConversationService {
     offset: number = 0,
   ): Promise<ConversationWithDetails[]> {
     return this.repository.getConversationsForUser(userId, limit, offset);
+  }
+
+  /**
+   * Met à jour le compteur de messages non lus pour une conversation
+   */
+  async updateUnreadCount(
+    conversationId: string,
+    userId: string,
+  ): Promise<number> {
+    return this.repository.updateUnreadCount(conversationId, userId);
+  }
+
+  /**
+   * Récupère les compteurs de messages non lus pour toutes les conversations d'un utilisateur
+   */
+  async getUnreadCountsForUser(userId: string): Promise<Map<string, number>> {
+    return this.repository.getUnreadCountsForUser(userId);
+  }
+
+  /**
+   * Marque tous les messages non lus d'une conversation comme lus
+   */
+  async markAllMessagesAsReadInConversation(
+    conversationId: string,
+    userId: string,
+  ): Promise<number> {
+    return this.repository.markAllMessagesAsReadInConversation(
+      conversationId,
+      userId,
+    );
   }
 }
