@@ -90,40 +90,47 @@ export class MessageRepository {
     limit = 20,
     offset = 0,
   ): Promise<MessageWithUserInfo[]> {
+    // Pagination alignée frontend/backend : offset = nombre de messages déjà chargés
     const query = `
-       SELECT
-         m.id,
-         m.sender_id AS "senderId",
-         m.receiver_id AS "receiverId",
-         m.content,
-         m.is_read AS "isRead",
-         m.sent_at AS "sentAt",
-         m.project_id AS "projectId",
-         m.reply_to_message_id AS "replyToMessageId",
-         m.conversation_id AS "conversationId",
-         m.created_at AS "createdAt",
-         m.updated_at AS "updatedAt",
-         m.deleted_at AS "deletedAt",
-         -- Infos sender
-         fs.id AS sender_freelance_id, fs.firstname AS sender_firstname, fs.lastname AS sender_lastname, fs.photo_url AS sender_photo_url,
-         cs.id AS sender_company_id, cs.company_name AS sender_company_name, cs.logo_url AS sender_logo_url,
-         -- Infos receiver
-         fr.id AS receiver_freelance_id, fr.firstname AS receiver_firstname, fr.lastname AS receiver_lastname, fr.photo_url AS receiver_photo_url,
-         cr.id AS receiver_company_id, cr.company_name AS receiver_company_name, cr.logo_url AS receiver_logo_url
-       FROM messages m
-       LEFT JOIN freelances fs ON m.sender_id = fs.id
-       LEFT JOIN companies cs ON m.sender_id = cs.id
-       LEFT JOIN freelances fr ON m.receiver_id = fr.id
-       LEFT JOIN companies cr ON m.receiver_id = cr.id
-       WHERE m.conversation_id = $1
-       AND m.deleted_at IS NULL
-       ORDER BY m.sent_at ASC
-       LIMIT $2 OFFSET $3
-     `;
+      SELECT
+        m.id,
+        m.sender_id AS "senderId",
+        m.receiver_id AS "receiverId",
+        m.content,
+        m.is_read AS "isRead",
+        m.sent_at AS "sentAt",
+        m.project_id AS "projectId",
+        m.reply_to_message_id AS "replyToMessageId",
+        m.conversation_id AS "conversationId",
+        m.created_at AS "createdAt",
+        m.updated_at AS "updatedAt",
+        m.deleted_at AS "deletedAt",
+        -- Infos sender
+        fs.id AS sender_freelance_id, fs.firstname AS sender_firstname, fs.lastname AS sender_lastname, fs.photo_url AS sender_photo_url,
+        cs.id AS sender_company_id, cs.company_name AS sender_company_name, cs.logo_url AS sender_logo_url,
+        -- Infos receiver
+        fr.id AS receiver_freelance_id, fr.firstname AS receiver_firstname, fr.lastname AS receiver_lastname, fr.photo_url AS receiver_photo_url,
+        cr.id AS receiver_company_id, cr.company_name AS receiver_company_name, cr.logo_url AS receiver_logo_url
+      FROM messages m
+      LEFT JOIN freelances fs ON m.sender_id = fs.id
+      LEFT JOIN companies cs ON m.sender_id = cs.id
+      LEFT JOIN freelances fr ON m.receiver_id = fr.id
+      LEFT JOIN companies cr ON m.receiver_id = cr.id
+      WHERE m.conversation_id = $1
+      AND m.deleted_at IS NULL
+      ORDER BY m.sent_at DESC
+      LIMIT $2 OFFSET $3
+    `;
     try {
-      const result = await db.query(query, [conversationId, limit, offset]);
+      const result = await db.query(query, [
+        conversationId,
+        limit,
+        offset, // offset = nombre de messages déjà chargés
+      ]);
+      // On reverse le tableau pour afficher du plus ancien au plus récent
+      const rows = result.rows.reverse();
       return Promise.all(
-        result.rows.map(async (row) => {
+        rows.map(async (row) => {
           // Build sender UserInfo
           let sender: UserInfo;
           if (row.sender_freelance_id) {
