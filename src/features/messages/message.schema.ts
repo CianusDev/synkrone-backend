@@ -7,6 +7,7 @@ export const createMessageSchema = z.object({
   conversationId: z.uuid(),
   projectId: z.uuid().optional(),
   replyToMessageId: z.uuid().optional(),
+  mediaIds: z.array(z.uuid()).optional(),
 });
 
 export const markAsReadSchema = z.object({

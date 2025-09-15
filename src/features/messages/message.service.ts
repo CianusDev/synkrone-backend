@@ -25,25 +25,43 @@ export class MessageService {
   async sendMessage(
     data: Partial<Message> & { mediaIds?: string[] },
   ): Promise<MessageWithUserInfo> {
+    console.log(
+      "📥 sendMessage called with data:",
+      JSON.stringify(data, null, 2),
+    );
+
     const message = await this.repository.createMessage(data);
+    console.log("✅ Message created with ID:", message.id);
 
     // Associer les médias si fournis
     let media: Media[] = [];
     if (data.mediaIds && Array.isArray(data.mediaIds)) {
+      console.log(
+        `🔗 Associating ${data.mediaIds.length} media(s) to message ${message.id}`,
+      );
+
       for (const mediaId of data.mediaIds) {
         try {
+          console.log(
+            `🔗 Trying to associate media ${mediaId} to message ${message.id}`,
+          );
           await this.messageMediaService.addMediaToMessage(message.id, mediaId);
+          console.log(`✅ Successfully associated media ${mediaId}`);
         } catch (err) {
-          // Ignore les erreurs d'association individuelle, mais log
-          console.error("Erreur association média:", err);
+          console.error(`❌ Erreur association média ${mediaId}:`, err);
         }
       }
       media = await this.getMediaForMessage(message.id);
+      console.log(
+        `📎 Retrieved ${media.length} media(s) for message ${message.id}:`,
+        media,
+      );
     } else {
+      console.log("⚠️ No mediaIds provided or mediaIds is not an array");
       media = await this.getMediaForMessage(message.id);
     }
 
-    console.log("Media associés au message:", media);
+    console.log("📎 Final media array:", media);
     // Récupérer les infos utilisateur pour sender et receiver
     const sender = await this.repository.getUserInfo(
       // data.senderId ??
@@ -116,24 +134,46 @@ export class MessageService {
    * Récupère les médias associés à un message, avec toutes les infos du média
    */
   async getMediaForMessage(messageId: string): Promise<Media[]> {
+    console.log(`🔍 getMediaForMessage called for messageId: ${messageId}`);
+
     const links = await this.messageMediaService.getMediaForMessage(messageId);
-    if (!links || links.length === 0) return [];
+    console.log(`🔗 Found ${links?.length || 0} media links:`, links);
+
+    if (!links || links.length === 0) {
+      console.log(`⚠️ No media links found for message ${messageId}`);
+      return [];
+    }
+
     const mediaInfos: Media[] = [];
     for (const link of links) {
+      console.log(`🔍 Fetching media info for mediaId: ${link.mediaId}`);
+
       const result = await db.query(
         "SELECT id, url, type, description, uploaded_at FROM media WHERE id = $1",
         [link.mediaId],
       );
+
+      console.log(`📊 Query result for media ${link.mediaId}:`, {
+        rowCount: result.rows.length,
+        rows: result.rows,
+      });
+
       if (result.rows.length > 0) {
-        mediaInfos.push({
+        const mediaInfo = {
           id: result.rows[0].id,
           url: result.rows[0].url,
           type: result.rows[0].type,
           description: result.rows[0].description,
           uploadedAt: result.rows[0].uploaded_at,
-        });
+        };
+        mediaInfos.push(mediaInfo);
+        console.log(`✅ Added media info:`, mediaInfo);
+      } else {
+        console.log(`❌ No media found in database for ID: ${link.mediaId}`);
       }
     }
+
+    console.log(`📎 Returning ${mediaInfos.length} media infos:`, mediaInfos);
     return mediaInfos;
   }
 

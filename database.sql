@@ -756,6 +756,7 @@ CREATE TABLE deliverable_media (
     deliverable_id UUID NOT NULL REFERENCES deliverables(id) ON DELETE CASCADE,
     media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
     deleted_at TIMESTAMP NULL;
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (deliverable_id, media_id)
 );
 

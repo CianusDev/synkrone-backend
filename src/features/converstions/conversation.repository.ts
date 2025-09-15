@@ -92,6 +92,7 @@ export class ConversationRepository {
        LEFT JOIN LATERAL (
          SELECT * FROM messages
          WHERE conversation_id = c.id
+         AND deleted_at IS NULL
          ORDER BY sent_at DESC
          LIMIT 1
        ) m ON true
@@ -186,6 +187,7 @@ export class ConversationRepository {
        LEFT JOIN LATERAL (
          SELECT * FROM messages
          WHERE conversation_id = c.id
+         AND deleted_at IS NULL
          ORDER BY sent_at DESC
          LIMIT 1
        ) m ON true

@@ -32,18 +32,34 @@ export class ApplicationsService {
    * @returns The created application
    */
   async createApplication(data: Partial<Application>): Promise<Application> {
-    // 1. Vérifier l'unicité de la candidature
-    const existing = await this.repository.getApplicationsWithFilters({
-      projectId: data.project_id,
-      freelanceId: data.freelance_id,
-      status: ApplicationStatus.SUBMITTED, // ou tous statuts sauf withdrawn/rejected
-      limit: 1,
-      page: 1,
-    });
-    if (existing.total > 0) {
-      throw new Error(
-        "Une candidature existe déjà pour ce projet et ce freelance.",
+    // 1. Vérifier s'il existe déjà une candidature acceptée pour ce freelance sur ce projet
+    const acceptedApplication =
+      await this.repository.getApplicationByFreelanceAndProject(
+        data.freelance_id || "",
+        data.project_id || "",
+        [ApplicationStatus.ACCEPTED],
       );
+    if (acceptedApplication) {
+      throw new Error(
+        "Vous avez déjà été accepté sur cette mission et ne pouvez pas repostuler.",
+      );
+    }
+
+    // 2. Vérifier l'unicité des candidatures en cours (submitted/under_review)
+    const pendingApplication =
+      await this.repository.getApplicationByFreelanceAndProject(
+        data.freelance_id || "",
+        data.project_id || "",
+        [ApplicationStatus.SUBMITTED, ApplicationStatus.UNDER_REVIEW],
+      );
+    if (pendingApplication) {
+      if (pendingApplication.status === ApplicationStatus.SUBMITTED) {
+        throw new Error("Une candidature est déjà en cours pour ce projet.");
+      } else {
+        throw new Error(
+          "Une candidature est déjà en cours d'examen pour ce projet.",
+        );
+      }
     }
 
     const project = await this.projectsRepository.getProjectById(

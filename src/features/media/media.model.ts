@@ -1,8 +1,9 @@
 export enum MediaType {
+  PDF = "pdf",
   IMAGE = "image",
-  VIDEO = "video",
-  DOCUMENT = "document",
-  // Ajoute d'autres types si ton type_media_enum en contient plus
+  DOC = "doc",
+  ZIP = "zip",
+  OTHER = "other",
 }
 
 export interface Media {

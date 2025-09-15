@@ -96,12 +96,9 @@ export class MessageMediaRepository {
     mediaId: string,
   ): Promise<boolean> {
     const query = `
-      UPUPDATATE message_media
+      UPDATE message_media
       SET deleted_at = NOW()
-      W()
-_media
-      SET deleted_at = NOW message      WHERE message_id = $1 AND media_id = $2 AND deleted_at IS NULL AND deleted_at IS NULL
-      RETURNING *;
+      WHERE message_id = $1 AND media_id = $2 AND deleted_at IS NULL
       RETURNING *;
     `;
     const result = await db.query(query, [messageId, mediaId]);

@@ -259,4 +259,44 @@ export class ApplicationsRepository {
       throw new Error("Erreur de base de données");
     }
   }
+
+  /**
+   * Vérifie s'il existe une candidature pour un freelance sur un projet donné
+   * @param freelanceId - UUID du freelance
+   * @param projectId - UUID du projet
+   * @param statuses - Statuts à vérifier (optionnel, par défaut tous)
+   * @returns L'application trouvée ou null
+   */
+  async getApplicationByFreelanceAndProject(
+    freelanceId: string,
+    projectId: string,
+    statuses?: ApplicationStatus[],
+  ): Promise<Application | null> {
+    let query = `
+      SELECT * FROM applications
+      WHERE freelance_id = $1 AND project_id = $2
+    `;
+    const values: any[] = [freelanceId, projectId];
+
+    if (statuses && statuses.length > 0) {
+      const statusPlaceholders = statuses
+        .map((_, index) => `$${index + 3}`)
+        .join(", ");
+      query += ` AND status IN (${statusPlaceholders})`;
+      values.push(...statuses);
+    }
+
+    query += ` ORDER BY submission_date DESC LIMIT 1`;
+
+    try {
+      const result = await db.query(query, values);
+      return (result.rows[0] as Application) || null;
+    } catch (error) {
+      console.error(
+        "Erreur lors de la vérification de candidature existante :",
+        error,
+      );
+      throw new Error("Erreur de base de données");
+    }
+  }
 }

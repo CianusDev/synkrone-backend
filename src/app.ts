@@ -26,6 +26,7 @@ import conversationsRoutes from "./features/converstions/conversation.route";
 import messagesRoutes from "./features/messages/message.route";
 import presenceRoutes from "./features/presence/presence.route";
 import { io } from "./server";
+import mediaRoutes from "./features/media/media.route";
 import { HTTP_STATUS, SOKET_EVENTS } from "./utils/constant";
 dotenv.config();
 
@@ -225,4 +226,5 @@ app.use("/api/contracts", contractsRoutes);
 app.use("/api/project-skills", projectSkillsRoutes);
 app.use("/api/conversations", conversationsRoutes);
 app.use("/api/messages", messagesRoutes);
+app.use("/api/media", mediaRoutes);
 app.use("/api/presence", presenceRoutes);

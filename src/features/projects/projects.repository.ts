@@ -91,7 +91,7 @@ export class ProjectsRepository {
         p.updated_at AS "updatedAt",
         p.published_at AS "publishedAt",
         (
-          SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id AND a.status = 'submitted'
+          SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id AND a.status IN ('submitted', 'accepted')
         ) AS "applicationsCount",
         (
           SELECT COUNT(*) FROM project_invitations i WHERE i.project_id = p.id
@@ -249,7 +249,7 @@ export class ProjectsRepository {
         p.updated_at AS "updatedAt",
         p.published_at AS "publishedAt",
         (
-          SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id AND a.status = 'submitted'
+          SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id AND a.status IN ('submitted', 'accepted')
         ) AS "applicationsCount",
         (
           SELECT COUNT(*) FROM project_invitations i WHERE i.project_id = p.id
