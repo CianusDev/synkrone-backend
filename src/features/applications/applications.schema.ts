@@ -31,6 +31,15 @@ export const projectIdParamSchema = z.object({
   projectId: z.uuid({ message: "ID de projet invalide (UUID attendu)." }),
 });
 
+// Schéma pour la mise à jour du contenu d'une candidature (freelance)
+export const updateApplicationContentSchema = z.object({
+  proposed_rate: z
+    .number()
+    .min(0, "Le taux proposé doit être positif.")
+    .optional(),
+  cover_letter: z.string().optional().nullable(),
+});
+
 // Schéma pour le filtrage et la pagination des candidatures
 export const filterApplicationsSchema = z.object({
   status: z.enum(ApplicationStatus).optional(),

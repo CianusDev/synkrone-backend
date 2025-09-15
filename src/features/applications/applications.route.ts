@@ -28,6 +28,11 @@ router.patch("/:id/withdraw", AuthFreelanceMiddleware, (req, res) =>
   controller.withdrawApplication(req, res),
 );
 
+// Mettre à jour le contenu d'une candidature (freelance connecté)
+router.patch("/:id/update", AuthFreelanceMiddleware, (req, res) =>
+  controller.updateApplicationContent(req, res),
+);
+
 // Récupérer les candidatures d'un projet (company ou admin)
 router.get("/project/:projectId", AuthAdminOrCompanyMiddleware, (req, res) =>
   controller.getApplicationsByProjectId(req, res),

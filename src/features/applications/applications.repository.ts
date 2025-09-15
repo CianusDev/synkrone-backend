@@ -299,4 +299,142 @@ export class ApplicationsRepository {
       throw new Error("Erreur de base de données");
     }
   }
+
+  /**
+   * Récupère les statistiques des candidatures pour un freelance donné
+   * @param freelanceId - UUID du freelance
+   * @returns Statistiques des candidatures par statut
+   */
+  async getApplicationStatsByFreelance(freelanceId: string): Promise<{
+    submitted: number;
+    accepted: number;
+    rejected: number;
+    under_review: number;
+    withdrawn: number;
+    total: number;
+  }> {
+    const query = `
+      SELECT
+        COUNT(CASE WHEN status = 'submitted' THEN 1 END) as submitted,
+        COUNT(CASE WHEN status = 'accepted' THEN 1 END) as accepted,
+        COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected,
+        COUNT(CASE WHEN status = 'under_review' THEN 1 END) as under_review,
+        COUNT(CASE WHEN status = 'withdrawn' THEN 1 END) as withdrawn,
+        COUNT(*) as total
+      FROM applications
+      WHERE freelance_id = $1
+    `;
+
+    try {
+      const result = await db.query(query, [freelanceId]);
+      const stats = result.rows[0];
+      return {
+        submitted: parseInt(stats.submitted || "0", 10),
+        accepted: parseInt(stats.accepted || "0", 10),
+        rejected: parseInt(stats.rejected || "0", 10),
+        under_review: parseInt(stats.under_review || "0", 10),
+        withdrawn: parseInt(stats.withdrawn || "0", 10),
+        total: parseInt(stats.total || "0", 10),
+      };
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des statistiques par freelance :",
+        error,
+      );
+      throw new Error("Erreur de base de données");
+    }
+  }
+
+  /**
+   * Récupère les statistiques des candidatures pour un projet donné
+   * @param projectId - UUID du projet
+   * @returns Statistiques des candidatures par statut
+   */
+  async getApplicationStatsByProject(projectId: string): Promise<{
+    submitted: number;
+    accepted: number;
+    rejected: number;
+    under_review: number;
+    withdrawn: number;
+    total: number;
+  }> {
+    const query = `
+      SELECT
+        COUNT(CASE WHEN status = 'submitted' THEN 1 END) as submitted,
+        COUNT(CASE WHEN status = 'accepted' THEN 1 END) as accepted,
+        COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected,
+        COUNT(CASE WHEN status = 'under_review' THEN 1 END) as under_review,
+        COUNT(CASE WHEN status = 'withdrawn' THEN 1 END) as withdrawn,
+        COUNT(*) as total
+      FROM applications
+      WHERE project_id = $1
+    `;
+
+    try {
+      const result = await db.query(query, [projectId]);
+      const stats = result.rows[0];
+      return {
+        submitted: parseInt(stats.submitted || "0", 10),
+        accepted: parseInt(stats.accepted || "0", 10),
+        rejected: parseInt(stats.rejected || "0", 10),
+        under_review: parseInt(stats.under_review || "0", 10),
+        withdrawn: parseInt(stats.withdrawn || "0", 10),
+        total: parseInt(stats.total || "0", 10),
+      };
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des statistiques par projet :",
+        error,
+      );
+      throw new Error("Erreur de base de données");
+    }
+  }
+
+  /**
+   * Met à jour le contenu d'une candidature (tarif proposé et lettre de motivation)
+   * @param id - UUID de la candidature
+   * @param data - Données à mettre à jour
+   * @returns La candidature mise à jour ou null si non trouvée
+   */
+  async updateApplicationContent(
+    id: string,
+    data: { proposed_rate?: number; cover_letter?: string },
+  ): Promise<Application | null> {
+    const fields = [];
+    const values = [];
+    let idx = 2;
+
+    if (data.proposed_rate !== undefined) {
+      fields.push(`proposed_rate = $${idx++}`);
+      values.push(data.proposed_rate);
+    }
+    if (data.cover_letter !== undefined) {
+      fields.push(`cover_letter = $${idx++}`);
+      values.push(data.cover_letter);
+    }
+
+    if (fields.length === 0) {
+      // Aucun champ à mettre à jour, retourner la candidature existante
+      return this.getApplicationById(id);
+    }
+
+    const query = `
+      UPDATE applications
+      SET ${fields.join(", ")}
+      WHERE id = $1
+      RETURNING *;
+    `;
+    const queryValues = [id, ...values];
+
+    try {
+      const result = await db.query(query, queryValues);
+      return (result.rows[0] as Application) || null;
+    } catch (error) {
+      console.error(
+        "Erreur lors de la mise à jour du contenu de la candidature :",
+        error,
+      );
+      throw new Error("Erreur de base de données");
+    }
+  }
 }

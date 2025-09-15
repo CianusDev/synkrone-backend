@@ -3,6 +3,7 @@ import { ApplicationsService } from "./applications.service";
 import {
   createApplicationSchema,
   updateApplicationStatusSchema,
+  updateApplicationContentSchema,
   applicationIdSchema,
   freelanceIdParamSchema,
   projectIdParamSchema,
@@ -114,6 +115,7 @@ export class ApplicationsController {
         page: result.page,
         limit: result.limit,
         totalPages: result.totalPages,
+        stats: result.stats,
         message: "Liste des candidatures du freelance récupérée avec succès",
       });
     } catch (error) {
@@ -182,6 +184,7 @@ export class ApplicationsController {
         page: result.page,
         limit: result.limit,
         totalPages: result.totalPages,
+        stats: result.stats,
         message: "Liste des candidatures du projet récupérée avec succès",
       });
     } catch (error) {
@@ -299,9 +302,64 @@ export class ApplicationsController {
         page: result.page,
         limit: result.limit,
         totalPages: result.totalPages,
+        stats: result.stats,
         message: "Liste des candidatures filtrée récupérée avec succès",
       });
     } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  // PATCH /applications/:id/update : mettre à jour le contenu d'une candidature (freelance)
+  async updateApplicationContent(
+    req: Request & { freelance?: Freelance },
+    res: Response,
+  ) {
+    try {
+      const { id } = applicationIdSchema.parse(req.params);
+      const freelanceId = req.freelance?.id;
+      if (!freelanceId) {
+        return res.status(401).json({
+          success: false,
+          message: "Freelance non authentifié",
+        });
+      }
+
+      const validated = updateApplicationContentSchema.parse(req.body);
+      const updated = await this.service.updateApplicationContent(
+        id,
+        {
+          proposed_rate: validated.proposed_rate,
+          cover_letter: validated.cover_letter || undefined,
+        },
+        freelanceId,
+      );
+
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          message: "Candidature non trouvée ou non autorisée",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: updated,
+        message: "Candidature mise à jour avec succès",
+      });
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        error.message ===
+          "Seules les candidatures avec le statut 'soumise' peuvent être modifiées."
+      ) {
+        return res.status(409).json({
+          success: false,
+          message: error.message,
+        });
+      }
       this.handleError(error, res);
     }
   }

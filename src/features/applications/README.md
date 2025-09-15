@@ -36,6 +36,21 @@ export interface Application {
   status: ApplicationStatus;
   submission_date: Date;
   response_date?: Date | null;
+  
+  // Relations incluses dans les réponses GET
+  freelance?: Partial<Freelance>;
+  project?: Project;
+  freelanceStats?: ApplicationStats;
+  projectStats?: ApplicationStats;
+}
+
+export interface ApplicationStats {
+  submitted: number;
+  accepted: number;
+  rejected: number;
+  under_review: number;
+  withdrawn: number;
+  total: number;
 }
 ```
 
@@ -77,7 +92,58 @@ export interface Application {
 ```json
 {
   "success": true,
-  "data": { ... },
+  "data": {
+    "id": "uuid",
+    "project_id": "uuid",
+    "freelance_id": "uuid",
+    "proposed_rate": 500,
+    "cover_letter": "Je suis motivé !",
+    "status": "submitted",
+    "submission_date": "2024-06-01T10:00:00.000Z",
+    "response_date": null,
+    "freelance": {
+      "id": "uuid",
+      "firstname": "John",
+      "lastname": "Doe",
+      "email": "john@example.com",
+      // ... autres infos freelance (sans password)
+    },
+    "project": {
+      "id": "uuid",
+      "title": "Application mobile React Native",
+      "description": "Développement d'une app mobile",
+      "budgetMin": 10000,
+      "budgetMax": 15000,
+      "status": "published",
+      "company": {
+        "id": "uuid",
+        "company_name": "Tech Corp",
+        "company_email": "contact@techcorp.com",
+        "logo_url": "https://...",
+        "industry": "Technology",
+        "company_size": "medium",
+        "is_verified": true
+        // ... infos entreprise complètes
+      }
+      // ... autres infos projet
+    },
+    "freelanceStats": {
+      "submitted": 5,
+      "accepted": 2,
+      "rejected": 1,
+      "under_review": 1,
+      "withdrawn": 1,
+      "total": 10
+    },
+    "projectStats": {
+      "submitted": 12,
+      "accepted": 1,
+      "rejected": 3,
+      "under_review": 8,
+      "withdrawn": 0,
+      "total": 24
+    }
+  },
   "message": "Candidature récupérée avec succès"
 }
 ```
@@ -97,11 +163,52 @@ export interface Application {
 ```json
 {
   "success": true,
-  "data": [ ... ],
+  "data": [
+    {
+      "id": "uuid",
+      "project_id": "uuid",
+      "freelance_id": "uuid",
+      "proposed_rate": 500,
+      "cover_letter": "Je suis motivé !",
+      "status": "submitted",
+      "submission_date": "2024-06-01T10:00:00.000Z",
+      "response_date": null,
+      "freelance": {
+        "id": "uuid",
+        "firstname": "John",
+        "lastname": "Doe",
+        // ... infos freelance
+      },
+      "project": {
+        "id": "uuid", 
+        "title": "Application mobile React Native",
+        "description": "Développement d'une app mobile",
+        "budgetMin": 10000,
+        "budgetMax": 15000,
+        "company": {
+          "id": "uuid",
+          "company_name": "Tech Corp",
+          "company_email": "contact@techcorp.com",
+          "industry": "Technology",
+          "is_verified": true
+          // ... infos entreprise complètes
+        }
+        // ... autres infos projet complètes
+      }
+    }
+  ],
   "total": 42,
   "page": 1,
   "limit": 10,
   "totalPages": 5,
+  "stats": {
+    "submitted": 15,
+    "accepted": 8,
+    "rejected": 12,
+    "under_review": 5,
+    "withdrawn": 2,
+    "total": 42
+  },
   "message": "Liste des candidatures du freelance récupérée avec succès"
 }
 ```
@@ -121,11 +228,55 @@ export interface Application {
 ```json
 {
   "success": true,
-  "data": [ ... ],
+  "data": [
+    {
+      "id": "uuid",
+      "project_id": "uuid",
+      "freelance_id": "uuid",
+      "proposed_rate": 500,
+      "cover_letter": "Je suis motivé !",
+      "status": "submitted",
+      "submission_date": "2024-06-01T10:00:00.000Z",
+      "response_date": null,
+      "freelance": {
+        "id": "uuid",
+        "firstname": "John",
+        "lastname": "Doe",
+        "email": "john@example.com",
+        // ... infos complètes du freelance (sans password)
+      },
+      "project": {
+        "id": "uuid",
+        "title": "Application mobile React Native", 
+        "description": "Développement d'une app mobile",
+        "budgetMin": 10000,
+        "budgetMax": 15000,
+        "company": {
+          "id": "uuid",
+          "company_name": "Tech Corp",
+          "company_email": "contact@techcorp.com",
+          "logo_url": "https://...",
+          "industry": "Technology",
+          "company_size": "medium",
+          "is_verified": true
+          // ... infos entreprise complètes
+        }
+        // ... autres infos projet complètes
+      }
+    }
+  ],
   "total": 12,
   "page": 1,
   "limit": 10,
   "totalPages": 2,
+  "stats": {
+    "submitted": 8,
+    "accepted": 1,
+    "rejected": 2,
+    "under_review": 1,
+    "withdrawn": 0,
+    "total": 12
+  },
   "message": "Liste des candidatures du projet récupérée avec succès"
 }
 ```
@@ -151,11 +302,54 @@ export interface Application {
 ```json
 {
   "success": true,
-  "data": [ ... ],
+  "data": [
+    {
+      "id": "uuid",
+      "project_id": "uuid",
+      "freelance_id": "uuid",
+      "proposed_rate": 500,
+      "cover_letter": "Je suis motivé !",
+      "status": "under_review",
+      "submission_date": "2024-06-01T10:00:00.000Z",
+      "response_date": null,
+      "freelance": {
+        "id": "uuid",
+        "firstname": "John",
+        "lastname": "Doe",
+        // ... infos freelance complètes
+      },
+      "project": {
+        "id": "uuid",
+        "title": "Application mobile React Native",
+        "description": "Développement d'une app mobile",
+        "budgetMin": 10000,
+        "budgetMax": 15000,
+        "company": {
+          "id": "uuid",
+          "company_name": "Tech Corp",
+          "company_email": "contact@techcorp.com",
+          "logo_url": "https://...",
+          "industry": "Technology",
+          "company_size": "medium",
+          "is_verified": true
+          // ... infos entreprise complètes
+        }
+        // ... autres infos projet complètes
+      }
+    }
+  ],
   "total": 7,
   "page": 1,
   "limit": 10,
   "totalPages": 1,
+  "stats": {
+    "submitted": 4,
+    "accepted": 1,
+    "rejected": 1,
+    "under_review": 1,
+    "withdrawn": 0,
+    "total": 7
+  },
   "message": "Liste des candidatures filtrée récupérée avec succès"
 }
 ```
@@ -185,7 +379,35 @@ export interface Application {
 
 ---
 
-### 7. Supprimer une candidature
+### 7. Mettre à jour le contenu d'une candidature (freelance)
+
+`PATCH /applications/:id/update`
+
+**Body :**
+```json
+{
+  "proposed_rate": 600,
+  "cover_letter": "Nouvelle lettre de motivation mise à jour"
+}
+```
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Candidature mise à jour avec succès"
+}
+```
+
+**Restrictions :**
+- Seul le freelance propriétaire peut modifier sa candidature
+- Uniquement les candidatures avec le statut `submitted`
+- Les candidatures `accepted`, `rejected`, `withdrawn` ou `under_review` ne peuvent pas être modifiées
+
+---
+
+### 8. Supprimer une candidature
 
 `DELETE /applications/:id`
 
@@ -206,10 +428,36 @@ export interface Application {
 
 ---
 
+## Enrichissement des données
+
+- **Tous les endpoints GET** incluent automatiquement :
+  - Les informations complètes du **freelance** (sans mot de passe)
+  - Les informations complètes du **projet** (avec entreprise intégrée)
+  - Les **statistiques des candidatures** :
+    - `freelanceStats` : pour `GET /applications/:id` - statistiques du freelance
+    - `projectStats` : pour `GET /applications/:id` - statistiques du projet
+    - `stats` : pour les endpoints de liste - statistiques contextuelles
+- Optimisation : pour les listes par projet, les infos projet ne sont récupérées qu'une fois
+
+## Statistiques des candidatures
+
+Les statistiques incluent le nombre de candidatures par statut :
+- `submitted` : candidatures soumises
+- `accepted` : candidatures acceptées  
+- `rejected` : candidatures rejetées
+- `under_review` : candidatures en cours d'examen
+- `withdrawn` : candidatures retirées
+- `total` : nombre total de candidatures
+
+**Contexte des statistiques :**
+- `GET /applications/freelance/:freelanceId` → statistiques du freelance
+- `GET /applications/project/:projectId` → statistiques du projet
+- `POST /applications/filter` → statistiques selon les filtres (freelance ou projet)
+
 ## Pagination & Filtres
 
 - Les endpoints de liste acceptent `page`, `limit`, et `status` en query ou body.
-- La réponse inclut toujours le nombre total d’éléments et de pages.
+- La réponse inclut toujours le nombre total d'éléments et de pages.
 
 ---
 
