@@ -15,25 +15,59 @@ export class ConversationService {
 
   /**
    * Crée une conversation ou retourne l'existante (évite les doublons)
+   * Basé sur applicationId pour séparer les conversations par mission
    */
   async createOrGetConversation(
     data: Partial<Conversation>,
     currentUserId?: string,
   ): Promise<ConversationWithDetails> {
-    let conversation = await this.repository.findConversation(
-      data.freelanceId!,
-      data.companyId!,
-      currentUserId,
-    );
-    if (!conversation) {
-      const created = await this.repository.createConversation(data);
+    let conversation: ConversationWithDetails | null = null;
+
+    // Si applicationId est fourni, chercher par applicationId
+    if (data.applicationId) {
+      conversation = await this.repository.findConversationByApplication(
+        data.applicationId,
+        currentUserId,
+      );
+    } else {
+      // Sinon, utiliser l'ancienne méthode (pour compatibilité)
       conversation = await this.repository.findConversation(
-        created.freelanceId,
-        created.companyId,
+        data.freelanceId!,
+        data.companyId!,
         currentUserId,
       );
     }
+
+    if (!conversation) {
+      const created = await this.repository.createConversation(data);
+      // Récupérer la conversation créée avec détails
+      if (created.applicationId) {
+        conversation = await this.repository.findConversationByApplication(
+          created.applicationId,
+          currentUserId,
+        );
+      } else {
+        conversation = await this.repository.findConversation(
+          created.freelanceId,
+          created.companyId,
+          currentUserId,
+        );
+      }
+    }
     return conversation!;
+  }
+
+  /**
+   * Trouve une conversation par applicationId
+   */
+  async findConversationByApplication(
+    applicationId: string,
+    currentUserId?: string,
+  ): Promise<ConversationWithDetails | null> {
+    return this.repository.findConversationByApplication(
+      applicationId,
+      currentUserId,
+    );
   }
 
   /**

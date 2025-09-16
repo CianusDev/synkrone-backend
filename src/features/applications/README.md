@@ -407,7 +407,48 @@ export interface ApplicationStats {
 
 ---
 
-### 8. Supprimer une candidature
+### 8. Initialiser une négociation
+
+`POST /applications/:id/initialize-negotiate`
+
+**Description :** Crée ou récupère une conversation pour permettre la négociation entre l'entreprise et le freelance sur une candidature spécifique.
+
+**Autorisations :** Entreprise ou Admin
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "data": {
+    "conversation": {
+      "id": "uuid",
+      "freelanceId": "uuid",
+      "companyId": "uuid",
+      "applicationId": "uuid",
+      "createdAt": "2024-06-01T10:00:00.000Z",
+      "updatedAt": null
+    },
+    "freelance": {
+      "id": "uuid",
+      "firstname": "John",
+      "lastname": "Doe",
+      "photoUrl": "https://..."
+    },
+    "company": {
+      "id": "uuid",
+      "companyName": "Tech Corp",
+      "logoUrl": "https://..."
+    },
+    "lastMessage": null,
+    "unreadCount": 0
+  },
+  "message": "Négociation initialisée avec succès"
+}
+```
+
+---
+
+### 9. Supprimer une candidature
 
 `DELETE /applications/:id`
 

@@ -155,9 +155,9 @@ export class ProjectsService {
     if (!project) {
       throw new Error("Projet non trouvé");
     }
-    // Vérifier qu'il n'est pas déjà publié
+    // Si le projet est déjà publié, retourner le projet existant
     if (project.status === ProjectStatus.PUBLISHED) {
-      throw new Error("Projet déjà publié");
+      return project;
     }
     // Mettre à jour le statut
     return this.repository.updateProject(id, {

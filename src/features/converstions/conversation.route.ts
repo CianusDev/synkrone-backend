@@ -26,6 +26,11 @@ router.get("/find", AuthAdminMiddleware, (req, res) =>
   controller.findConversation(req, res),
 );
 
+// Trouve une conversation existante par applicationId
+router.get("/find-by-application", AuthAdminMiddleware, (req, res) =>
+  controller.findConversationByApplication(req, res),
+);
+
 // Marque tous les messages d'une conversation comme lus
 router.post("/:id/mark-all-read", AuthMiddleware, (req, res) =>
   controller.markAllMessagesAsRead(req, res),

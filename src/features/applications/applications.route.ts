@@ -13,6 +13,13 @@ router.post("/", AuthFreelanceMiddleware, (req, res) =>
   controller.createApplication(req, res),
 );
 
+// Initialiser une négociation (admin ou company)
+router.post(
+  "/:id/initialize-negotiate",
+  AuthAdminOrCompanyMiddleware,
+  (req, res) => controller.initializeNegotiate(req, res),
+);
+
 // Récupérer une candidature par ID (admin ou concerné)
 router.get("/:id", AuthAdminMiddleware, (req, res) =>
   controller.getApplicationById(req, res),

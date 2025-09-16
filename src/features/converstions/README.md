@@ -47,6 +47,10 @@ export const findConversationSchema = z.object({
   freelanceId: z.uuid(),
   companyId: z.uuid(),
 });
+
+export const findConversationByApplicationSchema = z.object({
+  applicationId: z.uuid(),
+});
 ```
 
 ---
@@ -57,6 +61,7 @@ export const findConversationSchema = z.object({
   - `createConversation(data)`
   - `getConversationById(id)`
   - `findConversation(freelanceId, companyId)`
+  - `findConversationByApplication(applicationId)`
   - `getConversationsForUser(userId)`
 
 - **Retourne** : conversation brute ou enrichie avec détails freelance, entreprise et dernier message.
@@ -67,6 +72,7 @@ export const findConversationSchema = z.object({
 
 - Orchestration de la logique métier.
 - Empêche les doublons lors de la création.
+- **Séparation par mission** : Utilise `applicationId` pour créer des conversations distinctes par candidature.
 - Utilise le repository pour toutes les opérations.
 
 ---
@@ -80,6 +86,7 @@ export const findConversationSchema = z.object({
   - `GET /conversations/:id` : Récupère une conversation par ID.
   - `GET /conversations/user` : Récupère toutes les conversations de l'utilisateur connecté.
   - `GET /conversations/find?freelanceId=...&companyId=...` : Recherche une conversation existante.
+  - `GET /conversations/find-by-application?applicationId=...` : Recherche une conversation par mission.
 
 ---
 
@@ -92,6 +99,7 @@ Les routes sont montées sous le préfixe `/api/conversations` dans l'applicatio
 | POST    | `/api/conversations/`                     | AuthAdminMiddleware  | Crée ou récupère une conversation                        |
 | GET     | `/api/conversations/user`                 | AuthMiddleware       | Récupère toutes les conversations de l'utilisateur       |
 | GET     | `/api/conversations/find`                 | AuthAdminMiddleware  | Trouve une conversation entre freelance et entreprise    |
+| GET     | `/api/conversations/find-by-application`  | AuthAdminMiddleware  | Trouve une conversation par candidature/mission          |
 | GET     | `/api/conversations/:id`                  | AuthAdminMiddleware  | (Commenté/optionnel) Récupère une conversation par ID    |
 
 - **Sécurité** :
@@ -116,6 +124,9 @@ Les routes sont montées sous le préfixe `/api/conversations` dans l'applicatio
 
 4. **Recherche par freelance/entreprise** :  
    - GET `/conversations/find?freelanceId=...&companyId=...`
+
+5. **Recherche par candidature/mission** :  
+   - GET `/conversations/find-by-application?applicationId=...`
 
 ---
 
@@ -151,9 +162,26 @@ ou
 
 ---
 
-## 9. Extension
+## 9. Logique de séparation des conversations
 
-Pour ajouter des fonctionnalités (pagination, suppression, etc.), il suffit d’ajouter les méthodes dans le service/repository et de les exposer via le controller/route.
+### **Une conversation par mission :**
+- Chaque candidature (`applicationId`) génère une conversation unique
+- Un freelance peut avoir plusieurs conversations avec la même entreprise (une par projet)
+- Évite le mélange des contextes entre différentes missions
+
+### **Exemple :**
+- Freelance A + Entreprise X + Projet 1 → Conversation #1
+- Freelance A + Entreprise X + Projet 2 → Conversation #2 (séparée)
+
+### **Avantages :**
+- ✅ Séparation claire des contextes
+- ✅ Historique spécifique par mission
+- ✅ Pas de confusion entre projets
+- ✅ Meilleure organisation
+
+## 10. Extension
+
+Pour ajouter des fonctionnalités (pagination, suppression, etc.), il suffit d'ajouter les méthodes dans le service/repository et de les exposer via le controller/route.
 
 ---
 

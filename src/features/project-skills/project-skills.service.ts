@@ -18,7 +18,19 @@ export class ProjectSkillsService {
     // Vérifier si l'association existe déjà
     const exists = await this.repository.existsProjectSkill(projectId, skillId);
     if (exists) {
-      throw new Error("Cette compétence est déjà associée à ce projet");
+      // Retourner l'association existante au lieu de lancer une erreur
+      const existingSkills =
+        await this.repository.getSkillsByProjectId(projectId);
+      const existingSkill = existingSkills.find(
+        (skill) => skill.skillId === skillId,
+      );
+      if (existingSkill) {
+        return {
+          id: existingSkill.id,
+          projectId: existingSkill.projectId,
+          skillId: existingSkill.skillId,
+        };
+      }
     }
 
     return this.repository.addSkillToProject(projectId, skillId);

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { MessageController } from "./message.controller";
 import { AuthMiddleware } from "../../middlewares/auth.middleware";
+
 const router = Router();
 const controller = new MessageController();
 

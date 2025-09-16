@@ -3,6 +3,7 @@ import { ConversationService } from "./conversation.service";
 import {
   createConversationSchema,
   findConversationSchema,
+  findConversationByApplicationSchema,
 } from "./conversation.schema";
 
 export class ConversationController {
@@ -132,6 +133,32 @@ export class ConversationController {
       const conversation = await this.service.findConversation(
         parsed.data.freelanceId,
         parsed.data.companyId,
+        currentUserId,
+      );
+      if (!conversation)
+        return res.status(404).json({ error: "Conversation not found" });
+      return res.json(conversation);
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * Trouve une conversation existante par applicationId
+   * GET /conversations/find-by-application?applicationId=...
+   */
+  async findConversationByApplication(
+    req: Request & { user?: { id: string } },
+    res: Response,
+  ) {
+    try {
+      const parsed = findConversationByApplicationSchema.safeParse(req.query);
+      if (!parsed.success) {
+        return this.handleError(parsed.error, res);
+      }
+      const currentUserId = req?.user?.id;
+      const conversation = await this.service.findConversationByApplication(
+        parsed.data.applicationId,
         currentUserId,
       );
       if (!conversation)

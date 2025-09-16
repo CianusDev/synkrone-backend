@@ -30,7 +30,7 @@ export class MessageRepository {
     const values = [
       message.senderId,
       message.receiverId,
-      message.content,
+      message.content || "",
       message.isRead ?? false,
       message.sentAt ?? new Date(),
       message.projectId ?? null,
@@ -303,7 +303,7 @@ export class MessageRepository {
     const query = `
        UPDATE messages
        SET content = $2, updated_at = NOW()
-       WHERE id = $1 AND deleted_at IS NULL AND content != $2
+       WHERE id = $1 AND deleted_at IS NULL
        RETURNING *;
      `;
     try {

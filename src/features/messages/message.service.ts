@@ -7,6 +7,7 @@ import { ConversationService } from "../converstions/conversation.service";
 import { presenceService } from "../presence/presence.service";
 import { db } from "../../config/database";
 import { Media } from "../media/media.model";
+import { decryptMessage, encryptMessage } from "../../utils/encryption";
 
 export class MessageService {
   private readonly repository: MessageRepository;
@@ -30,7 +31,16 @@ export class MessageService {
       JSON.stringify(data, null, 2),
     );
 
-    const message = await this.repository.createMessage(data);
+    const encryptedContent = encryptMessage(data.content || "");
+    data.content = encryptedContent;
+    console.log("🔒 Message content encrypted");
+
+    const messageEncryptedContend = await this.repository.createMessage(data);
+    messageEncryptedContend.content = decryptMessage(
+      messageEncryptedContend.content,
+    );
+    console.log("🔓 Message content decrypted for processing");
+    const message = messageEncryptedContend;
     console.log("✅ Message created with ID:", message.id);
 
     // Associer les médias si fournis
@@ -111,7 +121,14 @@ export class MessageService {
    * Récupère un message par son ID et enrichit avec les médias associés
    */
   async getMessageById(id: string): Promise<MessageWithUserInfo | null> {
-    const message = await this.repository.getMessageById(id);
+    const messageEncryptedContend = await this.repository.getMessageById(id);
+    let message = null;
+    if (messageEncryptedContend) {
+      messageEncryptedContend.content = decryptMessage(
+        messageEncryptedContend.content,
+      );
+      message = messageEncryptedContend;
+    }
     if (!message) return null;
     const media = await this.getMediaForMessage(message.id);
     const sender = await this.repository.getUserInfo(message.senderId);
@@ -197,8 +214,10 @@ export class MessageService {
     // Le repository retourne déjà les infos utilisateur, on enrichit seulement avec les médias
     const enrichedMessages = await Promise.all(
       messages.map(async (msg) => {
+        // Décrypte le contenu du message avant de l'enrichir
+        const decryptedContent = decryptMessage(msg.content);
         const media = await this.getMediaForMessage(msg.id);
-        return { ...msg, media };
+        return { ...msg, content: decryptedContent, media };
       }),
     );
     return enrichedMessages;
@@ -209,7 +228,17 @@ export class MessageService {
    */
   async markAsRead(messageId: string, userId: string): Promise<boolean> {
     // Vérifier d'abord si le message existe et appartient à l'utilisateur
-    const message = await this.repository.getMessageById(messageId);
+    const messageEncryptedContend =
+      await this.repository.getMessageById(messageId);
+    messageEncryptedContend?.content &&
+      (messageEncryptedContend.content = decryptMessage(
+        messageEncryptedContend.content,
+      ));
+    const message = messageEncryptedContend;
+    console.log(
+      `📖 markAsRead called for message ${messageId} by user ${userId}`,
+    );
+
     if (!message) {
       console.warn(`Message ${messageId} not found for markAsRead`);
       return false;
@@ -382,7 +411,13 @@ export class MessageService {
     newContent: string,
     userId?: string, // optionnel, à passer depuis le controller
   ): Promise<boolean> {
-    const message = await this.repository.getMessageById(messageId);
+    const messageEncryptedContend =
+      await this.repository.getMessageById(messageId);
+    messageEncryptedContend?.content &&
+      (messageEncryptedContend.content = decryptMessage(
+        messageEncryptedContend.content,
+      ));
+    const message = messageEncryptedContend;
     if (!message || message.deletedAt) {
       return false;
     }

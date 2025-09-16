@@ -2,6 +2,15 @@
 
 Ce document décrit la structure, les endpoints, les modèles et le fonctionnement de la feature **messages** du backend Synkrone.
 
+## 🔐 Sécurité
+
+Les messages sont stockés en texte clair dans la base de données. La sécurité est assurée par :
+
+- **Authentification** : Tous les endpoints sont protégés par le middleware d'authentification
+- **Autorisation** : Seuls les participants d'une conversation peuvent accéder aux messages
+- **Validation** : Validation stricte des données d'entrée avec Zod
+- **Logs sécurisés** : Logging approprié sans exposer de données sensibles
+
 ---
 
 ## 1. Modèles
@@ -331,13 +340,18 @@ Toutes les routes sont protégées par le middleware `AuthMiddleware` (freelance
 
 ---
 
-## 10. À compléter / Améliorer
+## 10. Chiffrement et Migration
 
-- Ajout de la gestion des pièces jointes (media)
-- Suppression/édition de message (implémenté)
+---
+
+## 11. À compléter / Améliorer
+
+- Ajout de la gestion des pièces jointes (media) — **implémenté**
+- Suppression/édition de message — **implémenté**
 - Réponse à un message (reply) — **implémenté via replyToMessageId**
-- Recherche full-text dans les messages
+- Recherche full-text dans les messages (à implémenter)
 - Statistiques (nombre de messages, etc.)
-
+- Chiffrement end-to-end des messages
+- Compression des messages pour optimiser le stockage
 
 ---

@@ -58,14 +58,23 @@ export class ApplicationsRepository {
   }
 
   /**
-   * Récupère toutes les candidatures pour un freelance donné
+   * Récupère toutes les candidatures pour un freelance donné (excluant rejetées et retirées par défaut)
    * @param freelanceId - UUID du freelance
+   * @param includeAll - Si true, inclut toutes les candidatures même rejetées/retirées
    * @returns Tableau de candidatures
    */
   async getApplicationsByFreelanceId(
     freelanceId: string,
+    includeAll: boolean = false,
   ): Promise<Application[]> {
-    const query = `SELECT * FROM applications WHERE freelance_id = $1 ORDER BY submission_date DESC;`;
+    let query = `SELECT * FROM applications WHERE freelance_id = $1`;
+
+    if (!includeAll) {
+      query += ` AND status NOT IN ('${ApplicationStatus.REJECTED}', '${ApplicationStatus.WITHDRAWN}')`;
+    }
+
+    query += ` ORDER BY submission_date DESC;`;
+
     try {
       const result = await db.query(query, [freelanceId]);
       return result.rows as Application[];
@@ -79,12 +88,23 @@ export class ApplicationsRepository {
   }
 
   /**
-   * Récupère toutes les candidatures pour un projet donné
+   * Récupère toutes les candidatures pour un projet donné (excluant retirées par défaut)
    * @param projectId - UUID du projet
+   * @param includeAll - Si true, inclut toutes les candidatures même retirées
    * @returns Tableau de candidatures
    */
-  async getApplicationsByProjectId(projectId: string): Promise<Application[]> {
-    const query = `SELECT * FROM applications WHERE project_id = $1 ORDER BY submission_date DESC;`;
+  async getApplicationsByProjectId(
+    projectId: string,
+    includeAll: boolean = false,
+  ): Promise<Application[]> {
+    let query = `SELECT * FROM applications WHERE project_id = $1`;
+
+    if (!includeAll) {
+      query += ` AND status != '${ApplicationStatus.WITHDRAWN}'`;
+    }
+
+    query += ` ORDER BY submission_date DESC;`;
+
     try {
       const result = await db.query(query, [projectId]);
       return result.rows as Application[];
@@ -184,7 +204,7 @@ export class ApplicationsRepository {
 
   /**
    * Récupère les candidatures avec pagination et retourne aussi le total
-   * @param params - { status, freelanceId, projectId, limit, page }
+   * @param params - { status, freelanceId, projectId, limit, page, includeAll }
    * @returns { data: Application[], total: number, page: number, limit: number }
    */
   async getApplicationsWithFilters(params: {
@@ -193,6 +213,7 @@ export class ApplicationsRepository {
     projectId?: string;
     limit?: number;
     page?: number;
+    includeAll?: boolean;
   }): Promise<{
     data: Application[];
     total: number;
@@ -218,6 +239,19 @@ export class ApplicationsRepository {
     if (params.projectId) {
       whereClauses.push(`project_id = $${idx++}`);
       values.push(params.projectId);
+    }
+
+    // Appliquer le filtrage par défaut si includeAll n'est pas true
+    if (!params.includeAll) {
+      if (params.freelanceId && !params.projectId) {
+        // Pour un freelance : exclure rejected et withdrawn
+        whereClauses.push(
+          `status NOT IN ('${ApplicationStatus.REJECTED}', '${ApplicationStatus.WITHDRAWN}')`,
+        );
+      } else if (params.projectId && !params.freelanceId) {
+        // Pour un projet : exclure seulement withdrawn
+        whereClauses.push(`status != '${ApplicationStatus.WITHDRAWN}'`);
+      }
     }
 
     let where =
@@ -246,7 +280,7 @@ export class ApplicationsRepository {
       const total = parseInt(countResult.rows[0]?.total ?? "0", 10);
 
       return {
-        data: dataResult.rows,
+        data: dataResult.rows as Application[],
         total,
         page,
         limit,

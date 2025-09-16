@@ -1,6 +1,8 @@
 import { Conversation } from "./conversation.model";
 import { Message } from "../messages/message.model";
 import { db } from "../../config/database";
+import { decrypt } from "dotenv";
+import { decryptMessage } from "../../utils/encryption";
 
 export interface ConversationWithDetails {
   conversation: Conversation;
@@ -57,6 +59,100 @@ export class ConversationRepository {
       return result.rows[0] as Conversation;
     } catch (error) {
       console.error("Error fetching conversation by ID:", error);
+      throw new Error("Database error");
+    }
+  }
+
+  /**
+   * Trouve une conversation existante par applicationId
+   * et retourne les infos des participants + dernier message
+   */
+  async findConversationByApplication(
+    applicationId: string,
+    currentUserId?: string,
+  ): Promise<ConversationWithDetails | null> {
+    const query = `
+       SELECT
+         c.id,
+         c.freelance_id,
+         c.company_id,
+         c.application_id,
+         c.contract_id,
+         c.created_at,
+         c.updated_at,
+         f.id AS freelance_id, f.firstname, f.lastname, f.photo_url,
+         co.id AS company_id, co.company_name, co.logo_url,
+         m.id AS last_message_id, m.sender_id AS last_message_sender_id, m.receiver_id AS last_message_receiver_id,
+         m.content AS last_message_content, m.is_read AS last_message_is_read,
+         m.sent_at AS last_message_sent_at, m.project_id AS last_message_project_id, m.conversation_id AS last_message_conversation_id,
+         m.created_at AS last_message_created_at, m.updated_at AS last_message_updated_at,
+         COALESCE(unread.count, 0) AS unread_count
+       FROM conversations c
+       JOIN freelances f ON c.freelance_id = f.id
+       JOIN companies co ON c.company_id = co.id
+       LEFT JOIN LATERAL (
+         SELECT * FROM messages
+         WHERE conversation_id = c.id
+         AND deleted_at IS NULL
+         ORDER BY sent_at DESC
+         LIMIT 1
+       ) m ON true
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*) as count FROM messages
+         WHERE conversation_id = c.id
+         AND receiver_id = $2
+         AND is_read = false
+         AND deleted_at IS NULL
+       ) unread ON true
+       WHERE c.application_id = $1
+       LIMIT 1
+     `;
+    try {
+      const result = await db.query(query, [
+        applicationId,
+        currentUserId || null,
+      ]);
+      const row = result.rows[0];
+      if (!row) return null;
+      return {
+        conversation: {
+          id: row.id,
+          freelanceId: row.freelance_id,
+          companyId: row.company_id,
+          applicationId: row.application_id,
+          contractId: row.contract_id,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        },
+        freelance: {
+          id: row.freelance_id,
+          firstname: row.firstname,
+          lastname: row.lastname,
+          photoUrl: row.photo_url,
+        },
+        company: {
+          id: row.company_id,
+          companyName: row.company_name,
+          logoUrl: row.logo_url,
+        },
+        lastMessage: row.last_message_id
+          ? {
+              id: row.last_message_id,
+              senderId: row.last_message_sender_id,
+              receiverId: row.last_message_receiver_id,
+              content: row.last_message_content,
+              isRead: row.last_message_is_read,
+              sentAt: row.last_message_sent_at,
+              projectId: row.last_message_project_id,
+              conversationId: row.last_message_conversation_id,
+              createdAt: row.last_message_created_at,
+              updatedAt: row.last_message_updated_at,
+            }
+          : undefined,
+        unreadCount: parseInt(row.unread_count) || 0,
+      };
+    } catch (error) {
+      console.error("Error finding conversation by application:", error);
       throw new Error("Database error");
     }
   }
@@ -231,7 +327,9 @@ export class ConversationRepository {
               id: row.last_message_id,
               senderId: row.last_message_sender_id,
               receiverId: row.last_message_receiver_id,
-              content: row.last_message_content,
+              content:
+                decryptMessage(row.last_message_content) ||
+                "Erreur de déchiffrement",
               isRead: row.last_message_is_read,
               sentAt: row.last_message_sent_at,
               projectId: row.last_message_project_id,

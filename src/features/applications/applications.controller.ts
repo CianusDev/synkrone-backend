@@ -123,6 +123,31 @@ export class ApplicationsController {
     }
   }
 
+  // POST /applications/:id/initialize-negotiate : initialiser une négociation
+  async initializeNegotiate(req: Request, res: Response) {
+    try {
+      const { id } = applicationIdSchema.parse(req.params);
+      const application = await this.service.getApplicationById(id);
+      if (!application) {
+        return res.status(404).json({
+          success: false,
+          message: "Candidature non trouvée",
+        });
+      }
+
+      // Initialiser la conversation pour cette candidature
+      const conversation = await this.service.initializeNegotiation(id);
+
+      res.status(200).json({
+        success: true,
+        data: conversation,
+        message: "Négociation initialisée avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
   // PATCH /applications/:id/withdraw : retirer une candidature
   async withdrawApplication(
     req: Request & { freelance?: Freelance },

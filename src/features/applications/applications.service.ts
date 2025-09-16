@@ -72,27 +72,12 @@ export class ApplicationsService {
     );
     if (!freelance) throw new Error("Freelance introuvable.");
 
-    // Notification de bienvenue
-    // const notificationRepo = new NotificationRepository();
-    // const welcomeNotification = await notificationRepo.createNotification({
-    //   title: "Bienvenue sur la plateforme !",
-    //   message: `Bonjour ${newFreelance.firstname}, votre compte a bien été créé. Nous vous souhaitons la bienvenue !`,
-    //   type: NotificationTypeEnum.system,
-    //   is_global: false,
-    // });
-    // if (welcomeNotification) {
-    //   await this.userNotificationService.createUserNotification(
-    //     newFreelance.id,
-    //     welcomeNotification.id,
-    //     false,
-    //   );
-    // }
-
+    // Notifier l'entreprise de la nouvelle candidature
     if (project && project.company?.id) {
       const notification = await this.notificationRepository.createNotification(
         {
           title: "Nouvelle candidature reçue",
-          message: `Le freelance {{${freelance.firstname}}} {{${freelance.lastname}}} a postulé au projet {{${project.title}}}.`,
+          message: `Le freelance ${freelance.firstname} ${freelance.lastname} a postulé au projet "${project.title}".`,
           type: NotificationTypeEnum.application,
           is_global: false,
         },
@@ -225,7 +210,8 @@ export class ApplicationsService {
       new Date(),
     );
     if (!updated) return null;
-    // Retourner la candidature mise à jour avec l'objet freelance (sans password_hashed) et projet
+
+    // Récupérer les informations pour les notifications
     const freelance =
       await this.freelanceRepository.getFreelanceById(freelanceId);
     const { password_hashed, ...freelanceSafe } = freelance || {};
@@ -233,6 +219,33 @@ export class ApplicationsService {
     const project = await this.projectsRepository.getProjectById(
       updated.project_id,
     );
+
+    // Notifier l'entreprise que la candidature a été retirée
+    if (project && project.company?.id && freelance) {
+      try {
+        const notification =
+          await this.notificationRepository.createNotification({
+            title: "Candidature retirée",
+            message: `Le freelance ${freelance.firstname} ${freelance.lastname} a retiré sa candidature au projet "${project.title}".`,
+            type: NotificationTypeEnum.application,
+            is_global: false,
+          });
+
+        if (notification) {
+          await this.userNotificationService.createUserNotification(
+            project.company.id,
+            notification.id,
+            false,
+          );
+        }
+      } catch (notificationError) {
+        console.error(
+          `❌ Erreur lors de l'envoi de la notification pour candidature retirée ${id}:`,
+          notificationError,
+        );
+        // Ne pas faire échouer l'opération de retrait si la notification échoue
+      }
+    }
 
     return {
       ...updated,
@@ -304,46 +317,48 @@ export class ApplicationsService {
       return null;
     }
 
+    // Récupérer les données du projet et du freelance une seule fois
+    const project = await this.projectsRepository.getProjectById(
+      application.project_id,
+    );
+    const freelance = await this.freelanceRepository.getFreelanceById(
+      application.freelance_id,
+    );
+
     // Optionally, send notification if status is ACCEPTED or REJECTED
     if (
       (status === ApplicationStatus.ACCEPTED ||
         status === ApplicationStatus.REJECTED) &&
-      application.project_id
+      project &&
+      project.company?.id &&
+      freelance
     ) {
-      const project = await this.projectsRepository.getProjectById(
-        application.project_id,
+      let notificationTitle = "";
+      let notificationMessage = "";
+
+      if (status === ApplicationStatus.ACCEPTED) {
+        notificationTitle = "Candidature acceptée";
+        notificationMessage = `Votre candidature au projet "${project.title}" a été acceptée.`;
+      } else if (status === ApplicationStatus.REJECTED) {
+        notificationTitle = "Candidature refusée";
+        notificationMessage = `Votre candidature au projet "${project.title}" a été refusée.`;
+      }
+
+      const notification = await this.notificationRepository.createNotification(
+        {
+          title: notificationTitle,
+          message: notificationMessage,
+          type: NotificationTypeEnum.application,
+          is_global: false,
+        },
       );
-      const freelance = await this.freelanceRepository.getFreelanceById(
-        application.freelance_id,
-      );
 
-      if (project && project.company?.id && freelance) {
-        let notificationTitle = "";
-        let notificationMessage = "";
-
-        if (status === ApplicationStatus.ACCEPTED) {
-          notificationTitle = "Candidature acceptée";
-          notificationMessage = `Votre candidature au projet "${project.title}" a été acceptée.`;
-        } else if (status === ApplicationStatus.REJECTED) {
-          notificationTitle = "Candidature refusée";
-          notificationMessage = `Votre candidature au projet "${project.title}" a été refusée.`;
-        }
-
-        const notification =
-          await this.notificationRepository.createNotification({
-            title: notificationTitle,
-            message: notificationMessage,
-            type: NotificationTypeEnum.application,
-            is_global: false,
-          });
-
-        if (notification) {
-          await this.userNotificationService.createUserNotification(
-            freelance.id,
-            notification.id,
-            false,
-          );
-        }
+      if (notification) {
+        await this.userNotificationService.createUserNotification(
+          freelance.id,
+          notification.id,
+          false,
+        );
       }
     }
 
@@ -352,15 +367,24 @@ export class ApplicationsService {
       await this.repository.rejectOtherApplications(application.project_id, id);
 
       // Créer la conversation entre le freelance et la company si elle n'existe pas déjà
-      const project = await this.projectsRepository.getProjectById(
-        application.project_id,
-      );
       if (project && project.company?.id) {
-        await this.conversationService.createOrGetConversation({
-          freelanceId: application.freelance_id,
-          companyId: project.company.id,
-          applicationId: application.id,
-        });
+        try {
+          await this.conversationService.createOrGetConversation({
+            freelanceId: application.freelance_id,
+            companyId: project.company.id,
+            applicationId: application.id,
+          });
+          console.log(
+            `✅ Conversation créée/récupérée pour la candidature acceptée: ${application.id}`,
+          );
+        } catch (conversationError) {
+          console.error(
+            `❌ Erreur lors de la création de la conversation pour la candidature ${application.id}:`,
+            conversationError,
+          );
+          // Ne pas faire échouer toute l'opération si la conversation échoue
+          // L'acceptation de la candidature reste valide
+        }
       }
 
       // Notifier tous les freelances dont la candidature est rejetée automatiquement
@@ -371,10 +395,9 @@ export class ApplicationsService {
       for (const app of rejectedApps) {
         if (app.id !== id && app.status === ApplicationStatus.REJECTED) {
           // Récupère le freelance
-          const freelance = await this.freelanceRepository.getFreelanceById(
-            app.freelance_id,
-          );
-          if (freelance) {
+          const rejectedFreelance =
+            await this.freelanceRepository.getFreelanceById(app.freelance_id);
+          if (rejectedFreelance) {
             const notification =
               await this.notificationRepository.createNotification({
                 title: "Candidature refusée",
@@ -384,7 +407,7 @@ export class ApplicationsService {
               });
             if (notification) {
               await this.userNotificationService.createUserNotification(
-                freelance.id,
+                rejectedFreelance.id,
                 notification.id,
                 false,
               );
@@ -417,6 +440,7 @@ export class ApplicationsService {
     projectId?: string;
     limit?: number;
     page?: number;
+    includeAll?: boolean;
   }): Promise<{
     data: Application[];
     total: number;
@@ -522,5 +546,48 @@ export class ApplicationsService {
       freelance: freelanceSafe,
       project: project || undefined,
     };
+  }
+
+  /**
+   * Initialize negotiation by creating a conversation for the application
+   * @param applicationId - Application UUID
+   * @returns The created conversation with details
+   */
+  async initializeNegotiation(applicationId: string): Promise<any> {
+    // Récupérer la candidature
+    const application = await this.repository.getApplicationById(applicationId);
+    if (!application) {
+      throw new Error("Candidature non trouvée");
+    }
+
+    // Récupérer le projet pour avoir l'ID de l'entreprise
+    const project = await this.projectsRepository.getProjectById(
+      application.project_id,
+    );
+    if (!project || !project.company?.id) {
+      throw new Error("Projet ou entreprise non trouvé");
+    }
+
+    // Créer ou récupérer la conversation
+    try {
+      const conversation =
+        await this.conversationService.createOrGetConversation({
+          freelanceId: application.freelance_id,
+          companyId: project.company.id,
+          applicationId: application.id,
+        });
+
+      console.log(
+        `✅ Négociation initialisée pour la candidature: ${applicationId}`,
+      );
+
+      return conversation;
+    } catch (conversationError) {
+      console.error(
+        `❌ Erreur lors de l'initialisation de la négociation pour la candidature ${applicationId}:`,
+        conversationError,
+      );
+      throw new Error("Impossible d'initialiser la négociation");
+    }
   }
 }

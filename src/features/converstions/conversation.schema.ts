@@ -22,6 +22,13 @@ export const findConversationSchema = z.object({
   }),
 });
 
+// Schéma pour la recherche d'une conversation par applicationId
+export const findConversationByApplicationSchema = z.object({
+  applicationId: z.uuid({
+    message: "applicationId doit être un UUID valide",
+  }),
+});
+
 // Schéma pour la pagination (query params)
 export const paginationSchema = z.object({
   limit: z.string().regex(/^\d+$/).optional(),
