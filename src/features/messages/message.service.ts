@@ -1,5 +1,10 @@
 import { MessageRepository } from "./message.repository";
-import { Message, MessageEvent, MessageWithUserInfo } from "./message.model";
+import {
+  Message,
+  MessageEvent,
+  MessageWithUserInfo,
+  MessageType,
+} from "./message.model";
 import { io } from "../../server";
 import { MessageMediaService } from "../media/message_media/message_media.service";
 import { ConversationService } from "../converstions/conversation.service";
@@ -7,7 +12,11 @@ import { ConversationService } from "../converstions/conversation.service";
 import { presenceService } from "../presence/presence.service";
 import { db } from "../../config/database";
 import { Media } from "../media/media.model";
-import { decryptMessage, encryptMessage } from "../../utils/encryption";
+import {
+  decryptMessage,
+  encryptMessage,
+  safeDecryptMessage,
+} from "../../utils/encryption";
 
 export class MessageService {
   private readonly repository: MessageRepository;
@@ -24,19 +33,28 @@ export class MessageService {
    * Crée un message, le sauvegarde en base, associe les médias si présents et le transmet en realtime au destinataire
    */
   async sendMessage(
-    data: Partial<Message> & { mediaIds?: string[] },
+    data: Partial<Message> & { mediaIds?: string[]; typeMessage?: MessageType },
   ): Promise<MessageWithUserInfo> {
     console.log(
       "📥 sendMessage called with data:",
       JSON.stringify(data, null, 2),
     );
 
+    // Déterminer le type de message automatiquement si non spécifié
+    if (!data.typeMessage) {
+      if (data.mediaIds && data.mediaIds.length > 0) {
+        data.typeMessage = MessageType.MEDIA;
+      } else {
+        data.typeMessage = MessageType.TEXT;
+      }
+    }
+
     const encryptedContent = encryptMessage(data.content || "");
     data.content = encryptedContent;
     console.log("🔒 Message content encrypted");
 
     const messageEncryptedContend = await this.repository.createMessage(data);
-    messageEncryptedContend.content = decryptMessage(
+    messageEncryptedContend.content = safeDecryptMessage(
       messageEncryptedContend.content,
     );
     console.log("🔓 Message content decrypted for processing");
@@ -124,7 +142,7 @@ export class MessageService {
     const messageEncryptedContend = await this.repository.getMessageById(id);
     let message = null;
     if (messageEncryptedContend) {
-      messageEncryptedContend.content = decryptMessage(
+      messageEncryptedContend.content = safeDecryptMessage(
         messageEncryptedContend.content,
       );
       message = messageEncryptedContend;
@@ -215,7 +233,7 @@ export class MessageService {
     const enrichedMessages = await Promise.all(
       messages.map(async (msg) => {
         // Décrypte le contenu du message avant de l'enrichir
-        const decryptedContent = decryptMessage(msg.content);
+        const decryptedContent = safeDecryptMessage(msg.content);
         const media = await this.getMediaForMessage(msg.id);
         return { ...msg, content: decryptedContent, media };
       }),
@@ -231,7 +249,7 @@ export class MessageService {
     const messageEncryptedContend =
       await this.repository.getMessageById(messageId);
     messageEncryptedContend?.content &&
-      (messageEncryptedContend.content = decryptMessage(
+      (messageEncryptedContend.content = safeDecryptMessage(
         messageEncryptedContend.content,
       ));
     const message = messageEncryptedContend;
@@ -409,12 +427,13 @@ export class MessageService {
   async updateMessageContent(
     messageId: string,
     newContent: string,
+    typeMessage?: string,
     userId?: string, // optionnel, à passer depuis le controller
   ): Promise<boolean> {
     const messageEncryptedContend =
       await this.repository.getMessageById(messageId);
     messageEncryptedContend?.content &&
-      (messageEncryptedContend.content = decryptMessage(
+      (messageEncryptedContend.content = safeDecryptMessage(
         messageEncryptedContend.content,
       ));
     const message = messageEncryptedContend;
@@ -427,6 +446,7 @@ export class MessageService {
     const success = await this.repository.updateMessageContent(
       messageId,
       newContent,
+      typeMessage,
     );
     if (success) {
       // Emit socket event pour modification
@@ -464,5 +484,83 @@ export class MessageService {
       io.to(message.senderId).emit("delete_message", { messageId });
     }
     return success;
+  }
+
+  /**
+   * Crée un message système automatique
+   * @param senderId - ID de l'expéditeur (peut être null pour les messages système)
+   * @param receiverId - ID du destinataire
+   * @param content - Contenu du message système
+   * @param conversationId - ID de la conversation (optionnel)
+   * @param projectId - ID du projet (optionnel)
+   * @returns Le message système créé
+   */
+  async createSystemMessage(
+    senderId: string,
+    receiverId: string,
+    content: string,
+    conversationId?: string,
+    projectId?: string,
+  ): Promise<MessageWithUserInfo> {
+    console.log("🤖 Creating system message:", {
+      senderId,
+      receiverId,
+      content,
+      conversationId,
+      projectId,
+    });
+
+    const systemMessageData = {
+      senderId,
+      receiverId,
+      content,
+      typeMessage: MessageType.SYSTEM,
+      conversationId,
+      projectId,
+      isRead: false,
+      sentAt: new Date(),
+    };
+
+    // Chiffrer le contenu du message système
+    const encryptedContent = encryptMessage(content);
+    systemMessageData.content = encryptedContent;
+
+    const messageEncrypted =
+      await this.repository.createMessage(systemMessageData);
+    messageEncrypted.content = safeDecryptMessage(messageEncrypted.content);
+    const message = messageEncrypted;
+
+    console.log("✅ System message created with ID:", message.id);
+
+    // Récupérer les infos utilisateur pour sender et receiver
+    const sender = await this.repository.getUserInfo(message.senderId);
+    const receiver = await this.repository.getUserInfo(message.receiverId);
+
+    // Pour les messages système, si sender n'existe pas, créer un sender système
+    const systemSender = sender || {
+      id: message.senderId,
+      companyName: "Système",
+      role: "company" as const,
+    };
+
+    if (!receiver) {
+      throw new Error(
+        `Receiver user info not found for id: ${message.receiverId}`,
+      );
+    }
+
+    // Emit realtime au destinataire seulement (pas d'accusé d'envoi pour les messages système)
+    io.to(message.receiverId).emit(MessageEvent.Receive, {
+      ...message,
+      media: [], // Pas de médias pour les messages système
+      sender: systemSender,
+      receiver,
+    });
+
+    console.log(
+      `🤖 System message ${message.id} sent to ${message.receiverId}`,
+    );
+
+    return { ...message, media: [], sender: systemSender, receiver };
   }
 }

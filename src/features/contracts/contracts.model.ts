@@ -7,8 +7,9 @@ export enum ContractStatus {
 }
 
 export enum PaymentMode {
+  FIXED_PRICE = "fixed_price",
+  DAILY_RATE = "daily_rate",
   BY_MILESTONE = "by_milestone",
-  FINAL_PAYMENT = "final_payment",
 }
 
 export interface Contract {
@@ -17,11 +18,31 @@ export interface Contract {
   project_id: string;
   freelance_id: string;
   company_id: string;
-  agreed_rate?: number;
   payment_mode: PaymentMode;
+  total_amount?: number;
+  tjm?: number;
+  estimated_days?: number;
   terms?: string;
   start_date?: Date;
   end_date?: Date;
   status: ContractStatus;
   created_at: Date;
+}
+
+/**
+ * Interface pour la création d'un contrat
+ */
+export interface CreateContractData {
+  application_id: string;
+  project_id: string;
+  freelance_id: string;
+  company_id: string;
+  payment_mode: PaymentMode;
+  total_amount?: number;
+  tjm?: number;
+  estimated_days?: number;
+  terms?: string;
+  start_date?: Date;
+  end_date?: Date;
+  status?: ContractStatus;
 }

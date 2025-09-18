@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { MessageService } from "./message.service";
-import { createMessageSchema, markAsReadSchema } from "./message.schema";
+import {
+  createMessageSchema,
+  markAsReadSchema,
+  createSystemMessageSchema,
+} from "./message.schema";
+import { MessageType } from "./message.model";
 
 export class MessageController {
   private readonly service: MessageService;
@@ -60,6 +65,12 @@ export class MessageController {
         ...req.body,
         senderId: userId,
       });
+
+      // Déterminer automatiquement le type de message selon les médias
+      if (data.mediaIds && data.mediaIds.length > 0) {
+        data.typeMessage = MessageType.MEDIA;
+      }
+
       const message = await this.service.sendMessage(data);
       res.status(201).json(message);
     } catch (error: any) {
@@ -71,7 +82,7 @@ export class MessageController {
   async updateMessage(req: Request, res: Response) {
     try {
       const { messageId } = req.params;
-      const { content } = req.body;
+      const { content, typeMessage } = req.body;
       if (!content || typeof content !== "string" || content.trim() === "") {
         return res.status(400).json({
           success: false,
@@ -81,6 +92,7 @@ export class MessageController {
       const success = await this.service.updateMessageContent(
         messageId,
         content,
+        typeMessage,
       );
       if (!success) {
         return res.status(404).json({
@@ -120,6 +132,23 @@ export class MessageController {
         data.userId,
       );
       res.json({ success });
+    } catch (error: any) {
+      this.handleError(error, res);
+    }
+  }
+
+  // Créer un message système
+  async createSystemMessage(req: Request, res: Response) {
+    try {
+      const data = createSystemMessageSchema.parse(req.body);
+      const message = await this.service.createSystemMessage(
+        data.senderId,
+        data.receiverId,
+        data.content,
+        data.conversationId,
+        data.projectId,
+      );
+      res.status(201).json(message);
     } catch (error: any) {
       this.handleError(error, res);
     }

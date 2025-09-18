@@ -89,6 +89,7 @@ export class UserNotificationRepository {
           message,
           type,
           is_global,
+          metadata,
           created_at: notif_created_at,
           updated_at: notif_updated_at,
         } = row;
@@ -99,6 +100,7 @@ export class UserNotificationRepository {
           message,
           type,
           is_global,
+          metadata: metadata ? JSON.parse(metadata) : null,
           created_at: notif_created_at,
           updated_at: notif_updated_at,
         };

@@ -16,9 +16,9 @@ export class NotificationRepository {
   ): Promise<Notification> {
     const query = `
       INSERT INTO notifications (
-        title, message, type, is_global
+        title, message, type, is_global, metadata
       ) VALUES (
-        $1, $2, $3, $4
+        $1, $2, $3, $4, $5
       ) RETURNING *
     `;
     const values = [
@@ -26,6 +26,7 @@ export class NotificationRepository {
       notification.message,
       notification.type,
       notification.is_global ?? false,
+      notification.metadata ? JSON.stringify(notification.metadata) : null,
     ];
 
     try {
@@ -147,6 +148,14 @@ export class NotificationRepository {
     if (mergedNotification.is_global !== undefined) {
       fields.push(`is_global = $${idx++}`);
       values.push(mergedNotification.is_global);
+    }
+    if (mergedNotification.metadata !== undefined) {
+      fields.push(`metadata = $${idx++}`);
+      values.push(
+        mergedNotification.metadata
+          ? JSON.stringify(mergedNotification.metadata)
+          : null,
+      );
     }
     if (mergedNotification.updated_at !== undefined) {
       fields.push(`updated_at = $${idx++}`);

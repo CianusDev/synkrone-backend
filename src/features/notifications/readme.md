@@ -24,12 +24,14 @@ export interface Notification {
   message: string;
   type: NotificationTypeEnum;
   is_global: boolean;
+  metadata?: Record<string, any> | null;
   created_at: Date;
   updated_at: Date | null;
 }
 ```
 
-- Les types de notification sont : `project`, `application`, `payment`, `message`, `system`.
+- Les types de notification sont : `project`, `application`, `payment`, `message`, `system`.
+- Le champ `metadata` (JSONB) permet de stocker des données contextuelles liées à la notification.
 
 ---
 
@@ -50,7 +52,11 @@ Authorization: Bearer ADMIN_TOKEN
   "title": "Titre de la notification",
   "message": "Contenu du message",
   "type": "system",
-  "is_global": true
+  "is_global": true,
+  "metadata": {
+    "priority": "high",
+    "category": "maintenance"
+  }
 }
 ```
 
@@ -79,7 +85,11 @@ Authorization: Bearer ADMIN_TOKEN
   "title": "Nouveau titre",
   "message": "Nouveau message",
   "type": "system",
-  "is_global": false
+  "is_global": false,
+  "metadata": {
+    "user_id": "uuid-123",
+    "action": "profile_update"
+  }
 }
 ```
 
@@ -89,6 +99,68 @@ Authorization: Bearer ADMIN_TOKEN
 DELETE /api/notifications/:id
 Authorization: Bearer ADMIN_TOKEN
 ```
+
+---
+
+## Usage des métadonnées (metadata)
+
+Le champ `metadata` permet de stocker des informations contextuelles structurées :
+
+### Exemples d'usage
+
+**Notification de projet** :
+```json
+{
+  "type": "project",
+  "title": "Nouveau projet disponible",
+  "message": "Un projet correspond à vos compétences",
+  "metadata": {
+    "project_id": "uuid-project",
+    "company_name": "TechCorp",
+    "budget_range": "2000-5000",
+    "skills": ["React", "Node.js"],
+    "deadline": "2024-03-15"
+  }
+}
+```
+
+**Notification de paiement** :
+```json
+{
+  "type": "payment",
+  "title": "Paiement reçu",
+  "message": "Votre paiement de 1500€ a été traité",
+  "metadata": {
+    "contract_id": "uuid-contract",
+    "amount": 1500.00,
+    "currency": "EUR",
+    "payment_method": "bank_transfer",
+    "transaction_id": "TXN-123456"
+  }
+}
+```
+
+**Notification système** :
+```json
+{
+  "type": "system",
+  "title": "Maintenance programmée",
+  "message": "La plateforme sera indisponible de 2h à 4h",
+  "metadata": {
+    "priority": "high",
+    "affected_services": ["payments", "messaging"],
+    "start_time": "2024-01-15T02:00:00Z",
+    "end_time": "2024-01-15T04:00:00Z"
+  }
+}
+```
+
+### Avantages des métadonnées
+
+- **Contexte riche** : Informations détaillées sans surcharger le message
+- **Filtrage avancé** : Possibilité de filtrer les notifications par métadonnées
+- **Actions dynamiques** : Le frontend peut proposer des actions basées sur les métadonnées
+- **Analytics** : Suivi des performances par type de notification ou contexte
 
 ---
 

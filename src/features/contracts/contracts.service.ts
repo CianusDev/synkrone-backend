@@ -2,7 +2,12 @@ import { ApplicationsRepository } from "../applications/applications.repository"
 import { CompanyRepository } from "../company/company.repository";
 import { FreelanceRepository } from "../freelance/freelance.repository";
 import { ProjectsRepository } from "../projects/projects.repository";
-import { Contract, ContractStatus, PaymentMode } from "./contracts.model";
+import {
+  Contract,
+  ContractStatus,
+  PaymentMode,
+  CreateContractData,
+} from "./contracts.model";
 import { ContractsRepository } from "./contracts.repository";
 
 export class ContractsService {
@@ -25,7 +30,7 @@ export class ContractsService {
    * @param data - Données du contrat
    * @returns Le contrat créé
    */
-  async createContract(data: Partial<Contract>): Promise<Contract> {
+  async createContract(data: CreateContractData): Promise<Contract> {
     // 1. Vérifier qu'il n'existe pas déjà un contrat pour la même application
     if (data.application_id) {
       const existing = await this.applicationsRepository.getApplicationById(
@@ -49,12 +54,39 @@ export class ContractsService {
     );
     if (!company) throw new Error("Entreprise introuvable.");
 
-    // 3. Vérifier que le taux est positif
-    if (typeof data.agreed_rate === "number" && data.agreed_rate <= 0) {
-      throw new Error("Le taux convenu doit être positif.");
+    // 3. Vérifier la cohérence selon le mode de paiement
+    if (
+      data.payment_mode === PaymentMode.FIXED_PRICE ||
+      data.payment_mode === PaymentMode.BY_MILESTONE
+    ) {
+      if (!data.total_amount || data.total_amount <= 0) {
+        throw new Error(
+          "Le montant total est requis et doit être positif pour les modes fixed_price et by_milestone.",
+        );
+      }
     }
 
-    // 4. Créer le contrat
+    if (data.payment_mode === PaymentMode.DAILY_RATE) {
+      if (!data.tjm || data.tjm <= 0) {
+        throw new Error(
+          "Le TJM est requis et doit être positif pour le mode daily_rate.",
+        );
+      }
+      if (!data.estimated_days || data.estimated_days <= 0) {
+        throw new Error(
+          "Le nombre de jours estimé est requis et doit être positif pour le mode daily_rate.",
+        );
+      }
+    }
+
+    // 4. Vérifier la cohérence des dates
+    if (data.start_date && data.end_date && data.start_date > data.end_date) {
+      throw new Error(
+        "La date de début doit être antérieure à la date de fin.",
+      );
+    }
+
+    // 5. Créer le contrat
     return this.repository.createContract(data);
   }
 

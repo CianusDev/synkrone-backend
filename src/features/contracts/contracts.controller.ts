@@ -10,7 +10,7 @@ import {
   projectIdParamSchema,
 } from "./contracts.schema";
 import { ZodError } from "zod";
-import { ContractStatus } from "./contracts.model";
+import { ContractStatus, CreateContractData } from "./contracts.model";
 
 export class ContractsController {
   private readonly service: ContractsService;
@@ -52,12 +52,21 @@ export class ContractsController {
         });
       }
       const data = result.data;
-      const contract = await this.service.createContract({
-        ...data,
+      const contractData: CreateContractData = {
+        application_id: data.application_id,
+        project_id: data.project_id,
+        freelance_id: data.freelance_id,
+        company_id: data.company_id,
+        payment_mode: data.payment_mode,
+        total_amount: data.total_amount,
+        tjm: data.tjm,
+        estimated_days: data.estimated_days,
         terms: data.terms ?? undefined,
         start_date: data.start_date ?? undefined,
         end_date: data.end_date ?? undefined,
-      });
+        status: data.status,
+      };
+      const contract = await this.service.createContract(contractData);
       res.status(201).json({
         success: true,
         data: contract,

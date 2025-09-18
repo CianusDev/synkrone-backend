@@ -6,6 +6,7 @@ import { db } from "../../config/database";
  */
 const DROP_QUERIES = `
   -- Supprimer toutes les tables (ordre inverse des dépendances)
+  DROP TABLE IF EXISTS evaluations CASCADE;
   DROP TABLE IF EXISTS deliverable_media CASCADE;
   DROP TABLE IF EXISTS message_media CASCADE;
   DROP TABLE IF EXISTS freelance_skills CASCADE;
@@ -13,10 +14,12 @@ const DROP_QUERIES = `
   DROP TABLE IF EXISTS applications CASCADE;
   DROP TABLE IF EXISTS contracts CASCADE;
   DROP TABLE IF EXISTS deliverables CASCADE;
+  DROP TABLE IF EXISTS work_days CASCADE;
   DROP TABLE IF EXISTS invoices CASCADE;
   DROP TABLE IF EXISTS payments CASCADE;
   DROP TABLE IF EXISTS notifications CASCADE;
   DROP TABLE IF EXISTS user_notifications CASCADE;
+  DROP TABLE IF EXISTS conversations CASCADE;
   DROP TABLE IF EXISTS messages CASCADE;
   DROP TABLE IF EXISTS project_invitations CASCADE;
   DROP TABLE IF EXISTS litigations CASCADE;
@@ -34,6 +37,7 @@ const DROP_QUERIES = `
   DROP TABLE IF EXISTS freelances CASCADE;
 
   -- Supprimer les types ENUM
+  DROP TYPE IF EXISTS work_day_status_enum CASCADE;
   DROP TYPE IF EXISTS report_status_enum CASCADE;
   DROP TYPE IF EXISTS litigation_status_enum CASCADE;
   DROP TYPE IF EXISTS invitation_status_enum CASCADE;
@@ -48,6 +52,8 @@ const DROP_QUERIES = `
   DROP TYPE IF EXISTS project_status_enum CASCADE;
   DROP TYPE IF EXISTS type_media_enum CASCADE;
   DROP TYPE IF EXISTS type_work_enum CASCADE;
+  DROP TYPE IF EXISTS user_type_enum CASCADE;
+  DROP TYPE IF EXISTS message_type_enum CASCADE;
   DROP TYPE IF EXISTS otp_type_enum CASCADE;
   DROP TYPE IF EXISTS admin_level_enum CASCADE;
   DROP TYPE IF EXISTS company_size_enum CASCADE;
@@ -69,6 +75,10 @@ const DROP_QUERIES = `
   DROP FUNCTION IF EXISTS admin_block_company(UUID, INTEGER) CASCADE;
 
   -- Supprimer les vues
+  DROP VIEW IF EXISTS deliverable_work_summary CASCADE;
+  DROP VIEW IF EXISTS contract_summary CASCADE;
+  DROP VIEW IF EXISTS company_average_rating CASCADE;
+  DROP VIEW IF EXISTS freelance_average_rating CASCADE;
   DROP VIEW IF EXISTS admin_suspicious_admin_activity CASCADE;
   DROP VIEW IF EXISTS admin_suspicious_activity CASCADE;
   DROP VIEW IF EXISTS admin_admin_session_stats CASCADE;

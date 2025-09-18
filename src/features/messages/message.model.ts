@@ -5,6 +5,7 @@ export interface Message {
   senderId: string;
   receiverId: string;
   content: string;
+  typeMessage: MessageType;
   isRead: boolean;
   sentAt: Date;
   projectId?: string;
@@ -13,6 +14,12 @@ export interface Message {
   createdAt: Date;
   updatedAt?: Date;
   deletedAt?: Date;
+}
+
+export enum MessageType {
+  TEXT = "text",
+  MEDIA = "media",
+  SYSTEM = "system",
 }
 
 export interface UserInfo {

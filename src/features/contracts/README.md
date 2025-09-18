@@ -28,8 +28,9 @@ export enum ContractStatus {
 }
 
 export enum PaymentMode {
+  FIXED_PRICE = "fixed_price",
+  DAILY_RATE = "daily_rate", 
   BY_MILESTONE = "by_milestone",
-  FINAL_PAYMENT = "final_payment",
 }
 
 export interface Contract {
@@ -38,8 +39,10 @@ export interface Contract {
   project_id: string;
   freelance_id: string;
   company_id: string;
-  agreed_rate?: number;
   payment_mode: PaymentMode;
+  total_amount?: number;
+  tjm?: number;
+  estimated_days?: number;
   terms?: string;
   start_date?: Date;
   end_date?: Date;
@@ -63,8 +66,10 @@ export interface Contract {
   "project_id": "uuid",
   "freelance_id": "uuid",
   "company_id": "uuid",
-  "agreed_rate": 1200,
-  "payment_mode": "by_milestone",
+  "payment_mode": "fixed_price",
+  "total_amount": 5000.00,
+  "tjm": 500.00,
+  "estimated_days": 10,
   "terms": "Conditions du contrat...",
   "start_date": "2024-07-01",
   "end_date": "2024-08-01",
@@ -184,7 +189,7 @@ export interface Contract {
   "freelanceId": "uuid",
   "companyId": "uuid",
   "projectId": "uuid",
-  "paymentMode": "final_payment",
+  "paymentMode": "daily_rate",
   "page": 1,
   "limit": 10
 }
@@ -241,9 +246,51 @@ export interface Contract {
 
 ---
 
+## Modes de paiement supportés
+
+### 1. Prix fixe (`fixed_price`)
+Montant total défini à l'avance pour tout le projet.
+- **Requis** : `total_amount`
+- **Optionnel** : `tjm`, `estimated_days` (pour information)
+
+```json
+{
+  "payment_mode": "fixed_price",
+  "total_amount": 5000.00
+}
+```
+
+### 2. Taux journalier (`daily_rate`)  
+Paiement basé sur TJM × nombre de jours travaillés.
+- **Requis** : `tjm`, `estimated_days`
+- **Optionnel** : `total_amount` (calculé automatiquement)
+
+```json
+{
+  "payment_mode": "daily_rate", 
+  "tjm": 500.00,
+  "estimated_days": 10
+}
+```
+
+### 3. Par étapes (`by_milestone`)
+Paiement échelonné selon les livrables validés.
+- **Requis** : `total_amount`
+- **Logique** : Le montant est réparti sur les livrables milestone
+
+```json
+{
+  "payment_mode": "by_milestone",
+  "total_amount": 8000.00
+}
+```
+
+---
+
 ## Validation
 
 - Toutes les entrées sont validées avec Zod (body, params, query).
+- Validation automatique de la cohérence selon le mode de paiement.
 - Les erreurs de validation retournent un code 400 et un message détaillé.
 
 ---
@@ -251,7 +298,22 @@ export interface Contract {
 ## Pagination & Filtres
 
 - Les endpoints de liste acceptent `page`, `limit`, `status`, `paymentMode` en query ou body.
-- La réponse inclut toujours le nombre total d’éléments et de pages.
+- La réponse inclut toujours le nombre total d'éléments et de pages.
+- Modes de paiement supportés : `fixed_price`, `daily_rate`, `by_milestone`
+
+---
+
+## Logique métier
+
+### Validation automatique
+- **fixed_price** / **by_milestone** : `total_amount` obligatoire et positif
+- **daily_rate** : `tjm` et `estimated_days` obligatoires et positifs  
+- **Dates** : `start_date` doit être antérieure à `end_date`
+- **Unicité** : Un seul contrat par candidature acceptée
+
+### Calculs automatiques
+- **daily_rate** : `montant_estimé = tjm × estimated_days`
+- **Statuts** : Workflow `draft` → `active` → `completed`/`cancelled`
 
 ---
 
@@ -259,8 +321,9 @@ export interface Contract {
 
 - Les IDs sont validés (UUID).
 - Les statuts et modes de paiement sont limités aux valeurs des enums.
+- Validation de la cohérence métier selon le mode de paiement.
 - Les champs optionnels (`terms`, `start_date`, `end_date`, etc.) sont correctement typés et traités.
-- Les middlewares d’authentification sont appliqués selon le rôle (freelance, company, admin).
+- Les middlewares d'authentification sont appliqués selon le rôle (freelance, company, admin).
 
 ---
 

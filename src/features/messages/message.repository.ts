@@ -1,5 +1,6 @@
 import { Message, MessageWithUserInfo, UserInfo } from "./message.model";
 import { db } from "../../config/database";
+import { safeDecryptMessage } from "../../utils/encryption";
 
 export class MessageRepository {
   /**
@@ -10,14 +11,15 @@ export class MessageRepository {
   async createMessage(message: Partial<Message>): Promise<Message> {
     const query = `
       INSERT INTO messages (
-        sender_id, receiver_id, content, is_read, sent_at, project_id, reply_to_message_id, conversation_id
+        sender_id, receiver_id, content, type_message, is_read, sent_at, project_id, reply_to_message_id, conversation_id
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8
+        $1, $2, $3, $4, $5, $6, $7, $8, $9
       ) RETURNING
         id,
         sender_id AS "senderId",
         receiver_id AS "receiverId",
         content,
+        type_message AS "typeMessage",
         is_read AS "isRead",
         sent_at AS "sentAt",
         project_id AS "projectId",
@@ -31,6 +33,7 @@ export class MessageRepository {
       message.senderId,
       message.receiverId,
       message.content || "",
+      message.typeMessage || "text",
       message.isRead ?? false,
       message.sentAt ?? new Date(),
       message.projectId ?? null,
@@ -58,6 +61,7 @@ export class MessageRepository {
         sender_id AS "senderId",
         receiver_id AS "receiverId",
         content,
+        type_message AS "typeMessage",
         is_read AS "isRead",
         sent_at AS "sentAt",
         project_id AS "projectId",
@@ -99,6 +103,7 @@ export class MessageRepository {
           m.sender_id AS "senderId",
           m.receiver_id AS "receiverId",
           m.content,
+          m.type_message AS "typeMessage",
           m.is_read AS "isRead",
           m.sent_at AS "sentAt",
           m.project_id AS "projectId",
@@ -203,7 +208,7 @@ export class MessageRepository {
               if (parentResult.rows.length > 0) {
                 replyToMessage = {
                   id: parentResult.rows[0].id,
-                  content: parentResult.rows[0].content,
+                  content: safeDecryptMessage(parentResult.rows[0].content),
                   senderId: parentResult.rows[0].senderId,
                   createdAt: parentResult.rows[0].createdAt,
                 };
@@ -219,6 +224,7 @@ export class MessageRepository {
             senderId: row.senderId,
             receiverId: row.receiverId,
             content: row.content,
+            typeMessage: row.typeMessage,
             isRead: row.isRead,
             sentAt: row.sentAt,
             projectId: row.projectId,
@@ -294,20 +300,37 @@ export class MessageRepository {
    * Modifie le contenu d'un message (CORRIGÉ : met à jour updated_at seulement si le contenu change)
    * @param messageId - L'ID du message à modifier
    * @param newContent - Le nouveau contenu du message
+   * @param typeMessage - Le type du message (optionnel)
    * @returns true si modification réussie, false sinon
    */
   async updateMessageContent(
     messageId: string,
     newContent: string,
+    typeMessage?: string,
   ): Promise<boolean> {
-    const query = `
-       UPDATE messages
-       SET content = $2, updated_at = NOW()
-       WHERE id = $1 AND deleted_at IS NULL
-       RETURNING *;
-     `;
+    let query: string;
+    let params: any[];
+
+    if (typeMessage) {
+      query = `
+        UPDATE messages
+        SET content = $2, type_message = $3, updated_at = NOW()
+        WHERE id = $1 AND deleted_at IS NULL
+        RETURNING *;
+      `;
+      params = [messageId, newContent, typeMessage];
+    } else {
+      query = `
+        UPDATE messages
+        SET content = $2, updated_at = NOW()
+        WHERE id = $1 AND deleted_at IS NULL
+        RETURNING *;
+      `;
+      params = [messageId, newContent];
+    }
+
     try {
-      const result = await db.query(query, [messageId, newContent]);
+      const result = await db.query(query, params);
       return (result.rowCount ?? 0) > 0;
     } catch (error) {
       console.error("Error updating message content:", error);

@@ -30,4 +30,9 @@ router.delete("/:messageId", AuthMiddleware, (req, res) =>
   controller.deleteMessage(req, res),
 );
 
+// Créer un message système
+router.post("/system", AuthMiddleware, (req, res) =>
+  controller.createSystemMessage(req, res),
+);
+
 export default router;

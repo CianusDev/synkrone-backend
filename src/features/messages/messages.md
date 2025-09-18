@@ -23,12 +23,19 @@ export interface Message {
   senderId: string;
   receiverId: string;
   content: string;
+  typeMessage: MessageType;
   isRead: boolean;
   sentAt: Date;
   projectId?: string;
   conversationId?: string;
   createdAt: Date;
   updatedAt?: Date;
+}
+
+export enum MessageType {
+  TEXT = "text",
+  MEDIA = "media",
+  SYSTEM = "system",
 }
 ```
 
@@ -106,8 +113,10 @@ Toutes les routes sont protégées par le middleware `AuthMiddleware` (freelance
     "receiverId": "uuid",
     "content": "string",
     "conversationId": "uuid",
+    "typeMessage": "text", // "text", "media", ou "system" (défaut: "text")
     "projectId": "uuid", // optionnel
-    "replyToMessageId": "uuid" // optionnel, pour répondre à un autre message
+    "replyToMessageId": "uuid", // optionnel, pour répondre à un autre message
+    "mediaIds": ["uuid"] // optionnel, pour les messages avec médias
   }
   ```
 
@@ -118,6 +127,7 @@ Toutes les routes sont protégées par le middleware `AuthMiddleware` (freelance
     "senderId": "...",
     "receiverId": "...",
     "content": "...",
+    "typeMessage": "text",
     "isRead": false,
     "sentAt": "...",
     "conversationId": "...",
@@ -155,7 +165,8 @@ Toutes les routes sont protégées par le middleware `AuthMiddleware` (freelance
   **Body :**
   ```json
   {
-    "content": "Nouveau contenu"
+    "content": "Nouveau contenu",
+    "typeMessage": "text" // optionnel, pour changer le type
   }
   ```
 
@@ -206,6 +217,7 @@ Toutes les routes sont protégées par le middleware `AuthMiddleware` (freelance
       "senderId": "...",
       "receiverId": "...",
       "content": "...",
+      "typeMessage": "text",
       "isRead": false,
       "sentAt": "...",
       "conversationId": "...",
@@ -307,6 +319,7 @@ Toutes les routes sont protégées par le middleware `AuthMiddleware` (freelance
   "senderId": "user-uuid",
   "receiverId": "user-uuid",
   "content": "Bonjour !",
+  "typeMessage": "text",
   "isRead": false,
   "sentAt": "2024-06-01T12:00:00Z",
   "conversationId": "conv-uuid",
@@ -340,11 +353,48 @@ Toutes les routes sont protégées par le middleware `AuthMiddleware` (freelance
 
 ---
 
-## 10. Chiffrement et Migration
+## 10. Types de Messages
+
+Le système supporte trois types de messages :
+
+1. **`text`** (par défaut) : Messages texte classiques
+2. **`media`** : Messages avec pièces jointes (images, fichiers)
+3. **`system`** : Messages système automatiques
+
+### Détection automatique du type
+
+- Si `mediaIds` est fourni lors de la création, le type devient automatiquement `media`
+- Sinon, le type par défaut est `text`
+- Les messages `system` doivent être explicitement définis
+
+### Exemples d'utilisation
+
+```typescript
+// Message texte simple
+{
+  "content": "Hello world!",
+  "typeMessage": "text" // ou omis (défaut)
+}
+
+// Message avec média
+{
+  "content": "Voici mon CV",
+  "typeMessage": "media", // détecté automatiquement si mediaIds fourni
+  "mediaIds": ["media-uuid-1", "media-uuid-2"]
+}
+
+// Message système
+{
+  "content": "L'utilisateur a rejoint la conversation",
+  "typeMessage": "system"
+}
+```
+
+## 11. Chiffrement et Migration
 
 ---
 
-## 11. À compléter / Améliorer
+## 12. À compléter / Améliorer
 
 - Ajout de la gestion des pièces jointes (media) — **implémenté**
 - Suppression/édition de message — **implémenté**

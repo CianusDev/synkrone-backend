@@ -119,52 +119,42 @@ function parsePostgreSQLBlocks(sqlContent: string): string[] {
  */
 function sortSQLBlocks(blocks: string[]): string[] {
   const sortedBlocks: string[] = [];
-  const priorities = [
-    // 1. Extensions d'abord
-    /^CREATE EXTENSION/i,
 
-    // 2. Types énumérés
-    /^CREATE TYPE.*AS ENUM/i,
-
-    // 3. Toutes les tables (avant les fonctions et triggers)
-    /^CREATE TABLE/i,
-
-    // 4. Index sur les tables
-    /^CREATE INDEX/i,
-
-    // 5. Fonctions utilitaires (pas de trigger)
-    /^CREATE OR REPLACE FUNCTION(?!.*trigger)/i,
-
-    // 6. Fonctions de trigger
-    /^CREATE OR REPLACE FUNCTION.*trigger/i,
-
-    // 7. Triggers
-    /^CREATE TRIGGER/i,
-
-    // 8. Vues
-    /^CREATE VIEW/i,
-
-    // 9. Politiques de sécurité
-    /^ALTER TABLE.*ENABLE ROW LEVEL SECURITY/i,
-    /^CREATE POLICY/i,
-
-    // 10. Commentaires
-    /^COMMENT ON/i,
-
-    // 11. Insertions de données
-    /^INSERT INTO/i,
-  ];
-
-  // Trier les blocs selon les priorités
-  for (const priority of priorities) {
-    const matchingBlocks = blocks.filter((block) => priority.test(block));
-    sortedBlocks.push(...matchingBlocks);
-  }
-
-  // Ajouter tous les blocs restants qui ne correspondent à aucune priorité
-  const remainingBlocks = blocks.filter(
-    (block) => !sortedBlocks.some((sorted) => sorted === block),
+  // Séparer les blocs par type pour un meilleur contrôle
+  const extensions = blocks.filter((block) => /^CREATE EXTENSION/i.test(block));
+  const types = blocks.filter((block) => /^CREATE TYPE.*AS ENUM/i.test(block));
+  const tables = blocks.filter((block) => /^CREATE TABLE/i.test(block));
+  const indexes = blocks.filter((block) => /^CREATE INDEX/i.test(block));
+  const functions = blocks.filter((block) =>
+    /^CREATE OR REPLACE FUNCTION(?!.*trigger)/i.test(block),
   );
+  const triggerFunctions = blocks.filter((block) =>
+    /^CREATE OR REPLACE FUNCTION.*trigger/i.test(block),
+  );
+  const triggers = blocks.filter((block) => /^CREATE TRIGGER/i.test(block));
+  const views = blocks.filter((block) => /^CREATE VIEW/i.test(block));
+  const alterTables = blocks.filter((block) => /^ALTER TABLE/i.test(block));
+  const policies = blocks.filter((block) => /^CREATE POLICY/i.test(block));
+  const comments = blocks.filter((block) => /^COMMENT ON/i.test(block));
+  const inserts = blocks.filter((block) => /^INSERT INTO/i.test(block));
+
+  // Assembler dans l'ordre correct
+  sortedBlocks.push(...extensions);
+  sortedBlocks.push(...types);
+  sortedBlocks.push(...tables);
+  sortedBlocks.push(...indexes);
+  sortedBlocks.push(...functions);
+  sortedBlocks.push(...triggerFunctions);
+  sortedBlocks.push(...triggers);
+  sortedBlocks.push(...views);
+  sortedBlocks.push(...alterTables);
+  sortedBlocks.push(...policies);
+  sortedBlocks.push(...comments);
+  sortedBlocks.push(...inserts);
+
+  // Ajouter tous les blocs restants qui ne correspondent à aucune catégorie
+  const usedBlocks = new Set(sortedBlocks);
+  const remainingBlocks = blocks.filter((block) => !usedBlocks.has(block));
   sortedBlocks.push(...remainingBlocks);
 
   return sortedBlocks;
@@ -297,14 +287,46 @@ async function executeBlockByBlock(
           `⏳ Progression: ${successCount}/${sortedBlocks.length - skipCount} blocs exécutés`,
         );
       }
-    } catch (error) {
-      // Afficher toutes les erreurs SQL, même celles qui pourraient être ignorées
-      console.error(`❌ Erreur lors de l'exécution du bloc SQL:`);
+    } catch (error: any) {
+      // Identifier le type de bloc pour un meilleur debug
+      const blockType = block.includes("CREATE EXTENSION")
+        ? "EXTENSION"
+        : block.includes("CREATE TYPE")
+          ? "TYPE ENUM"
+          : block.includes("CREATE TABLE")
+            ? "TABLE"
+            : block.includes("CREATE INDEX")
+              ? "INDEX"
+              : block.includes("CREATE OR REPLACE FUNCTION")
+                ? "FUNCTION"
+                : block.includes("CREATE TRIGGER")
+                  ? "TRIGGER"
+                  : block.includes("CREATE VIEW")
+                    ? "VIEW"
+                    : block.includes("CREATE POLICY")
+                      ? "POLICY"
+                      : block.includes("ALTER TABLE")
+                        ? "ALTER TABLE"
+                        : block.includes("COMMENT ON")
+                          ? "COMMENT"
+                          : "UNKNOWN";
+
+      console.error(
+        `❌ Erreur lors de l'exécution du bloc SQL (${blockType}):`,
+      );
       console.error(`📍 Bloc ${i + 1}/${sortedBlocks.length}:`);
       console.error(
-        `📄 SQL: ${block.substring(0, 200)}${block.length > 200 ? "..." : ""}`,
+        `📄 SQL: ${block.substring(0, 300)}${block.length > 300 ? "..." : ""}`,
       );
-      console.error(`🔍 Détails de l'erreur:`, error);
+      console.error(`🔍 Code d'erreur: ${error.code || "N/A"}`);
+      console.error(`🔍 Message: ${error.message || "N/A"}`);
+
+      // Pour les erreurs critiques qui empêchent la suite, on peut décider d'arrêter
+      const criticalErrors = ["42601", "42P01", "42P07"]; // syntax error, undefined table, relation exists
+      if (criticalErrors.includes(error.code)) {
+        console.error(`⚠️  Erreur critique détectée, mais on continue...`);
+      }
+
       // Ne pas throw, continuer l'exécution des autres blocs
     }
   }
@@ -408,6 +430,8 @@ async function verifyEnumTypes(): Promise<void> {
     "invitation_status_enum",
     "litigation_status_enum",
     "report_status_enum",
+    "message_type_enum", // Ajouté
+    "user_type_enum", // Ajouté
   ];
 
   console.log("🔍 Vérification des types énumérés...");
@@ -441,6 +465,57 @@ async function verifyEnumTypes(): Promise<void> {
 }
 
 /**
+ * Vérifie que les vues principales ont été créées
+ */
+async function verifyViews(): Promise<void> {
+  const expectedViews = [
+    "active_freelances",
+    "active_companies",
+    "available_freelances",
+    "admin_user_sessions",
+    "admin_admin_sessions",
+    "admin_session_stats",
+    "admin_admin_session_stats",
+    "admin_suspicious_activity",
+    "admin_suspicious_admin_activity",
+    "freelance_average_rating",
+    "company_average_rating",
+    "contract_summary",
+    "deliverable_work_summary",
+  ];
+
+  console.log("🔍 Vérification des vues créées...");
+
+  for (const viewName of expectedViews) {
+    try {
+      const result = await query(
+        `
+        SELECT EXISTS (
+          SELECT FROM information_schema.views
+          WHERE table_schema = 'public'
+          AND table_name = $1
+        )
+      `,
+        [viewName],
+      );
+
+      const exists = result.rows[0].exists;
+
+      if (exists) {
+        console.log(`✅ Vue '${viewName}' créée avec succès`);
+      } else {
+        console.log(`❌ Vue '${viewName}' non trouvée`);
+      }
+    } catch (error) {
+      console.error(
+        `❌ Erreur lors de la vérification de la vue '${viewName}':`,
+        error,
+      );
+    }
+  }
+}
+
+/**
  * Fonction utilitaire pour réinitialiser complètement la base de données
  * ATTENTION: Cette fonction supprime TOUTES les données!
  */
@@ -458,6 +533,7 @@ async function resetDatabase(): Promise<void> {
     // Supprimer toutes les tables dans l'ordre inverse des dépendances
     const dropQueries = [
       // Tables de liaison et dépendantes
+      "DROP TABLE IF EXISTS evaluations CASCADE;",
       "DROP TABLE IF EXISTS deliverable_media CASCADE;",
       "DROP TABLE IF EXISTS message_media CASCADE;",
       "DROP TABLE IF EXISTS freelance_skills CASCADE;",
@@ -506,6 +582,8 @@ async function resetDatabase(): Promise<void> {
       "DROP TYPE IF EXISTS company_size_enum CASCADE;",
       "DROP TYPE IF EXISTS availability_enum CASCADE;",
       "DROP TYPE IF EXISTS experience_level_enum CASCADE;",
+      "DROP TYPE IF EXISTS message_type_enum CASCADE;",
+      "DROP TYPE IF EXISTS user_type_enum CASCADE;",
 
       // Supprimer les fonctions
       "DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;",
@@ -570,6 +648,7 @@ async function main(): Promise<void> {
       case "verify":
         await verifyTables();
         await verifyEnumTypes();
+        await verifyViews();
         break;
 
       case "init":

@@ -14,6 +14,7 @@ export const createNotificationSchema = z.object({
   message: z.string().min(1, "Le message est requis."),
   type: notificationTypeEnum,
   is_global: z.boolean().default(false),
+  metadata: z.record(z.string(), z.any()).optional().nullable(),
 });
 
 // Schéma pour la mise à jour d'une notification (admin)
@@ -26,6 +27,7 @@ export const updateNotificationSchema = z.object({
   message: z.string().min(1, "Le message est requis.").optional(),
   type: notificationTypeEnum.optional(),
   is_global: z.boolean().optional(),
+  metadata: z.record(z.string(), z.any()).optional().nullable(),
 });
 
 // Schéma pour l'ID de notification (UUID)
