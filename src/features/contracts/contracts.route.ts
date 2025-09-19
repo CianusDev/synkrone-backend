@@ -3,6 +3,7 @@ import { ContractsController } from "./contracts.controller";
 import { AuthFreelanceMiddleware } from "../../middlewares/auth-freelance.middleware";
 import { AuthCompanyMiddleware } from "../../middlewares/auth-company.middleware";
 import { AuthAdminMiddleware } from "../../middlewares/auth-admin.middleware";
+import { AuthMiddleware } from "../../middlewares/auth.middleware";
 
 const router = Router();
 const controller = new ContractsController();
@@ -12,8 +13,8 @@ router.post("/", AuthCompanyMiddleware, (req, res) =>
   controller.createContract(req, res),
 );
 
-// Récupérer un contrat par ID (admin ou concerné)
-router.get("/:id", AuthAdminMiddleware, (req, res) =>
+// Récupérer un contrat par ID
+router.get("/:id", AuthMiddleware, (req, res) =>
   controller.getContractById(req, res),
 );
 
@@ -30,6 +31,21 @@ router.get("/company/:companyId", AuthCompanyMiddleware, (req, res) =>
 // Récupérer les contrats d'un projet (company ou admin)
 router.get("/project/:projectId", AuthCompanyMiddleware, (req, res) =>
   controller.getContractsByProjectId(req, res),
+);
+
+// Modifier un contrat (company uniquement, statut draft)
+router.patch("/:id", AuthCompanyMiddleware, (req, res) =>
+  controller.updateContract(req, res),
+);
+
+// Accepter un contrat (freelance uniquement)
+router.patch("/:id/accept", AuthFreelanceMiddleware, (req, res) =>
+  controller.acceptContract(req, res),
+);
+
+// Refuser un contrat (freelance uniquement)
+router.patch("/:id/refuse", AuthFreelanceMiddleware, (req, res) =>
+  controller.refuseContract(req, res),
 );
 
 // Mettre à jour le statut d'un contrat (admin uniquement)

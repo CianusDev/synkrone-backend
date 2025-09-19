@@ -140,7 +140,7 @@ export class ApplicationsService {
    * @returns Array of applications with stats
    */
   async getApplicationsByFreelanceId(freelanceId: string): Promise<{
-    applications: any[];
+    applications: Application[];
     stats: {
       submitted: number;
       accepted: number;

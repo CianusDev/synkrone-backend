@@ -22,6 +22,7 @@ Il propose une API REST complète avec création, consultation, mise à jour, su
 export enum ContractStatus {
   DRAFT = "draft",
   ACTIVE = "active",
+  PENDING = "pending",
   COMPLETED = "completed",
   CANCELLED = "cancelled",
   SUSPENDED = "suspended",
@@ -210,7 +211,94 @@ export interface Contract {
 
 ---
 
-### 7. Mettre à jour le statut d'un contrat
+### 7. Modifier un contrat
+
+`PATCH /api/contracts/:id`
+
+**Body :**
+```json
+{
+  "payment_mode": "daily_rate",
+  "tjm": 600.00,
+  "estimated_days": 15,
+  "terms": "Nouvelles conditions...",
+  "start_date": "2024-08-01",
+  "end_date": "2024-09-01"
+}
+```
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Contrat mis à jour avec succès"
+}
+```
+
+---
+
+### 8. Accepter un contrat
+
+`PATCH /api/contracts/:id/accept`
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Contrat accepté avec succès"
+}
+```
+
+---
+
+### 9. Refuser un contrat
+
+`PATCH /api/contracts/:id/refuse`
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Contrat refusé avec succès"
+}
+```
+
+---
+
+### 10. Activer un contrat pending
+
+`PATCH /api/contracts/:id/activate`
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Contrat activé avec succès"
+}
+```
+
+---
+
+### 11. Mettre un contrat en pending
+
+`PATCH /api/contracts/:id/set-pending`
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Contrat mis en pending avec succès"
+}
+```
+
+---
+
+### 12. Mettre à jour le statut d'un contrat
 
 `PATCH /api/contracts/:id/status`
 
@@ -232,7 +320,7 @@ export interface Contract {
 
 ---
 
-### 8. Supprimer un contrat
+### 13. Supprimer un contrat
 
 `DELETE /api/contracts/:id`
 
@@ -305,15 +393,30 @@ Paiement échelonné selon les livrables validés.
 
 ## Logique métier
 
+### Workflow de validation des contrats
+1. **Création** : L'entreprise crée un contrat avec le statut `draft`
+2. **Modification** : L'entreprise peut modifier le contrat tant qu'il est en statut `draft`
+3. **Acceptation/Refus** : Le freelance peut accepter ou refuser le contrat :
+   - **Acceptation avec livrables milestone** : statut → `active`
+   - **Acceptation sans livrables milestone** : statut → `pending`
+   - **Refus** : statut → `cancelled`
+4. **Gestion des livrables** :
+   - **Ajout de milestones** : `pending` → `active`
+   - **Suppression de tous les milestones** : `active` → `pending`
+5. **Verrouillage** : Une fois accepté ou refusé, le contrat n'est plus modifiable (sauf transitions milestone)
+
 ### Validation automatique
 - **fixed_price** / **by_milestone** : `total_amount` obligatoire et positif
 - **daily_rate** : `tjm` et `estimated_days` obligatoires et positifs  
 - **Dates** : `start_date` doit être antérieure à `end_date`
 - **Unicité** : Un seul contrat par candidature acceptée
+- **Modification** : Seuls les contrats en statut `draft` peuvent être modifiés
+- **Acceptation/Refus** : Seuls les contrats en statut `draft` peuvent être acceptés/refusés
 
 ### Calculs automatiques
 - **daily_rate** : `montant_estimé = tjm × estimated_days`
-- **Statuts** : Workflow `draft` → `active` → `completed`/`cancelled`
+- **Statuts** : Workflow `draft` → `active`/`pending` → `completed`/`cancelled`
+- **Transitions automatiques** : Basculement `pending` ↔ `active` selon la présence de livrables milestone
 
 ---
 
@@ -323,7 +426,13 @@ Paiement échelonné selon les livrables validés.
 - Les statuts et modes de paiement sont limités aux valeurs des enums.
 - Validation de la cohérence métier selon le mode de paiement.
 - Les champs optionnels (`terms`, `start_date`, `end_date`, etc.) sont correctement typés et traités.
-- Les middlewares d'authentification sont appliqués selon le rôle (freelance, company, admin).
+- Les middlewares d'authentification sont appliqués selon le rôle :
+  - **Création** : entreprise ou admin
+  - **Modification** : entreprise ou admin (statut draft uniquement)
+  - **Acceptation/Refus** : freelance concerné uniquement
+  - **Transitions milestone** : admin ou système (activation/suspension selon milestones)
+  - **Consultation** : freelance, entreprise ou admin
+  - **Suppression/Statut** : admin uniquement
 
 ---
 

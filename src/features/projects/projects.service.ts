@@ -29,6 +29,10 @@ export class ProjectsService {
     typeWork?: TypeWork;
     categoryId?: string;
     companyId: string;
+    durationDays?: number;
+    levelExperience?: string;
+    allowMultipleApplications?: boolean;
+    tjmProposed?: number;
   }): Promise<Project> {
     // 1. Vérifier la catégorie si fournie
     if (data.categoryId) {
@@ -104,6 +108,17 @@ export class ProjectsService {
       project.applicationId = project.isApplied
         ? applications.data[0]?.id
         : undefined;
+
+      // Vérifie si le freelance a été accepté
+      const acceptedApplications =
+        await this.applicationsRepository.getApplicationsWithFilters({
+          projectId: id,
+          freelanceId,
+          limit: 1,
+          page: 1,
+          status: ApplicationStatus.ACCEPTED,
+        });
+      project.isAccepted = acceptedApplications.total > 0;
     }
 
     // Récupère les projets récemment publiés (hors celui en cours)
@@ -229,7 +244,20 @@ export class ProjectsService {
               limit: 1,
               page: 1,
             });
-          return { ...project, isApplied: applications.total > 0 };
+          // Vérifie si le freelance a été accepté
+          const acceptedApplications =
+            await this.applicationsRepository.getApplicationsWithFilters({
+              projectId: project.id,
+              freelanceId: params.freelanceId,
+              limit: 1,
+              page: 1,
+              status: ApplicationStatus.ACCEPTED,
+            });
+          return {
+            ...project,
+            isApplied: applications.total > 0,
+            isAccepted: acceptedApplications.total > 0,
+          };
         }),
       );
     }

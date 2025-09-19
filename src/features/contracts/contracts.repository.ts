@@ -444,4 +444,120 @@ export class ContractsRepository {
       throw new Error("Erreur de base de données");
     }
   }
+
+  async getContractByApplicationId(
+    applicationId: string,
+  ): Promise<Contract | null> {
+    const sql = `
+       SELECT
+         id,
+         application_id,
+         project_id,
+         freelance_id,
+         company_id,
+         payment_mode,
+         total_amount,
+         tjm,
+         estimated_days,
+         terms,
+         start_date,
+         end_date,
+         status,
+         created_at
+       FROM contracts WHERE application_id = $1 LIMIT 1;
+     `;
+    const result = await query<Contract>(sql, [applicationId]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Met à jour un contrat complet
+   */
+  async updateContract(
+    id: string,
+    data: Partial<Omit<Contract, "id" | "created_at">>,
+  ): Promise<Contract | null> {
+    const fields = [];
+    const values = [];
+    let idx = 2;
+
+    if (data.application_id !== undefined) {
+      fields.push(`application_id = $${idx++}`);
+      values.push(data.application_id);
+    }
+    if (data.project_id !== undefined) {
+      fields.push(`project_id = $${idx++}`);
+      values.push(data.project_id);
+    }
+    if (data.freelance_id !== undefined) {
+      fields.push(`freelance_id = $${idx++}`);
+      values.push(data.freelance_id);
+    }
+    if (data.company_id !== undefined) {
+      fields.push(`company_id = $${idx++}`);
+      values.push(data.company_id);
+    }
+    if (data.payment_mode !== undefined) {
+      fields.push(`payment_mode = $${idx++}`);
+      values.push(data.payment_mode);
+    }
+    if (data.total_amount !== undefined) {
+      fields.push(`total_amount = $${idx++}`);
+      values.push(data.total_amount);
+    }
+    if (data.tjm !== undefined) {
+      fields.push(`tjm = $${idx++}`);
+      values.push(data.tjm);
+    }
+    if (data.estimated_days !== undefined) {
+      fields.push(`estimated_days = $${idx++}`);
+      values.push(data.estimated_days);
+    }
+    if (data.terms !== undefined) {
+      fields.push(`terms = $${idx++}`);
+      values.push(data.terms);
+    }
+    if (data.start_date !== undefined) {
+      fields.push(`start_date = $${idx++}`);
+      values.push(data.start_date);
+    }
+    if (data.end_date !== undefined) {
+      fields.push(`end_date = $${idx++}`);
+      values.push(data.end_date);
+    }
+    if (data.status !== undefined) {
+      fields.push(`status = $${idx++}`);
+      values.push(data.status);
+    }
+
+    if (fields.length === 0) return this.getContractById(id);
+
+    const sql = `
+      UPDATE contracts SET ${fields.join(", ")}
+      WHERE id = $1
+      RETURNING
+        id,
+        application_id,
+        project_id,
+        freelance_id,
+        company_id,
+        payment_mode,
+        total_amount,
+        tjm,
+        estimated_days,
+        terms,
+        start_date,
+        end_date,
+        status,
+        created_at;
+    `;
+
+    try {
+      const result = await query<Contract>(sql, [id, ...values]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du contrat :", error);
+      throw new Error("Erreur de base de données");
+    }
+  }
 }

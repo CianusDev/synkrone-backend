@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { ContractsService } from "./contracts.service";
 import {
   createContractSchema,
+  updateContractSchema,
   updateContractStatusSchema,
   contractIdSchema,
   filterContractsSchema,
@@ -110,6 +111,10 @@ export class ContractsController {
         filters.freelanceId!,
         filters.page,
         filters.limit,
+        {
+          status: filters.status,
+          paymentMode: filters.paymentMode,
+        },
       );
       res.status(200).json({
         success: true,
@@ -137,6 +142,10 @@ export class ContractsController {
         filters.companyId!,
         filters.page,
         filters.limit,
+        {
+          status: filters.status,
+          paymentMode: filters.paymentMode,
+        },
       );
       res.status(200).json({
         success: true,
@@ -164,6 +173,10 @@ export class ContractsController {
         filters.projectId!,
         filters.page,
         filters.limit,
+        {
+          status: filters.status,
+          paymentMode: filters.paymentMode,
+        },
       );
       res.status(200).json({
         success: true,
@@ -237,6 +250,82 @@ export class ContractsController {
         limit: result.limit,
         totalPages: result.totalPages,
         message: "Liste des contrats filtrée récupérée avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  // PATCH /contracts/:id : modifier un contrat (entreprise uniquement, statut draft)
+  async updateContract(req: Request, res: Response) {
+    try {
+      const { id } = contractIdSchema.parse(req.params);
+      const validatedData = updateContractSchema.parse(req.body);
+      const updated = await this.service.updateContract(id, {
+        application_id: validatedData.application_id,
+        project_id: validatedData.project_id,
+        freelance_id: validatedData.freelance_id,
+        company_id: validatedData.company_id,
+        payment_mode: validatedData.payment_mode,
+        total_amount: validatedData.total_amount,
+        tjm: validatedData.tjm,
+        estimated_days: validatedData.estimated_days,
+        terms: validatedData.terms ?? undefined,
+        start_date: validatedData.start_date ?? undefined,
+        end_date: validatedData.end_date ?? undefined,
+      });
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          message: "Contrat non trouvé ou non modifiable",
+        });
+      }
+      res.status(200).json({
+        success: true,
+        data: updated,
+        message: "Contrat mis à jour avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  // PATCH /contracts/:id/accept : accepter un contrat (freelance uniquement)
+  async acceptContract(req: Request, res: Response) {
+    try {
+      const { id } = contractIdSchema.parse(req.params);
+      const updated = await this.service.acceptContract(id);
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          message: "Contrat non trouvé ou non acceptable",
+        });
+      }
+      res.status(200).json({
+        success: true,
+        data: updated,
+        message: "Contrat accepté avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  // PATCH /contracts/:id/refuse : refuser un contrat (freelance uniquement)
+  async refuseContract(req: Request, res: Response) {
+    try {
+      const { id } = contractIdSchema.parse(req.params);
+      const updated = await this.service.refuseContract(id);
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          message: "Contrat non trouvé ou non refusable",
+        });
+      }
+      res.status(200).json({
+        success: true,
+        data: updated,
+        message: "Contrat refusé avec succès",
       });
     } catch (error) {
       this.handleError(error, res);

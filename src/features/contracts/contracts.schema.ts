@@ -23,8 +23,8 @@ export const createContractSchema = z
       .int()
       .positive("Le nombre de jours estimé doit être positif.")
       .optional(),
-    terms: z.string().optional().nullable(),
-    start_date: z.coerce.date().optional().nullable(),
+    terms: z.string().optional(),
+    start_date: z.coerce.date().optional(),
     end_date: z.coerce.date().optional().nullable(),
     status: z.nativeEnum(ContractStatus).optional(),
   })
@@ -83,13 +83,81 @@ export const projectIdParamSchema = z.object({
   projectId: z.uuid({ message: "ID de projet invalide (UUID attendu)." }),
 });
 
+// Schéma pour la mise à jour d'un contrat
+export const updateContractSchema = z
+  .object({
+    application_id: z
+      .uuid({
+        message: "ID de candidature invalide (UUID attendu).",
+      })
+      .optional(),
+    project_id: z
+      .uuid({ message: "ID de projet invalide (UUID attendu)." })
+      .optional(),
+    freelance_id: z
+      .uuid({
+        message: "ID de freelance invalide (UUID attendu).",
+      })
+      .optional(),
+    company_id: z
+      .uuid({ message: "ID d'entreprise invalide (UUID attendu)." })
+      .optional(),
+    payment_mode: z.enum(PaymentMode).optional(),
+    total_amount: z
+      .number()
+      .positive("Le montant total doit être positif.")
+      .optional(),
+    tjm: z.number().positive("Le TJM doit être positif.").optional(),
+    estimated_days: z
+      .number()
+      .int()
+      .positive("Le nombre de jours estimé doit être positif.")
+      .optional(),
+    terms: z.string().optional().nullable(),
+    start_date: z.coerce.date().optional(),
+    end_date: z.coerce.date().optional(),
+    status: z.enum(ContractStatus).optional(),
+  })
+  .refine(
+    (data) => {
+      if (
+        data.payment_mode === PaymentMode.FIXED_PRICE ||
+        data.payment_mode === PaymentMode.BY_MILESTONE
+      ) {
+        return data.total_amount !== undefined ? data.total_amount > 0 : true;
+      }
+      return true;
+    },
+    {
+      message:
+        "Le montant total doit être positif pour les modes fixed_price et by_milestone.",
+      path: ["total_amount"],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.payment_mode === PaymentMode.DAILY_RATE) {
+        const tjmValid = data.tjm !== undefined ? data.tjm > 0 : true;
+        const daysValid =
+          data.estimated_days !== undefined ? data.estimated_days > 0 : true;
+        return tjmValid && daysValid;
+      }
+      return true;
+    },
+    {
+      message:
+        "Le TJM et le nombre de jours estimé doivent être positifs pour le mode daily_rate.",
+      path: ["tjm"],
+    },
+  );
+
 // Schéma pour le filtrage et la pagination des contrats
 export const filterContractsSchema = z.object({
-  status: z.nativeEnum(ContractStatus).optional(),
+  status: z.enum(ContractStatus).optional(),
   freelanceId: z.uuid().optional(),
   companyId: z.uuid().optional(),
   projectId: z.uuid().optional(),
-  paymentMode: z.nativeEnum(PaymentMode).optional(),
+  paymentMode: z.enum(PaymentMode).optional(),
   page: z
     .union([
       z.string().transform((val) => parseInt(val, 10)),

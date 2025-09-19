@@ -41,5 +41,6 @@ export interface Project {
   applications?: Application[];
   company?: Company;
   isApplied?: boolean; // <-- Ajouté
+  isAccepted?: boolean; // <-- Ajouté
   applicationId?: string; // <-- Ajouté
 }

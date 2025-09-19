@@ -1,5 +1,6 @@
 import { ApplicationsRepository } from "../applications/applications.repository";
 import { CompanyRepository } from "../company/company.repository";
+import { DeliverablesRepository } from "../deliverables/deliverables.repository";
 import { FreelanceRepository } from "../freelance/freelance.repository";
 import { ProjectsRepository } from "../projects/projects.repository";
 import {
@@ -13,6 +14,7 @@ import { ContractsRepository } from "./contracts.repository";
 export class ContractsService {
   private readonly repository: ContractsRepository;
   private readonly applicationsRepository: ApplicationsRepository;
+  private readonly deliverablesRepository: DeliverablesRepository;
   private readonly freelanceRepository: FreelanceRepository;
   private readonly projectsRepository: ProjectsRepository;
   private readonly companyRepository: CompanyRepository;
@@ -23,6 +25,7 @@ export class ContractsService {
     this.freelanceRepository = new FreelanceRepository();
     this.projectsRepository = new ProjectsRepository();
     this.companyRepository = new CompanyRepository();
+    this.deliverablesRepository = new DeliverablesRepository();
   }
 
   /**
@@ -33,10 +36,10 @@ export class ContractsService {
   async createContract(data: CreateContractData): Promise<Contract> {
     // 1. Vérifier qu'il n'existe pas déjà un contrat pour la même application
     if (data.application_id) {
-      const existing = await this.applicationsRepository.getApplicationById(
+      const existingContract = await this.repository.getContractByApplicationId(
         data.application_id,
       );
-      if (existing && existing.status === "accepted") {
+      if (existingContract) {
         throw new Error("Un contrat existe déjà pour cette candidature.");
       }
     }
@@ -100,12 +103,16 @@ export class ContractsService {
   }
 
   /**
-   * Récupère les contrats d'un freelance avec pagination
+   * Récupère les contrats d'un freelance avec pagination et filtres
    */
   async getContractsByFreelanceId(
     freelanceId: string,
     page?: number,
     limit?: number,
+    filters?: {
+      status?: ContractStatus;
+      paymentMode?: PaymentMode;
+    },
   ): Promise<{
     data: Contract[];
     total: number;
@@ -113,25 +120,26 @@ export class ContractsService {
     limit: number;
     totalPages: number;
   }> {
-    const result = await this.repository.getContractsByFreelanceId(
+    return this.getContractsWithFilters({
       freelanceId,
       page,
       limit,
-    );
-    const totalPages = Math.ceil(result.total / (result.limit || 1));
-    return {
-      ...result,
-      totalPages,
-    };
+      status: filters?.status,
+      paymentMode: filters?.paymentMode,
+    });
   }
 
   /**
-   * Récupère les contrats d'une entreprise avec pagination
+   * Récupère les contrats d'une entreprise avec pagination et filtres
    */
   async getContractsByCompanyId(
     companyId: string,
     page?: number,
     limit?: number,
+    filters?: {
+      status?: ContractStatus;
+      paymentMode?: PaymentMode;
+    },
   ): Promise<{
     data: Contract[];
     total: number;
@@ -139,25 +147,26 @@ export class ContractsService {
     limit: number;
     totalPages: number;
   }> {
-    const result = await this.repository.getContractsByCompanyId(
+    return this.getContractsWithFilters({
       companyId,
       page,
       limit,
-    );
-    const totalPages = Math.ceil(result.total / (result.limit || 1));
-    return {
-      ...result,
-      totalPages,
-    };
+      status: filters?.status,
+      paymentMode: filters?.paymentMode,
+    });
   }
 
   /**
-   * Récupère les contrats d'un projet avec pagination
+   * Récupère les contrats d'un projet avec pagination et filtres
    */
   async getContractsByProjectId(
     projectId: string,
     page?: number,
     limit?: number,
+    filters?: {
+      status?: ContractStatus;
+      paymentMode?: PaymentMode;
+    },
   ): Promise<{
     data: Contract[];
     total: number;
@@ -165,16 +174,13 @@ export class ContractsService {
     limit: number;
     totalPages: number;
   }> {
-    const result = await this.repository.getContractsByProjectId(
+    return this.getContractsWithFilters({
       projectId,
       page,
       limit,
-    );
-    const totalPages = Math.ceil(result.total / (result.limit || 1));
-    return {
-      ...result,
-      totalPages,
-    };
+      status: filters?.status,
+      paymentMode: filters?.paymentMode,
+    });
   }
 
   /**
@@ -218,5 +224,198 @@ export class ContractsService {
       ...result,
       totalPages,
     };
+  }
+
+  /**
+   * Met à jour un contrat (pour l'entreprise, seulement si statut draft)
+   */
+  async updateContract(
+    id: string,
+    data: Partial<Omit<Contract, "id" | "created_at">>,
+  ): Promise<Contract | null> {
+    // 1. Vérifier que le contrat existe et est en statut draft
+    const existingContract = await this.repository.getContractById(id);
+    if (!existingContract) {
+      throw new Error("Contrat non trouvé");
+    }
+    if (existingContract.status !== ContractStatus.DRAFT) {
+      throw new Error(
+        "Seuls les contrats en statut draft peuvent être modifiés",
+      );
+    }
+
+    // 2. Vérifier la cohérence selon le mode de paiement (si modifié)
+    const paymentMode = data.payment_mode || existingContract.payment_mode;
+    const totalAmount =
+      data.total_amount !== undefined
+        ? data.total_amount
+        : existingContract.total_amount;
+    const tjm = data.tjm !== undefined ? data.tjm : existingContract.tjm;
+    const estimatedDays =
+      data.estimated_days !== undefined
+        ? data.estimated_days
+        : existingContract.estimated_days;
+
+    if (
+      paymentMode === PaymentMode.FIXED_PRICE ||
+      paymentMode === PaymentMode.BY_MILESTONE
+    ) {
+      if (!totalAmount || totalAmount <= 0) {
+        throw new Error(
+          "Le montant total est requis et doit être positif pour les modes fixed_price et by_milestone.",
+        );
+      }
+    }
+
+    if (paymentMode === PaymentMode.DAILY_RATE) {
+      if (!tjm || tjm <= 0) {
+        throw new Error(
+          "Le TJM est requis et doit être positif pour le mode daily_rate.",
+        );
+      }
+      if (!estimatedDays || estimatedDays <= 0) {
+        throw new Error(
+          "Le nombre de jours estimé est requis et doit être positif pour le mode daily_rate.",
+        );
+      }
+    }
+
+    // 3. Vérifier la cohérence des dates
+    const startDate =
+      data.start_date !== undefined
+        ? data.start_date
+        : existingContract.start_date;
+    const endDate =
+      data.end_date !== undefined ? data.end_date : existingContract.end_date;
+
+    if (startDate && endDate && startDate > endDate) {
+      throw new Error(
+        "La date de début doit être antérieure à la date de fin.",
+      );
+    }
+
+    // 4. Mettre à jour le contrat
+    return this.repository.updateContract(id, data);
+  }
+
+  /**
+   * Accepte un contrat (pour le freelance, seulement si statut draft)
+   */
+  async acceptContract(id: string): Promise<Contract | null> {
+    // 1. Vérifier que le contrat existe et est en statut draft
+    const existingContract = await this.repository.getContractById(id);
+    if (!existingContract) {
+      throw new Error("Contrat non trouvé");
+    }
+    if (existingContract.status !== ContractStatus.DRAFT) {
+      throw new Error(
+        "Seuls les contrats en statut draft peuvent être acceptés",
+      );
+    }
+
+    // 2. Vérifier s'il y a des livrables milestone associés au contrat
+    const hasMilestones = await this.checkContractHasMilestones(id);
+
+    // 3. Déterminer le statut selon la présence de livrables milestone
+    const newStatus = hasMilestones
+      ? ContractStatus.ACTIVE
+      : ContractStatus.PENDING;
+
+    return this.repository.updateContractStatus(id, newStatus);
+  }
+
+  /**
+   * Vérifie si un contrat a des livrables milestone associés
+   */
+  private async checkContractHasMilestones(
+    contractId: string,
+  ): Promise<boolean> {
+    // TODO: Implémenter la vérification des livrables milestone
+    // Pour l'instant, retourne false par défaut (pas de livrables = PENDING)
+    // Cette méthode devra être mise à jour quand le module milestones sera disponible
+    try {
+      const milestones =
+        await this.deliverablesRepository.getDeliverablesByContract(contractId);
+      if (milestones && milestones.length > 0) {
+        return true; // Il y a au moins un livrable milestone
+      }
+      return false; // Par défaut, pas de livrables milestone
+    } catch (error) {
+      console.error("Erreur lors de la vérification des milestones:", error);
+      return false; // En cas d'erreur, on considère qu'il n'y a pas de milestones
+    }
+  }
+
+  /**
+   * Refuse un contrat (pour le freelance, seulement si statut draft)
+   */
+  async refuseContract(id: string): Promise<Contract | null> {
+    // 1. Vérifier que le contrat existe et est en statut draft
+    const existingContract = await this.repository.getContractById(id);
+    if (!existingContract) {
+      throw new Error("Contrat non trouvé");
+    }
+    if (existingContract.status !== ContractStatus.DRAFT) {
+      throw new Error(
+        "Seuls les contrats en statut draft peuvent être refusés",
+      );
+    }
+
+    // 2. Passer le statut à cancelled
+    return this.repository.updateContractStatus(id, ContractStatus.CANCELLED);
+  }
+
+  /**
+   * Active un contrat en statut PENDING (quand des milestones sont ajoutés)
+   */
+  async activatePendingContract(id: string): Promise<Contract | null> {
+    // 1. Vérifier que le contrat existe et est en statut pending
+    const existingContract = await this.repository.getContractById(id);
+    if (!existingContract) {
+      throw new Error("Contrat non trouvé");
+    }
+    if (existingContract.status !== ContractStatus.PENDING) {
+      throw new Error(
+        "Seuls les contrats en statut pending peuvent être activés",
+      );
+    }
+
+    // 2. Vérifier qu'il y a maintenant des livrables milestone
+    const hasMilestones = await this.checkContractHasMilestones(id);
+    if (!hasMilestones) {
+      throw new Error(
+        "Impossible d'activer le contrat : aucun livrable milestone associé",
+      );
+    }
+
+    // 3. Passer le statut à active
+    return this.repository.updateContractStatus(id, ContractStatus.ACTIVE);
+  }
+
+  /**
+   * Met un contrat ACTIVE en PENDING (si tous les milestones sont supprimés)
+   */
+  async setPendingFromActive(id: string): Promise<Contract | null> {
+    // 1. Vérifier que le contrat existe et est en statut active
+    const existingContract = await this.repository.getContractById(id);
+    if (!existingContract) {
+      throw new Error("Contrat non trouvé");
+    }
+    if (existingContract.status !== ContractStatus.ACTIVE) {
+      throw new Error(
+        "Seuls les contrats en statut active peuvent être mis en pending",
+      );
+    }
+
+    // 2. Vérifier qu'il n'y a plus de livrables milestone
+    const hasMilestones = await this.checkContractHasMilestones(id);
+    if (hasMilestones) {
+      throw new Error(
+        "Impossible de mettre en pending : des livrables milestone sont encore associés",
+      );
+    }
+
+    // 3. Passer le statut à pending
+    return this.repository.updateContractStatus(id, ContractStatus.PENDING);
   }
 }

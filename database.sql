@@ -20,18 +20,21 @@ CREATE TYPE message_type_enum AS ENUM (
     'text',              -- Message texte classique
     'media',             -- Message avec média (image, fichier)
     'system'             -- Message système automatique
+    'payment',            -- Message lié aux paiements
+    'contract',           -- Message lié aux contrats
+    'deliverable',          -- Message lié aux livrables
 );
 CREATE TYPE type_work_enum AS ENUM ('remote', 'hybride', 'presentiel');
 CREATE TYPE type_media_enum AS ENUM ('pdf', 'image', 'doc', 'zip', 'other');
 CREATE TYPE project_status_enum AS ENUM ('draft', 'published', 'is_pending');
 CREATE TYPE application_status_enum AS ENUM ('submitted', 'under_review', 'accepted', 'rejected', 'withdrawn');
-CREATE TYPE contract_status_enum AS ENUM ('draft', 'active', 'completed', 'cancelled', 'suspended');
+CREATE TYPE contract_status_enum AS ENUM ('draft', 'active', 'pending', 'completed', 'cancelled', 'suspended');
 CREATE TYPE payment_mode_enum AS ENUM ('fixed_price', 'daily_rate', 'by_milestone');
 CREATE TYPE user_type_enum AS ENUM ('freelance', 'company');
 CREATE TYPE deliverable_status_enum AS ENUM ('planned', 'in_progress', 'submitted', 'validated', 'rejected');
 CREATE TYPE invoice_status_enum AS ENUM ('draft', 'sent', 'paid', 'overdue', 'cancelled');
 CREATE TYPE payment_status_enum AS ENUM ('pending', 'completed', 'failed', 'refunded');
-CREATE TYPE payment_type_enum AS ENUM ('milestone', 'final', 'commission');
+CREATE TYPE payment_type_enum AS ENUM ('milestone', 'fixed_price', 'commission','orher');
 CREATE TYPE work_day_status_enum AS ENUM ('draft', 'submitted', 'validated', 'rejected');
 CREATE TYPE notification_type_enum AS ENUM ('project', 'application', 'payment', 'message', 'system');
 CREATE TYPE invitation_status_enum AS ENUM ('sent', 'viewed', 'accepted', 'declined', 'expired');
