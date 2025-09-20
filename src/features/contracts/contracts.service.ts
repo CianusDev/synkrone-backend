@@ -90,7 +90,18 @@ export class ContractsService {
     }
 
     // 5. Créer le contrat
-    return this.repository.createContract(data);
+    const newContract = await this.repository.createContract(data);
+
+    // 6. Vérifier s'il y a des livrables milestone associés au contrat
+    const hasMilestones = await this.checkContractHasMilestones(newContract.id);
+
+    // 7. Déterminer le statut selon la présence de livrables milestone
+    const newStatus = hasMilestones
+      ? ContractStatus.PENDING
+      : ContractStatus.DRAFT;
+    await this.repository.updateContractStatus(newContract.id, newStatus);
+
+    return newContract;
   }
 
   /**

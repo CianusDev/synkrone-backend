@@ -3,7 +3,6 @@ import { Project, ProjectStatus, TypeWork } from "./projects.model";
 import { ProjectSkillsService } from "../project-skills/project-skills.service";
 import { ApplicationsRepository } from "../applications/applications.repository";
 import { ApplicationStatus } from "../applications/applications.model";
-
 export class ProjectsService {
   private readonly repository: ProjectsRepository;
   private readonly projectSkillsService: ProjectSkillsService;

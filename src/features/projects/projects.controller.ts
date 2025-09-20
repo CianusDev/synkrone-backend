@@ -8,6 +8,9 @@ import {
 } from "./projects.schema";
 import { ProjectsService } from "./projects.service";
 import { Company } from "../company/company.model";
+import { google } from "@ai-sdk/google";
+import { generateObject, generateText } from "ai";
+import { z } from "zod";
 
 export class ProjectsController {
   private readonly service: ProjectsService;
@@ -144,6 +147,41 @@ export class ProjectsController {
     };
     try {
       const validated = createProjectSchema.parse(data);
+      // const { text } = await generateText({
+      //   model: google("gemini-2.5-flash"),
+      //   prompt: "Write a vegetarian lasagna recipe for 4 people.",
+      // });
+      const { object } = await generateObject({
+        model: google("gemini-2.5-flash"),
+        output: "object",
+        schema: z.object({
+          isCorrectTitle: z.boolean(),
+          isCorrectDescription: z.boolean(),
+        }),
+        prompt: `
+        Vérifie que le titre et la description du projet sont appropriés pour plateforme de freelancing .
+        Agit comme un modérateur de contenu.
+        Voici le titre : "${validated.title}"
+        Voici la description : "${validated.description}".`,
+      });
+      console.log({
+        object,
+        // text,
+        title: validated.title,
+        descrption: validated.description,
+      });
+      if (!object.isCorrectTitle) {
+        return res.status(400).json({
+          success: false,
+          message: "Le titre du projet n'est pas approprié.",
+        });
+      }
+      if (!object.isCorrectDescription) {
+        return res.status(400).json({
+          success: false,
+          message: "La description du projet n'est pas appropriée.",
+        });
+      }
       const project = await this.service.createProject(validated);
       res.status(201).json({
         success: true,
