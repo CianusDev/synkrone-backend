@@ -76,21 +76,64 @@ export class ContractsRepository {
   async getContractById(id: string): Promise<Contract | null> {
     const sql = `
       SELECT
-        id,
-        application_id,
-        project_id,
-        freelance_id,
-        company_id,
-        payment_mode,
-        total_amount,
-        tjm,
-        estimated_days,
-        terms,
-        start_date,
-        end_date,
-        status,
-        created_at
-      FROM contracts WHERE id = $1;
+        c.id,
+        c.application_id,
+        c.project_id,
+        c.freelance_id,
+        c.company_id,
+        c.payment_mode,
+        c.total_amount,
+        c.tjm,
+        c.estimated_days,
+        c.terms,
+        c.start_date,
+        c.end_date,
+        c.status,
+        c.created_at,
+        json_build_object(
+          'id', p.id,
+          'title', p.title,
+          'description', p.description,
+          'budgetMin', p.budget_min,
+          'budgetMax', p.budget_max,
+          'deadline', p.deadline,
+          'durationDays', p.duration_days,
+          'status', p.status,
+          'typeWork', p.type_work,
+          'categoryId', p.category_id,
+          'companyId', p.company_id,
+          'allowMultipleApplications', p.allow_multiple_applications,
+          'levelExperience', p.level_experience,
+          'tjmProposed', p.tjm_proposed,
+          'createdAt', p.created_at,
+          'updatedAt', p.updated_at,
+          'publishedAt', p.published_at
+        ) AS project,
+        json_build_object(
+          'id', f.id,
+          'firstname', f.firstname,
+          'lastname', f.lastname,
+          'email', f.email,
+          'photo_url', f.photo_url,
+          'job_title', f.job_title,
+          'experience', f.experience,
+          'description', f.description,
+          'cover_url', f.cover_url,
+          'linkedin_url', f.linkedin_url,
+          'tjm', f.tjm,
+          'availability', f.availability,
+          'location', f.location,
+          'is_verified', f.is_verified,
+          'country', f.country,
+          'city', f.city,
+          'phone', f.phone,
+          'created_at', f.created_at,
+          'updated_at', f.updated_at
+        ) AS freelance
+      FROM contracts c
+      LEFT JOIN projects p ON c.project_id = p.id
+      LEFT JOIN freelances f ON c.freelance_id = f.id
+      WHERE c.id = $1;
     `;
     try {
       const result = await query<Contract>(sql, [id]);
@@ -124,23 +167,68 @@ export class ContractsRepository {
 
     const sql = `
       SELECT
-        id,
-        application_id,
-        project_id,
-        freelance_id,
-        company_id,
-        payment_mode,
-        total_amount,
-        tjm,
-        estimated_days,
-        terms,
-        start_date,
-        end_date,
-        status,
-        created_at
-      FROM contracts WHERE freelance_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3;
+        c.id,
+        c.application_id,
+        c.project_id,
+        c.freelance_id,
+        c.company_id,
+        c.payment_mode,
+        c.total_amount,
+        c.tjm,
+        c.estimated_days,
+        c.terms,
+        c.start_date,
+        c.end_date,
+        c.status,
+        c.created_at,
+        json_build_object(
+          'id', p.id,
+          'title', p.title,
+          'description', p.description,
+          'budgetMin', p.budget_min,
+          'budgetMax', p.budget_max,
+          'deadline', p.deadline,
+          'durationDays', p.duration_days,
+          'status', p.status,
+          'typeWork', p.type_work,
+          'categoryId', p.category_id,
+          'companyId', p.company_id,
+          'allowMultipleApplications', p.allow_multiple_applications,
+          'levelExperience', p.level_experience,
+          'tjmProposed', p.tjm_proposed,
+          'createdAt', p.created_at,
+          'updatedAt', p.updated_at,
+          'publishedAt', p.published_at
+        ) AS project,
+        json_build_object(
+          'id', f.id,
+          'firstname', f.firstname,
+          'lastname', f.lastname,
+          'email', f.email,
+          'photo_url', f.photo_url,
+          'job_title', f.job_title,
+          'experience', f.experience,
+          'description', f.description,
+          'cover_url', f.cover_url,
+          'linkedin_url', f.linkedin_url,
+          'tjm', f.tjm,
+          'availability', f.availability,
+          'location', f.location,
+          'is_verified', f.is_verified,
+          'country', f.country,
+          'city', f.city,
+          'phone', f.phone,
+          'created_at', f.created_at,
+          'updated_at', f.updated_at
+        ) AS freelance
+      FROM contracts c
+      LEFT JOIN projects p ON c.project_id = p.id
+      LEFT JOIN freelances f ON c.freelance_id = f.id
+      WHERE c.freelance_id = $1
+      ORDER BY c.created_at DESC
+      LIMIT $2 OFFSET $3;
     `;
-    const countQuery = `SELECT COUNT(*) AS total FROM contracts WHERE freelance_id = $1;`;
+    const countQuery = `SELECT COUNT(*) AS total FROM contracts c WHERE c.freelance_id = $1;`;
     try {
       const dataResult = await query<Contract>(sql, [
         freelanceId,
@@ -186,23 +274,68 @@ export class ContractsRepository {
 
     const sql = `
       SELECT
-        id,
-        application_id,
-        project_id,
-        freelance_id,
-        company_id,
-        payment_mode,
-        total_amount,
-        tjm,
-        estimated_days,
-        terms,
-        start_date,
-        end_date,
-        status,
-        created_at
-      FROM contracts WHERE company_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3;
+        c.id,
+        c.application_id,
+        c.project_id,
+        c.freelance_id,
+        c.company_id,
+        c.payment_mode,
+        c.total_amount,
+        c.tjm,
+        c.estimated_days,
+        c.terms,
+        c.start_date,
+        c.end_date,
+        c.status,
+        c.created_at,
+        json_build_object(
+          'id', p.id,
+          'title', p.title,
+          'description', p.description,
+          'budgetMin', p.budget_min,
+          'budgetMax', p.budget_max,
+          'deadline', p.deadline,
+          'durationDays', p.duration_days,
+          'status', p.status,
+          'typeWork', p.type_work,
+          'categoryId', p.category_id,
+          'companyId', p.company_id,
+          'allowMultipleApplications', p.allow_multiple_applications,
+          'levelExperience', p.level_experience,
+          'tjmProposed', p.tjm_proposed,
+          'createdAt', p.created_at,
+          'updatedAt', p.updated_at,
+          'publishedAt', p.published_at
+        ) AS project,
+        json_build_object(
+          'id', f.id,
+          'firstname', f.firstname,
+          'lastname', f.lastname,
+          'email', f.email,
+          'photo_url', f.photo_url,
+          'job_title', f.job_title,
+          'experience', f.experience,
+          'description', f.description,
+          'cover_url', f.cover_url,
+          'linkedin_url', f.linkedin_url,
+          'tjm', f.tjm,
+          'availability', f.availability,
+          'location', f.location,
+          'is_verified', f.is_verified,
+          'country', f.country,
+          'city', f.city,
+          'phone', f.phone,
+          'created_at', f.created_at,
+          'updated_at', f.updated_at
+        ) AS freelance
+      FROM contracts c
+      LEFT JOIN projects p ON c.project_id = p.id
+      LEFT JOIN freelances f ON c.freelance_id = f.id
+      WHERE c.company_id = $1
+      ORDER BY c.created_at DESC
+      LIMIT $2 OFFSET $3;
     `;
-    const countQuery = `SELECT COUNT(*) AS total FROM contracts WHERE company_id = $1;`;
+    const countQuery = `SELECT COUNT(*) AS total FROM contracts c WHERE c.company_id = $1;`;
     try {
       const dataResult = await query<Contract>(sql, [
         companyId,
@@ -248,23 +381,68 @@ export class ContractsRepository {
 
     const sql = `
       SELECT
-        id,
-        application_id,
-        project_id,
-        freelance_id,
-        company_id,
-        payment_mode,
-        total_amount,
-        tjm,
-        estimated_days,
-        terms,
-        start_date,
-        end_date,
-        status,
-        created_at
-      FROM contracts WHERE project_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3;
+        c.id,
+        c.application_id,
+        c.project_id,
+        c.freelance_id,
+        c.company_id,
+        c.payment_mode,
+        c.total_amount,
+        c.tjm,
+        c.estimated_days,
+        c.terms,
+        c.start_date,
+        c.end_date,
+        c.status,
+        c.created_at,
+        json_build_object(
+          'id', p.id,
+          'title', p.title,
+          'description', p.description,
+          'budgetMin', p.budget_min,
+          'budgetMax', p.budget_max,
+          'deadline', p.deadline,
+          'durationDays', p.duration_days,
+          'status', p.status,
+          'typeWork', p.type_work,
+          'categoryId', p.category_id,
+          'companyId', p.company_id,
+          'allowMultipleApplications', p.allow_multiple_applications,
+          'levelExperience', p.level_experience,
+          'tjmProposed', p.tjm_proposed,
+          'createdAt', p.created_at,
+          'updatedAt', p.updated_at,
+          'publishedAt', p.published_at
+        ) AS project,
+        json_build_object(
+          'id', f.id,
+          'firstname', f.firstname,
+          'lastname', f.lastname,
+          'email', f.email,
+          'photo_url', f.photo_url,
+          'job_title', f.job_title,
+          'experience', f.experience,
+          'description', f.description,
+          'cover_url', f.cover_url,
+          'linkedin_url', f.linkedin_url,
+          'tjm', f.tjm,
+          'availability', f.availability,
+          'location', f.location,
+          'is_verified', f.is_verified,
+          'country', f.country,
+          'city', f.city,
+          'phone', f.phone,
+          'created_at', f.created_at,
+          'updated_at', f.updated_at
+        ) AS freelance
+      FROM contracts c
+      LEFT JOIN projects p ON c.project_id = p.id
+      LEFT JOIN freelances f ON c.freelance_id = f.id
+      WHERE c.project_id = $1
+      ORDER BY c.created_at DESC
+      LIMIT $2 OFFSET $3;
     `;
-    const countQuery = `SELECT COUNT(*) AS total FROM contracts WHERE project_id = $1;`;
+    const countQuery = `SELECT COUNT(*) AS total FROM contracts c WHERE c.project_id = $1;`;
     try {
       const dataResult = await query<Contract>(sql, [
         projectId,
@@ -297,30 +475,21 @@ export class ContractsRepository {
     id: string,
     status: ContractStatus,
   ): Promise<Contract | null> {
-    const sql = `
+    const updateSql = `
       UPDATE contracts
       SET status = $1
       WHERE id = $2
-      RETURNING
-        id,
-        application_id,
-        project_id,
-        freelance_id,
-        company_id,
-        payment_mode,
-        total_amount,
-        tjm,
-        estimated_days,
-        terms,
-        start_date,
-        end_date,
-        status,
-        created_at;
+      RETURNING id;
     `;
     const values = [status, id];
     try {
-      const result = await query<Contract>(sql, values);
-      return result.rows[0] || null;
+      const updateResult = await query(updateSql, values);
+      if (updateResult.rows.length === 0) {
+        return null;
+      }
+
+      // Récupérer le contrat mis à jour avec les données enrichies
+      return this.getContractById(id);
     } catch (error) {
       console.error(
         "Erreur lors de la mise à jour du statut du contrat :",
@@ -370,23 +539,23 @@ export class ContractsRepository {
     let idx = 1;
 
     if (params.status) {
-      whereClauses.push(`status = $${idx++}`);
+      whereClauses.push(`c.status = $${idx++}`);
       values.push(params.status);
     }
     if (params.freelanceId) {
-      whereClauses.push(`freelance_id = $${idx++}`);
+      whereClauses.push(`c.freelance_id = $${idx++}`);
       values.push(params.freelanceId);
     }
     if (params.companyId) {
-      whereClauses.push(`company_id = $${idx++}`);
+      whereClauses.push(`c.company_id = $${idx++}`);
       values.push(params.companyId);
     }
     if (params.projectId) {
-      whereClauses.push(`project_id = $${idx++}`);
+      whereClauses.push(`c.project_id = $${idx++}`);
       values.push(params.projectId);
     }
     if (params.paymentMode) {
-      whereClauses.push(`payment_mode = $${idx++}`);
+      whereClauses.push(`c.payment_mode = $${idx++}`);
       values.push(params.paymentMode);
     }
 
@@ -396,23 +565,65 @@ export class ContractsRepository {
     // Requête principale paginée
     const dataQuery = `
       SELECT
-        id,
-        application_id,
-        project_id,
-        freelance_id,
-        company_id,
-        payment_mode,
-        total_amount,
-        tjm,
-        estimated_days,
-        terms,
-        start_date,
-        end_date,
-        status,
-        created_at
-      FROM contracts
+        c.id,
+        c.application_id,
+        c.project_id,
+        c.freelance_id,
+        c.company_id,
+        c.payment_mode,
+        c.total_amount,
+        c.tjm,
+        c.estimated_days,
+        c.terms,
+        c.start_date,
+        c.end_date,
+        c.status,
+        c.created_at,
+        json_build_object(
+          'id', p.id,
+          'title', p.title,
+          'description', p.description,
+          'budgetMin', p.budget_min,
+          'budgetMax', p.budget_max,
+          'deadline', p.deadline,
+          'durationDays', p.duration_days,
+          'status', p.status,
+          'typeWork', p.type_work,
+          'categoryId', p.category_id,
+          'companyId', p.company_id,
+          'allowMultipleApplications', p.allow_multiple_applications,
+          'levelExperience', p.level_experience,
+          'tjmProposed', p.tjm_proposed,
+          'createdAt', p.created_at,
+          'updatedAt', p.updated_at,
+          'publishedAt', p.published_at
+        ) AS project,
+        json_build_object(
+          'id', f.id,
+          'firstname', f.firstname,
+          'lastname', f.lastname,
+          'email', f.email,
+          'photo_url', f.photo_url,
+          'job_title', f.job_title,
+          'experience', f.experience,
+          'description', f.description,
+          'cover_url', f.cover_url,
+          'linkedin_url', f.linkedin_url,
+          'tjm', f.tjm,
+          'availability', f.availability,
+          'location', f.location,
+          'is_verified', f.is_verified,
+          'country', f.country,
+          'city', f.city,
+          'phone', f.phone,
+          'created_at', f.created_at,
+          'updated_at', f.updated_at
+        ) AS freelance
+      FROM contracts c
+      LEFT JOIN projects p ON c.project_id = p.id
+      LEFT JOIN freelances f ON c.freelance_id = f.id
       ${where}
-      ORDER BY created_at DESC
+      ORDER BY c.created_at DESC
       LIMIT $${idx++}
       OFFSET $${idx++}
     `;
@@ -420,7 +631,9 @@ export class ContractsRepository {
 
     // Requête de comptage total
     const countQuery = `
-      SELECT COUNT(*) AS total FROM contracts
+      SELECT COUNT(*) AS total FROM contracts c
+      LEFT JOIN projects p ON c.project_id = p.id
+      LEFT JOIN freelances f ON c.freelance_id = f.id
       ${where}
     `;
     const countValues = values;
@@ -450,21 +663,64 @@ export class ContractsRepository {
   ): Promise<Contract | null> {
     const sql = `
        SELECT
-         id,
-         application_id,
-         project_id,
-         freelance_id,
-         company_id,
-         payment_mode,
-         total_amount,
-         tjm,
-         estimated_days,
-         terms,
-         start_date,
-         end_date,
-         status,
-         created_at
-       FROM contracts WHERE application_id = $1 LIMIT 1;
+         c.id,
+         c.application_id,
+         c.project_id,
+         c.freelance_id,
+         c.company_id,
+         c.payment_mode,
+         c.total_amount,
+         c.tjm,
+         c.estimated_days,
+         c.terms,
+         c.start_date,
+         c.end_date,
+         c.status,
+         c.created_at,
+         json_build_object(
+           'id', p.id,
+           'title', p.title,
+           'description', p.description,
+           'budgetMin', p.budget_min,
+           'budgetMax', p.budget_max,
+           'deadline', p.deadline,
+           'durationDays', p.duration_days,
+           'status', p.status,
+           'typeWork', p.type_work,
+           'categoryId', p.category_id,
+           'companyId', p.company_id,
+           'allowMultipleApplications', p.allow_multiple_applications,
+           'levelExperience', p.level_experience,
+           'tjmProposed', p.tjm_proposed,
+           'createdAt', p.created_at,
+           'updatedAt', p.updated_at,
+           'publishedAt', p.published_at
+         ) AS project,
+         json_build_object(
+           'id', f.id,
+           'firstname', f.firstname,
+           'lastname', f.lastname,
+           'email', f.email,
+           'photo_url', f.photo_url,
+           'job_title', f.job_title,
+           'experience', f.experience,
+           'description', f.description,
+           'cover_url', f.cover_url,
+           'linkedin_url', f.linkedin_url,
+           'tjm', f.tjm,
+           'availability', f.availability,
+           'location', f.location,
+           'is_verified', f.is_verified,
+           'country', f.country,
+           'city', f.city,
+           'phone', f.phone,
+           'created_at', f.created_at,
+           'updated_at', f.updated_at
+         ) AS freelance
+       FROM contracts c
+       LEFT JOIN projects p ON c.project_id = p.id
+       LEFT JOIN freelances f ON c.freelance_id = f.id
+       WHERE c.application_id = $1 LIMIT 1;
      `;
     const result = await query<Contract>(sql, [applicationId]);
     return result.rows[0] || null;
@@ -532,29 +788,20 @@ export class ContractsRepository {
 
     if (fields.length === 0) return this.getContractById(id);
 
-    const sql = `
+    const updateSql = `
       UPDATE contracts SET ${fields.join(", ")}
       WHERE id = $1
-      RETURNING
-        id,
-        application_id,
-        project_id,
-        freelance_id,
-        company_id,
-        payment_mode,
-        total_amount,
-        tjm,
-        estimated_days,
-        terms,
-        start_date,
-        end_date,
-        status,
-        created_at;
+      RETURNING id;
     `;
 
     try {
-      const result = await query<Contract>(sql, [id, ...values]);
-      return result.rows[0] || null;
+      const updateResult = await query(updateSql, [id, ...values]);
+      if (updateResult.rows.length === 0) {
+        return null;
+      }
+
+      // Récupérer le contrat mis à jour avec les données enrichies
+      return this.getContractById(id);
     } catch (error) {
       console.error("Erreur lors de la mise à jour du contrat :", error);
       throw new Error("Erreur de base de données");

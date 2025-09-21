@@ -249,11 +249,10 @@ export class ContractsService {
     if (!existingContract) {
       throw new Error("Contrat non trouvé");
     }
-    if (existingContract.status !== ContractStatus.DRAFT) {
-      throw new Error(
-        "Seuls les contrats en statut draft peuvent être modifiés",
-      );
-    }
+
+    // if (existingContract.status === ContractStatus.SUSPENDED) {
+    //   throw new Error("Les contrats suspendus ne peuvent pas être modifiés.");
+    // }
 
     // 2. Vérifier la cohérence selon le mode de paiement (si modifié)
     const paymentMode = data.payment_mode || existingContract.payment_mode;
@@ -306,21 +305,26 @@ export class ContractsService {
     }
 
     // 4. Mettre à jour le contrat
-    return this.repository.updateContract(id, data);
+    const updatedContract = this.repository.updateContract(id, {
+      ...data,
+      status: ContractStatus.PENDING,
+    });
+
+    return updatedContract;
   }
 
   /**
    * Accepte un contrat (pour le freelance, seulement si statut draft)
    */
   async acceptContract(id: string): Promise<Contract | null> {
-    // 1. Vérifier que le contrat existe et est en statut draft
+    // 1. Vérifier que le contrat existe et est en statut pending
     const existingContract = await this.repository.getContractById(id);
     if (!existingContract) {
       throw new Error("Contrat non trouvé");
     }
-    if (existingContract.status !== ContractStatus.DRAFT) {
+    if (existingContract.status !== ContractStatus.PENDING) {
       throw new Error(
-        "Seuls les contrats en statut draft peuvent être acceptés",
+        "Seuls les contrats en statut attente peuvent être acceptés",
       );
     }
 
@@ -358,18 +362,16 @@ export class ContractsService {
   }
 
   /**
-   * Refuse un contrat (pour le freelance, seulement si statut draft)
+   * Refuse un contrat (pour le freelance, seulement si statut pending)
    */
   async refuseContract(id: string): Promise<Contract | null> {
-    // 1. Vérifier que le contrat existe et est en statut draft
+    // 1. Vérifier que le contrat existe et est en statut pending
     const existingContract = await this.repository.getContractById(id);
     if (!existingContract) {
       throw new Error("Contrat non trouvé");
     }
-    if (existingContract.status !== ContractStatus.DRAFT) {
-      throw new Error(
-        "Seuls les contrats en statut draft peuvent être refusés",
-      );
+    if (existingContract.status !== ContractStatus.PENDING) {
+      throw new Error("Seuls les contrats en attente peuvent être refusés");
     }
 
     // 2. Passer le statut à cancelled

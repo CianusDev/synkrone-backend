@@ -1,18 +1,22 @@
-import { DeliverablesRepository } from "./deliverables.repository";
-import { Deliverable } from "./deliverables.model";
+import { ContractStatus } from "../contracts/contracts.model";
+import { ContractsRepository } from "../contracts/contracts.repository";
 import { DeliverableMediaService } from "../media/deliverable_media/deliverable_media.service";
-import { MediaService } from "../media/media.service";
 import { Media } from "../media/media.model";
+import { MediaService } from "../media/media.service";
+import { Deliverable } from "./deliverables.model";
+import { DeliverablesRepository } from "./deliverables.repository";
 
 export class DeliverablesService {
   private readonly repository: DeliverablesRepository;
   private readonly deliverableMediaService: DeliverableMediaService;
   private readonly mediaService: MediaService;
+  private readonly contractsRepository: ContractsRepository;
 
   constructor(repository: DeliverablesRepository) {
     this.repository = repository;
     this.deliverableMediaService = new DeliverableMediaService();
     this.mediaService = new MediaService();
+    this.contractsRepository = new ContractsRepository();
   }
 
   /**
@@ -26,6 +30,16 @@ export class DeliverablesService {
     // Logique métier : exemple, vérifier unicité du titre, cohérence de l'ordre, etc.
     const { mediaIds, ...livrableData } = data;
     const deliverable = await this.repository.createDeliverable(livrableData);
+    if (!deliverable) {
+      throw new Error("Erreur lors de la création du livrable");
+    } else {
+      console.log("Created deliverable:", deliverable);
+    }
+    // Mettre à jour le statut du contrat associé à "PENDING" lorsqu'un livrable est créé
+    const updatedContract = await this.contractsRepository.updateContractStatus(
+      data.contractId,
+      ContractStatus.PENDING,
+    );
 
     // Associer les médias si fournis
     if (mediaIds && mediaIds.length > 0) {

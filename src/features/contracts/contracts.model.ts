@@ -1,3 +1,6 @@
+import { Project } from "../projects/projects.model";
+import { Freelance } from "../freelance/freelance.model";
+
 export enum ContractStatus {
   DRAFT = "draft",
   ACTIVE = "active",
@@ -28,6 +31,8 @@ export interface Contract {
   end_date?: Date;
   status: ContractStatus;
   created_at: Date;
+  project?: Project;
+  freelance?: Freelance;
 }
 
 /**

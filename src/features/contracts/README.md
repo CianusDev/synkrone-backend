@@ -49,6 +49,8 @@ export interface Contract {
   end_date?: Date;
   status: ContractStatus;
   created_at: Date;
+  project?: Project;      // Informations enrichies du projet lié
+  freelance?: Freelance;  // Informations enrichies du freelance lié
 }
 ```
 
@@ -97,10 +99,40 @@ export interface Contract {
 ```json
 {
   "success": true,
-  "data": { ... },
+  "data": {
+    "id": "uuid",
+    "application_id": "uuid",
+    "project_id": "uuid",
+    "freelance_id": "uuid",
+    "company_id": "uuid",
+    "payment_mode": "fixed_price",
+    "total_amount": 5000.00,
+    "status": "active",
+    "created_at": "2024-01-15T10:30:00Z",
+    "project": {
+      "id": "uuid",
+      "title": "Développement application mobile",
+      "description": "...",
+      "budgetMin": 4000,
+      "budgetMax": 6000,
+      "status": "published",
+      "companyId": "uuid"
+    },
+    "freelance": {
+      "id": "uuid",
+      "firstname": "John",
+      "lastname": "Doe",
+      "email": "john@example.com",
+      "job_title": "Développeur Mobile",
+      "tjm": 500,
+      "experience": "expert"
+    }
+  },
   "message": "Contrat récupéré avec succès"
 }
 ```
+
+> **Note :** Tous les endpoints GET retournent maintenant les informations enrichies du projet et du freelance associés au contrat.
 
 ---
 
@@ -118,7 +150,24 @@ export interface Contract {
 ```json
 {
   "success": true,
-  "data": [ ... ],
+  "data": [
+    {
+      "id": "uuid",
+      "payment_mode": "daily_rate",
+      "tjm": 500,
+      "status": "active",
+      "project": {
+        "title": "Développement API REST",
+        "description": "...",
+        "companyId": "uuid"
+      },
+      "freelance": {
+        "firstname": "John",
+        "lastname": "Doe",
+        "job_title": "Développeur Backend"
+      }
+    }
+  ],
   "total": 42,
   "page": 1,
   "limit": 10,
@@ -420,12 +469,22 @@ Paiement échelonné selon les livrables validés.
 
 ---
 
+## Enrichissement des données
+
+Tous les endpoints **GET** retournent désormais les contrats enrichis avec :
+
+- **`project`** : Informations complètes du projet associé (titre, description, budget, statut, etc.)
+- **`freelance`** : Informations du freelance associé (nom, prénom, titre, expérience, TJM, etc.)
+
+Cet enrichissement se fait automatiquement via des JOIN en base de données pour optimiser les performances et éviter les requêtes multiples côté client.
+
 ## Sécurité & Bonnes pratiques
 
 - Les IDs sont validés (UUID).
 - Les statuts et modes de paiement sont limités aux valeurs des enums.
 - Validation de la cohérence métier selon le mode de paiement.
 - Les champs optionnels (`terms`, `start_date`, `end_date`, etc.) sont correctement typés et traités.
+- **Données enrichies** : Les informations projet/freelance sont récupérées via LEFT JOIN pour éviter les erreurs si des références sont supprimées.
 - Les middlewares d'authentification sont appliqués selon le rôle :
   - **Création** : entreprise ou admin
   - **Modification** : entreprise ou admin (statut draft uniquement)

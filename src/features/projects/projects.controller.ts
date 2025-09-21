@@ -1,5 +1,8 @@
+import { google } from "@ai-sdk/google";
+import { generateObject } from "ai";
 import { Request, Response } from "express";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
+import { Company } from "../company/company.model";
 import {
   createProjectSchema,
   getProjectsWithFiltersSchema,
@@ -7,10 +10,6 @@ import {
   updateProjectSchema,
 } from "./projects.schema";
 import { ProjectsService } from "./projects.service";
-import { Company } from "../company/company.model";
-import { google } from "@ai-sdk/google";
-import { generateObject, generateText } from "ai";
-import { z } from "zod";
 
 export class ProjectsController {
   private readonly service: ProjectsService;

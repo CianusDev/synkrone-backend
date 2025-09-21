@@ -107,6 +107,15 @@ export class ContractsController {
         ...req.query,
         freelanceId,
       });
+      if (
+        filters.status === ContractStatus.DRAFT ||
+        filters.status === undefined
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Le statut 'draft' n'est pas autorisé pour les freelances",
+        });
+      }
       const result = await this.service.getContractsByFreelanceId(
         filters.freelanceId!,
         filters.page,
