@@ -8,6 +8,7 @@ import { UserNotificationRepository } from "../notifications/user-notifications/
 import { NotificationTypeEnum } from "../notifications/notification.model";
 import { UserNotificationService } from "../notifications/user-notifications/user-notification.service";
 import { ConversationService } from "../converstions/conversation.service";
+import { emailTemplates, sendEmail } from "../../config/smtp-email";
 
 export class ApplicationsService {
   private readonly repository: ApplicationsRepository;
@@ -32,33 +33,55 @@ export class ApplicationsService {
    * @returns The created application
    */
   async createApplication(data: Partial<Application>): Promise<Application> {
-    // 1. Vérifier s'il existe déjà une candidature acceptée pour ce freelance sur ce projet
-    const acceptedApplication =
+    // 1. Vérifier s'il existe déjà une candidature pour ce freelance sur ce projet
+    const existingApplication =
       await this.repository.getApplicationByFreelanceAndProject(
         data.freelance_id || "",
         data.project_id || "",
-        [ApplicationStatus.ACCEPTED],
       );
-    if (acceptedApplication) {
-      throw new Error(
-        "Vous avez déjà été accepté sur cette mission et ne pouvez pas repostuler.",
-      );
-    }
 
-    // 2. Vérifier l'unicité des candidatures en cours (submitted/under_review)
-    const pendingApplication =
-      await this.repository.getApplicationByFreelanceAndProject(
-        data.freelance_id || "",
-        data.project_id || "",
-        [ApplicationStatus.SUBMITTED, ApplicationStatus.UNDER_REVIEW],
-      );
-    if (pendingApplication) {
-      if (pendingApplication.status === ApplicationStatus.SUBMITTED) {
-        throw new Error("Une candidature est déjà en cours pour ce projet.");
-      } else {
-        throw new Error(
-          "Une candidature est déjà en cours d'examen pour ce projet.",
-        );
+    if (existingApplication) {
+      switch (existingApplication.status) {
+        case ApplicationStatus.ACCEPTED:
+          throw new Error(
+            "Vous avez déjà été accepté sur cette mission et ne pouvez pas repostuler.",
+          );
+        case ApplicationStatus.SUBMITTED:
+          throw new Error("Une candidature est déjà en cours pour ce projet.");
+        case ApplicationStatus.UNDER_REVIEW:
+          throw new Error(
+            "Une candidature est déjà en cours d'examen pour ce projet.",
+          );
+        case ApplicationStatus.REJECTED:
+          // Mettre à jour la candidature rejetée avec les nouvelles données
+          await this.repository.updateApplicationForReactivation(
+            existingApplication.id,
+            {
+              proposed_rate: data.proposed_rate,
+              cover_letter: data.cover_letter,
+              status: ApplicationStatus.SUBMITTED,
+            },
+          );
+          console.log(
+            `✅ Candidature rejetée réactivée avec nouvelles données`,
+          );
+          break;
+        case ApplicationStatus.WITHDRAWN:
+          // Mettre à jour la candidature retirée avec les nouvelles données
+          await this.repository.updateApplicationForReactivation(
+            existingApplication.id,
+            {
+              proposed_rate: data.proposed_rate,
+              cover_letter: data.cover_letter,
+              status: ApplicationStatus.SUBMITTED,
+            },
+          );
+          console.log(
+            `✅ Candidature retirée réactivée avec nouvelles données`,
+          );
+          break;
+        default:
+          throw new Error("Une candidature existe déjà pour ce projet.");
       }
     }
 
@@ -90,9 +113,47 @@ export class ApplicationsService {
         );
       }
     }
+    // Si une candidature inactive existe, la mettre à jour au lieu d'en créer une nouvelle
+    if (
+      existingApplication &&
+      (existingApplication.status === ApplicationStatus.REJECTED ||
+        existingApplication.status === ApplicationStatus.WITHDRAWN)
+    ) {
+      console.log(
+        `✅ Mise à jour de la candidature existante ${existingApplication.id}`,
+      );
+      // Retourner la candidature mise à jour sans créer de nouvelle candidature ni envoyer d'email
+      // car la candidature a déjà été mise à jour plus haut
+      const updatedExisting = await this.repository.getApplicationById(
+        existingApplication.id,
+      );
+      if (updatedExisting) {
+        return updatedExisting;
+      }
+    }
 
-    // 3.
-    return this.repository.createApplication(data);
+    // Créer la candidature
+    const newapplication = await this.repository.createApplication(data);
+    const template = emailTemplates.freelanceApplied(
+      project.title,
+      freelance.firstname || "Cher(e) Freelance",
+      project.company?.company_name || "l'entreprise",
+      (() => {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, "0");
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const year = String(now.getFullYear());
+        return `${day}/${month}/${year}`;
+      })(),
+    );
+
+    // Envoi de l'email
+    await sendEmail({
+      to: project.company?.company_email!,
+      ...template,
+    });
+
+    return newapplication;
   }
 
   /**
@@ -203,7 +264,7 @@ export class ApplicationsService {
       );
     }
     // console.log({ application });
-    // Mettre à jour le statut
+    // Mettre à jour le statut vers withdrawn
     const updated = await this.repository.updateApplicationStatus(
       id,
       ApplicationStatus.WITHDRAWN,
@@ -321,8 +382,23 @@ export class ApplicationsService {
     const project = await this.projectsRepository.getProjectById(
       application.project_id,
     );
+
     const freelance = await this.freelanceRepository.getFreelanceById(
       application.freelance_id,
+    );
+
+    if (!project) {
+      throw new Error("Projet introuvable.");
+    }
+
+    if (!freelance) {
+      throw new Error("Freelance introuvable.");
+    }
+
+    const updatedApplication = await this.repository.updateApplicationStatus(
+      id,
+      status,
+      responseDate,
     );
 
     // Optionally, send notification if status is ACCEPTED or REJECTED
@@ -339,9 +415,45 @@ export class ApplicationsService {
       if (status === ApplicationStatus.ACCEPTED) {
         notificationTitle = "Candidature acceptée";
         notificationMessage = `Votre candidature au projet "${project.title}" a été acceptée.`;
+        const template = emailTemplates.applicationAccepted(
+          project.title,
+          freelance.firstname || "Cher(e) Freelance",
+          project.company?.company_name || "l'entreprise",
+          (() => {
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, "0");
+            const month = String(now.getMonth() + 1).padStart(2, "0");
+            const year = String(now.getFullYear());
+            return `${day}/${month}/${year}`;
+          })(),
+        );
+
+        // Envoi de l'email
+        await sendEmail({
+          to: freelance.email!,
+          ...template,
+        });
       } else if (status === ApplicationStatus.REJECTED) {
         notificationTitle = "Candidature refusée";
         notificationMessage = `Votre candidature au projet "${project.title}" a été refusée.`;
+        const template = emailTemplates.applicationRejected(
+          project.title,
+          freelance.firstname || "Cher(e) Freelance",
+          project.company?.company_name || "l'entreprise",
+          (() => {
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, "0");
+            const month = String(now.getMonth() + 1).padStart(2, "0");
+            const year = String(now.getFullYear());
+            return `${day}/${month}/${year}`;
+          })(),
+        );
+
+        // Envoi de l'email
+        await sendEmail({
+          to: freelance.email!,
+          ...template,
+        });
       }
 
       const notification = await this.notificationRepository.createNotification(
@@ -363,7 +475,10 @@ export class ApplicationsService {
     }
 
     // Si on accepte une candidature, rejeter toutes les autres du même projet
-    if (status === ApplicationStatus.ACCEPTED) {
+    if (
+      status === ApplicationStatus.ACCEPTED &&
+      project?.allowMultipleApplications === false
+    ) {
       await this.repository.rejectOtherApplications(application.project_id, id);
 
       // Créer la conversation entre le freelance et la company si elle n'existe pas déjà
@@ -417,7 +532,7 @@ export class ApplicationsService {
       }
     }
 
-    return this.repository.updateApplicationStatus(id, status, responseDate);
+    return updatedApplication;
   }
 
   /**
@@ -549,6 +664,25 @@ export class ApplicationsService {
   }
 
   /**
+   * Check if an application exists for a freelance on a specific project
+   * @param freelanceId - Freelance UUID
+   * @param projectId - Project UUID
+   * @param statuses - Optional array of statuses to filter
+   * @returns The existing application or null
+   */
+  async getApplicationByFreelanceAndProject(
+    freelanceId: string,
+    projectId: string,
+    statuses?: ApplicationStatus[],
+  ): Promise<Application | null> {
+    return this.repository.getApplicationByFreelanceAndProject(
+      freelanceId,
+      projectId,
+      statuses,
+    );
+  }
+
+  /**
    * Initialize negotiation by creating a conversation for the application
    * @param applicationId - Application UUID
    * @returns The created conversation with details
@@ -579,6 +713,12 @@ export class ApplicationsService {
 
       console.log(
         `✅ Négociation initialisée pour la candidature: ${applicationId}`,
+      );
+
+      const updateApplication = await this.repository.updateApplicationStatus(
+        application.id,
+        ApplicationStatus.UNDER_REVIEW,
+        new Date(),
       );
 
       return conversation;

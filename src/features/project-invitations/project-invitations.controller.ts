@@ -11,6 +11,7 @@ import {
 } from "./project-invitations.schema";
 import { ZodError } from "zod";
 import { InvitationStatus } from "./project-invitations.model";
+import { Freelance } from "../freelance/freelance.model";
 
 export class ProjectInvitationsController {
   private readonly service: ProjectInvitationsService;
@@ -30,7 +31,8 @@ export class ProjectInvitationsController {
     if (typeof error === "object" && error !== null && "message" in error) {
       return res.status(400).json({
         success: false,
-        message: (error as { message?: string }).message || "Une erreur est survenue",
+        message:
+          (error as { message?: string }).message || "Une erreur est survenue",
       });
     }
     return res.status(400).json({
@@ -98,7 +100,7 @@ export class ProjectInvitationsController {
       const result = await this.service.getInvitationsByFreelanceId(
         filters.freelanceId!,
         filters.page,
-        filters.limit
+        filters.limit,
       );
       res.status(200).json({
         success: true,
@@ -107,7 +109,8 @@ export class ProjectInvitationsController {
         page: result.page,
         limit: result.limit,
         totalPages: result.totalPages,
-        message: "Liste des invitations reçues par le freelance récupérée avec succès",
+        message:
+          "Liste des invitations reçues par le freelance récupérée avec succès",
       });
     } catch (error) {
       this.handleError(error, res);
@@ -125,7 +128,7 @@ export class ProjectInvitationsController {
       const result = await this.service.getInvitationsByCompanyId(
         filters.companyId!,
         filters.page,
-        filters.limit
+        filters.limit,
       );
       res.status(200).json({
         success: true,
@@ -134,7 +137,8 @@ export class ProjectInvitationsController {
         page: result.page,
         limit: result.limit,
         totalPages: result.totalPages,
-        message: "Liste des invitations envoyées par l'entreprise récupérée avec succès",
+        message:
+          "Liste des invitations envoyées par l'entreprise récupérée avec succès",
       });
     } catch (error) {
       this.handleError(error, res);
@@ -152,7 +156,7 @@ export class ProjectInvitationsController {
       const result = await this.service.getInvitationsByProjectId(
         filters.projectId!,
         filters.page,
-        filters.limit
+        filters.limit,
       );
       res.status(200).json({
         success: true,
@@ -172,11 +176,13 @@ export class ProjectInvitationsController {
   async updateInvitationStatus(req: Request, res: Response) {
     try {
       const { id } = invitationIdSchema.parse(req.params);
-      const { status, responded_at } = updateInvitationStatusSchema.parse(req.body);
+      const { status, responded_at } = updateInvitationStatusSchema.parse(
+        req.body,
+      );
       const updated = await this.service.updateInvitationStatus(
         id,
         status as InvitationStatus,
-        responded_at ?? undefined
+        responded_at ?? undefined,
       );
       if (!updated) {
         return res.status(404).json({
@@ -227,6 +233,70 @@ export class ProjectInvitationsController {
         limit: result.limit,
         totalPages: result.totalPages,
         message: "Liste des invitations filtrée récupérée avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  // PATCH /project-invitations/:id/accept : accepter une invitation (freelance)
+  async acceptInvitation(
+    req: Request & { freelance?: Freelance },
+    res: Response,
+  ) {
+    try {
+      const { id } = invitationIdSchema.parse(req.params);
+      const freelanceId = req.freelance?.id;
+
+      if (!freelanceId) {
+        return res.status(401).json({
+          success: false,
+          message: "Freelance non authentifié",
+        });
+      }
+
+      const result = await this.service.acceptInvitation(id, freelanceId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message:
+          "Invitation acceptée avec succès. Une candidature a été créée automatiquement.",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  // PATCH /project-invitations/:id/decline : décliner une invitation (freelance)
+  async declineInvitation(
+    req: Request & { freelance?: Freelance },
+    res: Response,
+  ) {
+    try {
+      const { id } = invitationIdSchema.parse(req.params);
+      const freelanceId = req.freelance?.id;
+
+      if (!freelanceId) {
+        return res.status(401).json({
+          success: false,
+          message: "Freelance non authentifié",
+        });
+      }
+
+      const result = await this.service.declineInvitation(id, freelanceId);
+
+      if (!result) {
+        return res.status(404).json({
+          success: false,
+          message: "Invitation non trouvée ou non autorisée",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: "Invitation déclinée avec succès",
       });
     } catch (error) {
       this.handleError(error, res);

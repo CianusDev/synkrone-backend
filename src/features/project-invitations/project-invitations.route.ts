@@ -37,6 +37,16 @@ router.patch("/:id/status", AuthFreelanceMiddleware, (req, res) =>
   controller.updateInvitationStatus(req, res),
 );
 
+// Accepter une invitation (freelance uniquement)
+router.patch("/:id/accept", AuthFreelanceMiddleware, (req, res) =>
+  controller.acceptInvitation(req, res),
+);
+
+// Décliner une invitation (freelance uniquement)
+router.patch("/:id/decline", AuthFreelanceMiddleware, (req, res) =>
+  controller.declineInvitation(req, res),
+);
+
 // Supprimer une invitation (admin uniquement)
 router.delete("/:id", AuthAdminMiddleware, (req, res) =>
   controller.deleteInvitation(req, res),

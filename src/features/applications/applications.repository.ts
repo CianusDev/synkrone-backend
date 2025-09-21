@@ -471,4 +471,63 @@ export class ApplicationsRepository {
       throw new Error("Erreur de base de données");
     }
   }
+
+  /**
+   * Met à jour une candidature existante avec de nouvelles données (pour réactivation)
+   * @param id - UUID de la candidature
+   * @param data - Nouvelles données de la candidature
+   * @returns La candidature mise à jour ou null si non trouvée
+   */
+  async updateApplicationForReactivation(
+    id: string,
+    data: {
+      proposed_rate?: number;
+      cover_letter?: string;
+      status?: ApplicationStatus;
+    },
+  ): Promise<Application | null> {
+    const fields = [];
+    const values = [];
+    let idx = 2;
+
+    if (data.proposed_rate !== undefined) {
+      fields.push(`proposed_rate = $${idx++}`);
+      values.push(data.proposed_rate);
+    }
+    if (data.cover_letter !== undefined) {
+      fields.push(`cover_letter = $${idx++}`);
+      values.push(data.cover_letter);
+    }
+    if (data.status !== undefined) {
+      fields.push(`status = $${idx++}`);
+      values.push(data.status);
+    }
+
+    // Toujours mettre à jour la date de soumission lors de la réactivation
+    fields.push(`submission_date = NOW()`);
+    fields.push(`response_date = NULL`);
+
+    if (fields.length === 0) {
+      return this.getApplicationById(id);
+    }
+
+    const query = `
+      UPDATE applications
+      SET ${fields.join(", ")}
+      WHERE id = $1
+      RETURNING *;
+    `;
+    const queryValues = [id, ...values];
+
+    try {
+      const result = await db.query(query, queryValues);
+      return (result.rows[0] as Application) || null;
+    } catch (error) {
+      console.error(
+        "Erreur lors de la mise à jour de la candidature pour réactivation :",
+        error,
+      );
+      throw new Error("Erreur de base de données");
+    }
+  }
 }

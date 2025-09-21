@@ -462,6 +462,29 @@ export interface ApplicationStats {
 
 ---
 
+## Gestion des candidatures multiples
+
+Le système gère intelligemment les tentatives de candidatures multiples pour un même projet :
+
+### Candidatures actives (bloquent la nouvelle candidature)
+- `submitted` : "Une candidature est déjà en cours pour ce projet"
+- `under_review` : "Une candidature est déjà en cours d'examen pour ce projet"
+- `accepted` : "Vous avez déjà été accepté sur cette mission et ne pouvez pas repostuler"
+
+### Candidatures inactives (permettent la réactivation)
+- `rejected` : La candidature existante est réactivée avec les nouvelles données
+- `withdrawn` : La candidature existante est réactivée avec les nouvelles données
+
+### Comportement de réactivation
+Quand un freelance tente de postuler à nouveau sur un projet où sa candidature a été rejetée ou retirée :
+1. La candidature existante est mise à jour avec les nouvelles données (tarif, lettre de motivation)
+2. Le statut passe automatiquement à `submitted`
+3. La date de soumission est mise à jour à la date actuelle
+4. La date de réponse est remise à null
+5. **Aucune nouvelle entrée n'est créée** - l'historique est préservé
+
+---
+
 ## Validation
 
 - Toutes les entrées sont validées avec Zod (body, params, query).

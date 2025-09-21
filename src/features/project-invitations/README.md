@@ -212,7 +212,92 @@ export interface ProjectInvitation {
 
 ---
 
-### 8. Supprimer une invitation
+### 8. Accepter une invitation (freelance)
+
+`PATCH /api/project-invitations/:id/accept`
+
+**Autorisations :** Freelance propriétaire de l'invitation
+
+**Description :** Accepte une invitation et crée automatiquement une candidature pour le projet associé.
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "data": {
+    "invitation": {
+      "id": "uuid",
+      "project_id": "uuid",
+      "freelance_id": "uuid", 
+      "company_id": "uuid",
+      "message": "Je vous invite à postuler !",
+      "status": "accepted",
+      "sent_at": "2024-06-01T10:00:00.000Z",
+      "responded_at": "2024-06-01T12:00:00.000Z",
+      "expires_at": "2024-07-01T12:00:00.000Z"
+    },
+    "application": {
+      "id": "uuid",
+      "project_id": "uuid",
+      "freelance_id": "uuid",
+      "proposed_rate": 0,
+      "cover_letter": "Candidature créée automatiquement suite à l'acceptation d'une invitation.",
+      "status": "submitted",
+      "submission_date": "2024-06-01T12:00:00.000Z",
+      "response_date": null
+    }
+  },
+  "message": "Invitation acceptée avec succès. Une candidature a été créée automatiquement."
+}
+```
+
+**Restrictions :**
+- Seul le freelance destinataire peut accepter l'invitation
+- L'invitation doit avoir le statut `sent` ou `viewed`
+- L'invitation ne doit pas être expirée
+- Une candidature sera automatiquement créée pour le projet (sauf si elle existe déjà)
+
+**Gestion des candidatures existantes :**
+- Si une candidature existe déjà pour ce freelance sur ce projet, elle sera réutilisée ou réactivée
+- Les candidatures `rejected` ou `withdrawn` sont réactivées avec mise à jour des données
+- Les candidatures `submitted`, `under_review` ou `accepted` empêchent l'acceptation de l'invitation
+
+---
+
+### 9. Décliner une invitation (freelance)
+
+`PATCH /api/project-invitations/:id/decline`
+
+**Autorisations :** Freelance propriétaire de l'invitation
+
+**Description :** Décline une invitation sans créer de candidature.
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "project_id": "uuid",
+    "freelance_id": "uuid",
+    "company_id": "uuid", 
+    "message": "Je vous invite à postuler !",
+    "status": "declined",
+    "sent_at": "2024-06-01T10:00:00.000Z",
+    "responded_at": "2024-06-01T12:00:00.000Z",
+    "expires_at": "2024-07-01T12:00:00.000Z"
+  },
+  "message": "Invitation déclinée avec succès"
+}
+```
+
+**Restrictions :**
+- Seul le freelance destinataire peut décliner l'invitation
+- L'invitation doit avoir le statut `sent` ou `viewed`
+
+---
+
+### 10. Supprimer une invitation
 
 `DELETE /api/project-invitations/:id`
 
@@ -223,6 +308,47 @@ export interface ProjectInvitation {
   "message": "Invitation supprimée avec succès"
 }
 ```
+
+---
+
+## Notifications automatiques
+
+Les endpoints d'acceptation et de déclinaison déclenchent automatiquement :
+
+1. **Acceptation d'invitation :**
+   - Mise à jour du statut à `accepted`
+   - Création automatique d'une candidature (si aucune candidature n'existe)
+   - Réactivation d'une candidature existante si elle a été `rejected` ou `withdrawn`
+   - Gestion des erreurs si une candidature active existe déjà
+   - Notification à l'entreprise
+   - Utilisation des services `applications`, `notifications` et `user-notifications`
+
+2. **Déclinaison d'invitation :**
+   - Mise à jour du statut à `declined`
+   - Notification à l'entreprise
+   - Aucune candidature créée
+
+## Gestion des contraintes de base de données
+
+Le système respecte la contrainte unique `unique_application_per_project` qui empêche qu'un même freelance ait plusieurs candidatures actives pour le même projet :
+
+- **Candidatures actives** : `submitted`, `under_review`, `accepted`
+- **Candidatures inactives** : `rejected`, `withdrawn`
+
+Lors de l'acceptation d'une invitation :
+1. Vérification de l'existence d'une candidature
+2. Si candidature active → erreur et annulation de l'acceptation
+3. Si candidature inactive (`rejected`/`withdrawn`) → réactivation avec statut `submitted`
+4. Si aucune candidature → création d'une nouvelle candidature
+
+### Réactivation des candidatures inactives
+
+Quand une invitation est acceptée et qu'une candidature `rejected` ou `withdrawn` existe :
+- La candidature existante est réactivée (statut → `submitted`)
+- Les données sont conservées (tarif proposé, lettre de motivation)
+- La date de soumission est mise à jour
+- La date de réponse est remise à null
+- **L'historique est préservé** - aucune suppression de données
 
 ---
 
