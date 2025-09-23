@@ -272,4 +272,58 @@ export class ProjectsService {
       page: currentPage,
     };
   }
+
+  /**
+   * Récupère les missions (projets avec contrats actifs) d'un freelance
+   */
+  async getFreelanceMissions(
+    freelanceId: string,
+    params?: {
+      search?: string;
+      page?: number;
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<{
+    data: Project[];
+    total: number;
+    limit: number;
+    offset: number;
+    totalPages: number;
+    page?: number;
+  }> {
+    let finalOffset = params?.offset ?? 0;
+    const finalLimit = params?.limit ?? 10;
+
+    if (params?.page && params.page > 0) {
+      finalOffset = (params.page - 1) * finalLimit;
+    }
+
+    const result = await this.repository.getFreelanceMissions(freelanceId, {
+      ...params,
+      limit: finalLimit,
+      offset: finalOffset,
+    });
+
+    // Ajouter les skills à chaque projet
+    const projectsWithSkills = await Promise.all(
+      result.data.map(async (project) => {
+        const skills = await this.projectSkillsService.getSkillsByProjectId(
+          project.id,
+        );
+        return { ...project, skills };
+      }),
+    );
+
+    const totalPages = Math.ceil(result.total / finalLimit);
+    const currentPage =
+      params?.page ?? Math.floor(finalOffset / finalLimit) + 1;
+
+    return {
+      ...result,
+      data: projectsWithSkills,
+      totalPages,
+      page: currentPage,
+    };
+  }
 }

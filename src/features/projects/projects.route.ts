@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ProjectsController } from "./projects.controller";
 import { AuthCompanyMiddleware } from "../../middlewares/auth-company.middleware";
+import { AuthFreelanceMiddleware } from "../../middlewares/auth-freelance.middleware";
 
 const router = Router();
 const controller = new ProjectsController();
@@ -11,6 +12,11 @@ router.get("/", (req, res) => controller.getProjects(req, res));
 // Récupérer les projets de l'entreprise connectée (GET)
 router.get("/my-projects", AuthCompanyMiddleware, (req, res) =>
   controller.getMyProjects(req, res),
+);
+
+// Récupérer les missions du freelance connecté (projets avec contrats actifs)
+router.get("/my-missions", AuthFreelanceMiddleware, (req, res) =>
+  controller.getMyMissions(req, res),
 );
 
 // Récupérer un projet par ID

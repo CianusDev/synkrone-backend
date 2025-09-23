@@ -2,6 +2,7 @@ import { ProjectSkillWithDetails } from "../project-skills/project-skills.model"
 import { Company } from "../company/company.model";
 import { Application } from "../applications/applications.model";
 import { ExprerienceLevel } from "../freelance/freelance.model";
+import { Contract } from "../contracts/contracts.model";
 
 export enum ProjectStatus {
   DRAFT = "draft",
@@ -43,4 +44,5 @@ export interface Project {
   isApplied?: boolean; // <-- Ajouté
   isAccepted?: boolean; // <-- Ajouté
   applicationId?: string; // <-- Ajouté
+  contract?: Contract; // <-- Ajouté pour les missions
 }

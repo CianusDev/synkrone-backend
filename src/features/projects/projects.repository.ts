@@ -401,4 +401,134 @@ export class ProjectsRepository {
     );
     return result.rows;
   }
+
+  /**
+   * Récupère les missions (projets avec contrats actifs) d'un freelance
+   */
+  async getFreelanceMissions(
+    freelanceId: string,
+    params?: {
+      search?: string;
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<{
+    data: Project[];
+    total: number;
+    limit: number;
+    offset: number;
+  }> {
+    let queryText = `
+      SELECT
+        p.id,
+        p.title,
+        p.description,
+        p.budget_min AS "budgetMin",
+        p.budget_max AS "budgetMax",
+        p.deadline,
+        p.duration_days AS "durationDays",
+        p.status,
+        p.type_work AS "typeWork",
+        p.category_id AS "categoryId",
+        p.company_id AS "companyId",
+        p.allow_multiple_applications AS "allowMultipleApplications",
+        p.level_experience AS "levelExperience",
+        p.tjm_proposed AS "tjmProposed",
+        p.created_at AS "createdAt",
+        p.updated_at AS "updatedAt",
+        p.published_at AS "publishedAt",
+        json_build_object(
+          'id', c.id,
+          'company_name', c.company_name,
+          'company_email', c.company_email,
+          'logo_url', c.logo_url,
+          'company_description', c.company_description,
+          'industry', c.industry,
+          'website_url', c.website_url,
+          'address', c.address,
+          'company_size', c.company_size,
+          'is_certified', c.is_certified,
+          'is_verified', c.is_verified,
+          'country', c.country,
+          'city', c.city,
+          'company_phone', c.company_phone,
+          'created_at', c.created_at,
+          'updated_at', c.updated_at
+        ) AS company,
+        json_build_object(
+          'id', ct.id,
+          'status', ct.status,
+          'payment_mode', ct.payment_mode,
+          'total_amount', ct.total_amount,
+          'tjm', ct.tjm,
+          'estimated_days', ct.estimated_days,
+          'start_date', ct.start_date,
+          'end_date', ct.end_date,
+          'created_at', ct.created_at
+        ) AS contract
+      FROM projects p
+      INNER JOIN companies c ON p.company_id = c.id
+      INNER JOIN contracts ct ON p.id = ct.project_id
+      WHERE ct.freelance_id = $1
+      AND ct.status = 'active'
+    `;
+
+    let countQuery = `
+      SELECT COUNT(*) AS total
+      FROM projects p
+      INNER JOIN contracts ct ON p.id = ct.project_id
+      WHERE ct.freelance_id = $1
+      AND ct.status = 'active'
+    `;
+
+    const conditions = [];
+    const whereValues = [freelanceId];
+    let paramIdx = 2;
+
+    // Construction des conditions WHERE supplémentaires
+    if (params?.search) {
+      conditions.push(
+        `(p.title ILIKE $${paramIdx} OR p.description ILIKE $${paramIdx + 1})`,
+      );
+      whereValues.push(`%${params.search}%`);
+      whereValues.push(`%${params.search}%`);
+      paramIdx += 2;
+    }
+
+    // Ajout des conditions WHERE supplémentaires
+    if (conditions.length > 0) {
+      const additionalWhere = " AND " + conditions.join(" AND ");
+      queryText += additionalWhere;
+      countQuery += additionalWhere;
+    }
+
+    // Ordre
+    queryText += " ORDER BY p.created_at DESC";
+
+    // Pagination
+    const finalQueryValues = [...whereValues];
+    if (params?.limit) {
+      queryText += ` LIMIT $${paramIdx++}`;
+      finalQueryValues.push(params.limit.toString());
+    }
+    if (params?.offset) {
+      queryText += ` OFFSET $${paramIdx++}`;
+      finalQueryValues.push(params.offset.toString());
+    }
+
+    // Exécution des requêtes
+    const [result, countResult] = await Promise.all([
+      query<Project>(queryText, finalQueryValues),
+      query(countQuery, whereValues), // Utilise seulement les paramètres WHERE, pas limit/offset
+    ]);
+
+    const total = parseInt(countResult.rows[0]?.total ?? "0", 10);
+
+    return {
+      data: result.rows,
+      total,
+      limit: params?.limit ?? 10,
+      offset: params?.offset ?? 0,
+    };
+  }
 }

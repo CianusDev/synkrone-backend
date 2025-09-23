@@ -93,6 +93,7 @@ Toutes les routes sont protégées par le middleware :
 |---------|----------------------------|------------------------------------|------------------|
 | GET     | `/projects`                | Liste paginée des projets          | company          |
 | GET     | `/projects/my-projects`    | Projets de l'entreprise connectée  | company          |
+| GET     | `/projects/my-missions`    | Missions du freelance connecté     | freelance        |
 | GET     | `/projects/:id`            | Récupère un projet par son id      | company          |
 | POST    | `/projects`                | Crée un projet                     | company          |
 | PATCH   | `/projects/:id`            | Met à jour un projet               | company          |
@@ -165,6 +166,57 @@ Toutes les routes sont protégées par le middleware :
 - Support des mêmes paramètres de pagination et filtres que `/projects`
 - Le `companyId` est automatiquement extrait du token d'authentification
 - Paramètres disponibles : `page`, `limit`, `offset`, `search`, `status`, `typeWork`, `categoryId`
+
+---
+
+## 📋 Récupération des missions du freelance connecté
+
+**Endpoint** :  
+`GET /projects/my-missions`
+
+- Récupère automatiquement les missions (projets avec contrats actifs) du freelance connecté via le token
+- Une mission est un projet pour lequel le freelance a un contrat actif
+- Support des paramètres de pagination et recherche
+- Le `freelanceId` est automatiquement extrait du token d'authentification
+- Paramètres disponibles : `page`, `limit`, `offset`, `search`
+- Chaque projet retourné inclut les informations du contrat associé dans le champ `contract`
+
+**Réponse exemple** :
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-project",
+      "title": "Développement API REST",
+      "description": "API pour plateforme e-commerce",
+      "status": "published",
+      "company": {
+        "id": "uuid-company",
+        "company_name": "TechCorp",
+        "logo_url": "https://...",
+        "industry": "E-commerce"
+      },
+      "contract": {
+        "id": "uuid-contract",
+        "status": "active",
+        "payment_mode": "daily_rate",
+        "tjm": 500,
+        "estimated_days": 20,
+        "start_date": "2024-01-15",
+        "end_date": "2024-02-15"
+      },
+      "skills": [...]
+    }
+  ],
+  "total": 3,
+  "limit": 10,
+  "offset": 0,
+  "page": 1,
+  "totalPages": 1,
+  "message": "Liste de vos missions récupérée avec succès"
+}
+```
 
 ---
 

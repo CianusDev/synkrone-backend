@@ -3,6 +3,7 @@ import { generateObject } from "ai";
 import { Request, Response } from "express";
 import { z, ZodError } from "zod";
 import { Company } from "../company/company.model";
+import { Freelance } from "../freelance/freelance.model";
 import {
   createProjectSchema,
   getProjectsWithFiltersSchema,
@@ -108,6 +109,41 @@ export class ProjectsController {
         page: result.page,
         totalPages: result.totalPages,
         message: "Liste de vos projets récupérée avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  // GET /projects/my-missions : missions du freelance connecté (projets avec contrats actifs)
+  async getMyMissions(req: Request & { freelance?: Freelance }, res: Response) {
+    try {
+      const freelance = req.freelance; // Injecté par le middleware AuthFreelanceMiddleware
+      if (!freelance) {
+        return res.status(401).json({
+          success: false,
+          message: "Freelance non authentifié",
+        });
+      }
+
+      const parsed = getProjectsWithFiltersSchema.parse(req.query);
+
+      const result = await this.service.getFreelanceMissions(freelance.id, {
+        search: parsed.search,
+        page: parsed.page,
+        limit: parsed.limit,
+        offset: parsed.offset,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        page: result.page,
+        totalPages: result.totalPages,
+        message: "Liste de vos missions récupérée avec succès",
       });
     } catch (error) {
       this.handleError(error, res);
