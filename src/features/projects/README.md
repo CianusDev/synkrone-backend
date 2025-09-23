@@ -169,6 +169,84 @@ Toutes les routes sont protégées par le middleware :
 
 ---
 
+## 📋 Récupération d'un projet par ID (avec contrat et livrables)
+
+**Endpoint** :  
+`GET /projects/:id?freelanceId=uuid`
+
+- Si le paramètre `freelanceId` est fourni, le projet retourné inclut :
+  - Le contrat actif entre le freelance et l'entreprise pour ce projet (champ `contract`)
+  - La liste des livrables associés au contrat (champ `deliverables`)
+  - Les médias associés à chaque livrable (champ `medias` dans chaque deliverable)
+  - Le nombre total de livrables (champ `deliverableCount`)
+
+**Réponse exemple avec freelanceId** :
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-project",
+    "title": "Développement API REST",
+    "description": "API pour plateforme e-commerce",
+    "status": "published",
+    "company": {
+      "id": "uuid-company",
+      "company_name": "TechCorp",
+      "logo_url": "https://...",
+      "industry": "E-commerce"
+    },
+    "contract": {
+      "id": "uuid-contract",
+      "status": "active",
+      "payment_mode": "daily_rate",
+      "tjm": 500,
+      "estimated_days": 20,
+      "start_date": "2024-01-15",
+      "end_date": "2024-02-15"
+    },
+    "deliverables": [
+      {
+        "id": "uuid-deliverable-1",
+        "title": "Analyse des besoins",
+        "description": "Document d'analyse détaillée",
+        "status": "validated",
+        "isMilestone": true,
+        "amount": 1000,
+        "dueDate": "2024-01-20",
+        "order": 1,
+        "medias": [
+          {
+            "id": "uuid-media-1",
+            "url": "https://example.com/document.pdf",
+            "type": "pdf",
+            "size": 1024000,
+            "uploadedAt": "2024-01-18T10:30:00Z",
+            "uploadedBy": "uuid-freelance",
+            "description": "Document d'analyse complet"
+          }
+        ]
+      },
+      {
+        "id": "uuid-deliverable-2", 
+        "title": "Développement API",
+        "description": "Code source de l'API",
+        "status": "in_progress",
+        "isMilestone": true,
+        "amount": 3000,
+        "dueDate": "2024-02-10",
+        "order": 2,
+        "medias": []
+      }
+    ],
+    "deliverableCount": 2,
+    "skills": [...]
+  },
+  "message": "Projet récupéré avec succès"
+}
+```
+
+---
+
 ## 📋 Récupération des missions du freelance connecté
 
 **Endpoint** :  
@@ -180,6 +258,7 @@ Toutes les routes sont protégées par le middleware :
 - Le `freelanceId` est automatiquement extrait du token d'authentification
 - Paramètres disponibles : `page`, `limit`, `offset`, `search`
 - Chaque projet retourné inclut les informations du contrat associé dans le champ `contract`
+- Le nombre de livrables associés au contrat est disponible dans le champ `deliverableCount`
 
 **Réponse exemple** :
 ```json
@@ -191,6 +270,7 @@ Toutes les routes sont protégées par le middleware :
       "title": "Développement API REST",
       "description": "API pour plateforme e-commerce",
       "status": "published",
+      "deliverableCount": 5,
       "company": {
         "id": "uuid-company",
         "company_name": "TechCorp",

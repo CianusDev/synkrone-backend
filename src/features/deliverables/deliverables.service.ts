@@ -3,7 +3,7 @@ import { ContractsRepository } from "../contracts/contracts.repository";
 import { DeliverableMediaService } from "../media/deliverable_media/deliverable_media.service";
 import { Media } from "../media/media.model";
 import { MediaService } from "../media/media.service";
-import { Deliverable } from "./deliverables.model";
+import { Deliverable, DeliverableStatus } from "./deliverables.model";
 import { DeliverablesRepository } from "./deliverables.repository";
 
 export class DeliverablesService {
@@ -148,6 +148,9 @@ export class DeliverablesService {
           }),
         ),
       );
+      const updated = await this.repository.updateDeliverable(id, {
+        status: DeliverableStatus.SUBMITTED,
+      });
     }
 
     // Récupérer les liens et enrichir avec les objets Media

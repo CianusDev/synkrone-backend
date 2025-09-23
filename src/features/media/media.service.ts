@@ -16,6 +16,7 @@ export class MediaService {
     type: MediaType;
     uploadedBy?: string;
     description?: string;
+    size?: number;
   }): Promise<Media> {
     // Ici, tu peux ajouter des vérifications métier si besoin
     return this.repository.createMedia(data);
@@ -31,7 +32,10 @@ export class MediaService {
   /**
    * Met à jour un média
    */
-  async updateMedia(id: string, data: Partial<Omit<Media, "id" | "uploadedAt">>): Promise<Media | null> {
+  async updateMedia(
+    id: string,
+    data: Partial<Omit<Media, "id" | "uploadedAt">>,
+  ): Promise<Media | null> {
     // Vérifications métier possibles ici
     return this.repository.updateMedia(id, data);
   }
@@ -46,7 +50,10 @@ export class MediaService {
   /**
    * Liste les médias (optionnel: filtrer par type ou uploader)
    */
-  async listMedia(params?: { type?: MediaType; uploadedBy?: string }): Promise<Media[]> {
+  async listMedia(params?: {
+    type?: MediaType;
+    uploadedBy?: string;
+  }): Promise<Media[]> {
     return this.repository.listMedia(params);
   }
 }

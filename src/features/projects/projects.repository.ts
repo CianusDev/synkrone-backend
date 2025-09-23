@@ -465,7 +465,10 @@ export class ProjectsRepository {
           'start_date', ct.start_date,
           'end_date', ct.end_date,
           'created_at', ct.created_at
-        ) AS contract
+        ) AS contract,
+        (
+          SELECT COUNT(*) FROM deliverables d WHERE d.contract_id = ct.id
+        ) AS "deliverableCount"
       FROM projects p
       INNER JOIN companies c ON p.company_id = c.id
       INNER JOIN contracts ct ON p.id = ct.project_id
@@ -530,5 +533,85 @@ export class ProjectsRepository {
       limit: params?.limit ?? 10,
       offset: params?.offset ?? 0,
     };
+  }
+
+  /**
+   * Récupère le contrat actif d'un projet pour un freelance donné
+   */
+  async getProjectContractByFreelance(
+    projectId: string,
+    freelanceId: string,
+  ): Promise<any | null> {
+    const result = await query<any>(
+      `SELECT
+        c.id,
+        c.application_id,
+        c.project_id,
+        c.freelance_id,
+        c.company_id,
+        c.payment_mode,
+        c.total_amount,
+        c.tjm,
+        c.estimated_days,
+        c.terms,
+        c.start_date,
+        c.end_date,
+        c.status,
+        c.created_at
+       FROM contracts c
+       WHERE c.project_id = $1
+       AND c.freelance_id = $2
+       AND c.status = 'active'
+       LIMIT 1`,
+      [projectId, freelanceId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  /**
+   * Récupère les livrables d'un contrat avec leurs médias associés
+   */
+  async getDeliverablesByContract(contractId: string): Promise<any[]> {
+    const result = await query<any>(
+      `SELECT
+        d.id,
+        d.contract_id AS "contractId",
+        d.title,
+        d.description,
+        d.status,
+        d.is_milestone AS "isMilestone",
+        d.amount,
+        d.due_date AS "dueDate",
+        d.submitted_at AS "submittedAt",
+        d.validated_at AS "validatedAt",
+        d.feedback,
+        d."order",
+        d.created_at AS "createdAt",
+        d.updated_at AS "updatedAt",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', m.id,
+              'url', m.url,
+              'type', m.type,
+              'size', m.size,
+              'uploadedAt', m.uploaded_at,
+              'uploadedBy', m.uploaded_by,
+              'description', m.description
+            )
+          ) FILTER (WHERE m.id IS NOT NULL),
+          '[]'::json
+        ) AS medias
+       FROM deliverables d
+       LEFT JOIN deliverable_media dm ON d.id = dm.deliverable_id AND dm.deleted_at IS NULL
+       LEFT JOIN media m ON dm.media_id = m.id
+       WHERE d.contract_id = $1
+       GROUP BY d.id, d.contract_id, d.title, d.description, d.status,
+                d.is_milestone, d.amount, d.due_date, d.submitted_at,
+                d.validated_at, d.feedback, d."order", d.created_at, d.updated_at
+       ORDER BY d."order" ASC, d.created_at ASC`,
+      [contractId],
+    );
+    return result.rows;
   }
 }

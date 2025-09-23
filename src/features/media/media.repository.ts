@@ -10,12 +10,19 @@ export class MediaRepository {
     type: MediaType;
     uploadedBy?: string;
     description?: string;
+    size?: number;
   }): Promise<Media> {
     const result = await query<Media>(
-      `INSERT INTO media (url, type, uploaded_by, description)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO media (url, type, uploaded_by, description, size)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, url, type, uploaded_by AS "uploadedBy", uploaded_at AS "uploadedAt", description`,
-      [data.url, data.type, data.uploadedBy ?? null, data.description ?? null],
+      [
+        data.url,
+        data.type,
+        data.uploadedBy ?? null,
+        data.description ?? null,
+        data.size ?? null,
+      ],
     );
     return result.rows[0];
   }
@@ -25,7 +32,7 @@ export class MediaRepository {
    */
   async getMediaById(id: string): Promise<Media | null> {
     const result = await query<Media>(
-      `SELECT id, url, type, uploaded_by AS "uploadedBy", uploaded_at AS "uploadedAt", description
+      `SELECT id, url, type, uploaded_by AS "uploadedBy", uploaded_at AS "uploadedAt", description, size
        FROM media WHERE id = $1`,
       [id],
     );
@@ -60,12 +67,16 @@ export class MediaRepository {
       values.push(data.description);
     }
 
+    if (data.size !== undefined) {
+      fields.push(`size = $${idx++}`);
+      values.push(data.size);
+    }
     if (fields.length === 0) return this.getMediaById(id);
 
     const queryText = `
       UPDATE media SET ${fields.join(", ")}
       WHERE id = $1
-      RETURNING id, url, type, uploaded_by AS "uploadedBy", uploaded_at AS "uploadedAt", description
+      RETURNING id, url, type, uploaded_by AS "uploadedBy", uploaded_at AS "uploadedAt", description, size
     `;
     const result = await query<Media>(queryText, [id, ...values]);
     return result.rows[0] ?? null;
@@ -86,7 +97,7 @@ export class MediaRepository {
     type?: MediaType;
     uploadedBy?: string;
   }): Promise<Media[]> {
-    let queryText = `SELECT id, url, type, uploaded_by AS "uploadedBy", uploaded_at AS "uploadedAt", description FROM media`;
+    let queryText = `SELECT id, url, type, uploaded_by AS "uploadedBy", uploaded_at AS "uploadedAt", description, size FROM media`;
     const conditions = [];
     const values = [];
     let idx = 1;

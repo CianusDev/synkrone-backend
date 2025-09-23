@@ -11,6 +11,7 @@ export interface Media {
   url: string;
   type: MediaType;
   uploadedBy?: string; // UUID, optionnel
+  size: number; // en octets
   uploadedAt: Date;
   description?: string;
 }

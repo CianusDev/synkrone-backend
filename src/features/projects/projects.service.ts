@@ -120,6 +120,33 @@ export class ProjectsService {
       project.isAccepted = acceptedApplications.total > 0;
     }
 
+    // Récupère le contrat actif si freelanceId fourni
+    if (freelanceId) {
+      try {
+        const contract = await this.repository.getProjectContractByFreelance(
+          id,
+          freelanceId,
+        );
+
+        if (contract) {
+          project.contract = contract;
+
+          // Récupère les livrables associés au contrat
+          const deliverables = await this.repository.getDeliverablesByContract(
+            contract.id,
+          );
+          console.log({ deliverables });
+          project.deliverables = deliverables;
+          project.deliverableCount = deliverables.length;
+        }
+      } catch (error) {
+        console.error(
+          "Erreur lors de la récupération du contrat/livrables:",
+          error,
+        );
+      }
+    }
+
     // Récupère les projets récemment publiés (hors celui en cours)
     const recentProjects =
       await this.repository.getRecentlyPublishedProjects(5);

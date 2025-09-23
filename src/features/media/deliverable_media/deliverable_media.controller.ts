@@ -73,6 +73,7 @@ export class DeliverableMediaController {
         return res.status(400).json({ error: parseResult.error.issues });
       }
       const { deliverableId, mediaId } = parseResult.data;
+      console.log({ deliverableId, mediaId });
       const success = await this.service.removeMediaFromDeliverable(
         deliverableId,
         mediaId,

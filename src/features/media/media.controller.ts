@@ -57,7 +57,11 @@ export class MediaController {
    */
   async createMedia(req: Request, res: Response) {
     try {
-      const parsed = createMediaSchema.safeParse(req.body);
+      const userId = (req as any).user.id;
+      const parsed = createMediaSchema.safeParse({
+        ...req.body,
+        uploadedBy: userId,
+      });
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.issues });
       }

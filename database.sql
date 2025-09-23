@@ -195,6 +195,7 @@ CREATE TABLE media (
     url VARCHAR(500) NOT NULL,
     type type_media_enum NOT NULL,
     uploaded_by UUID,
+    size INTEGER CHECK (size >= 0),
     uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     description TEXT,
     CONSTRAINT unique_url UNIQUE (url),

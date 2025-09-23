@@ -3,6 +3,7 @@ import { Company } from "../company/company.model";
 import { Application } from "../applications/applications.model";
 import { ExprerienceLevel } from "../freelance/freelance.model";
 import { Contract } from "../contracts/contracts.model";
+import { Deliverable } from "../deliverables/deliverables.model";
 
 export enum ProjectStatus {
   DRAFT = "draft",
@@ -45,4 +46,6 @@ export interface Project {
   isAccepted?: boolean; // <-- Ajouté
   applicationId?: string; // <-- Ajouté
   contract?: Contract; // <-- Ajouté pour les missions
+  deliverableCount?: number; // <-- Ajouté pour le nombre de livrables
+  deliverables?: Deliverable[]; // <-- Ajouté pour les livrables du contrat
 }
