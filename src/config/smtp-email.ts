@@ -11,29 +11,11 @@ dotenv.config();
  */
 export const smtpConfig = {
   host: "smtp.gmail.com",
-  port: 587, // Port TLS/STARTTLS recommandé
-  secure: false, // false pour port 587 (TLS/STARTTLS)
-  requireTLS: true, // Force TLS
+  port: 465, // Port TLS/STARTTLS recommandé
+  secure: true, // false pour port 587 (TLS/STARTTLS)
   auth: {
     user: envConfig.gmailUser, // Votre adresse Gmail
     pass: envConfig.gmailAppPassword, // Mot de passe d'application Gmail
-  },
-  tls: {
-    rejectUnauthorized: false, // Permettre les certificats auto-signés en production
-    ciphers: "SSLv3",
-  },
-  // Timeouts pour la production
-  connectionTimeout: 60000, // 60 secondes
-  greetingTimeout: 30000, // 30 secondes
-  socketTimeout: 60000, // 60 secondes
-  // Options de pool pour les connexions
-  pool: true,
-  maxConnections: 5,
-  maxMessages: 100,
-  // Retry en cas d'échec
-  retry: {
-    attempts: 3,
-    delay: 5000, // 5 secondes entre les tentatives
   },
 };
 
