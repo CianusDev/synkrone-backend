@@ -19,10 +19,10 @@ CREATE TYPE experience_level_enum AS ENUM ('beginner', 'intermediate', 'expert')
 CREATE TYPE message_type_enum AS ENUM (
     'text',              -- Message texte classique
     'media',             -- Message avec média (image, fichier)
-    'system'             -- Message système automatique
-    'payment',            -- Message lié aux paiements
-    'contract',           -- Message lié aux contrats
-    'deliverable',          -- Message lié aux livrables
+    'system',            -- Message système automatique
+    'payment',           -- Message lié aux paiements
+    'contract',          -- Message lié aux contrats
+    'deliverable'        -- Message lié aux livrables
 );
 CREATE TYPE type_work_enum AS ENUM ('remote', 'hybride', 'presentiel');
 CREATE TYPE type_media_enum AS ENUM ('pdf', 'image', 'doc', 'zip', 'other');

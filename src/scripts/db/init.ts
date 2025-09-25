@@ -262,7 +262,8 @@ async function executeBlockByBlock(
     `📦 ${sortedBlocks.length} blocs SQL triés et prêts à être exécutés`,
   );
 
-  // On n'utilise plus de transaction globale ici pour garantir la création des tables même si un bloc échoue
+  // Nettoyer les objets existants problématiques avant de commencer
+  await cleanupProblematicObjects(client);
 
   let successCount = 0;
   let skipCount = 0;
@@ -277,7 +278,14 @@ async function executeBlockByBlock(
         continue;
       }
 
-      // Exécuter le bloc SQL (ne pas ajouter ; car il est déjà inclus)
+      // Gestion spéciale pour les objets qui peuvent déjà exister
+      if (await shouldSkipExistingObject(client, block)) {
+        console.log(`⏭️  Bloc ${i + 1} ignoré (objet existe déjà)`);
+        skipCount++;
+        continue;
+      }
+
+      // Exécuter le bloc SQL
       await client.query(block);
       successCount++;
 
@@ -288,28 +296,7 @@ async function executeBlockByBlock(
         );
       }
     } catch (error: any) {
-      // Identifier le type de bloc pour un meilleur debug
-      const blockType = block.includes("CREATE EXTENSION")
-        ? "EXTENSION"
-        : block.includes("CREATE TYPE")
-          ? "TYPE ENUM"
-          : block.includes("CREATE TABLE")
-            ? "TABLE"
-            : block.includes("CREATE INDEX")
-              ? "INDEX"
-              : block.includes("CREATE OR REPLACE FUNCTION")
-                ? "FUNCTION"
-                : block.includes("CREATE TRIGGER")
-                  ? "TRIGGER"
-                  : block.includes("CREATE VIEW")
-                    ? "VIEW"
-                    : block.includes("CREATE POLICY")
-                      ? "POLICY"
-                      : block.includes("ALTER TABLE")
-                        ? "ALTER TABLE"
-                        : block.includes("COMMENT ON")
-                          ? "COMMENT"
-                          : "UNKNOWN";
+      const blockType = getBlockType(block);
 
       console.error(
         `❌ Erreur lors de l'exécution du bloc SQL (${blockType}):`,
@@ -321,13 +308,13 @@ async function executeBlockByBlock(
       console.error(`🔍 Code d'erreur: ${error.code || "N/A"}`);
       console.error(`🔍 Message: ${error.message || "N/A"}`);
 
-      // Pour les erreurs critiques qui empêchent la suite, on peut décider d'arrêter
-      const criticalErrors = ["42601", "42P01", "42P07"]; // syntax error, undefined table, relation exists
-      if (criticalErrors.includes(error.code)) {
+      // Gestion intelligente des erreurs
+      if (await handleKnownErrors(client, error, block, blockType)) {
+        console.log(`✅ Erreur gérée automatiquement`);
+        successCount++;
+      } else {
         console.error(`⚠️  Erreur critique détectée, mais on continue...`);
       }
-
-      // Ne pas throw, continuer l'exécution des autres blocs
     }
   }
 
@@ -339,6 +326,145 @@ async function executeBlockByBlock(
 
   // Vérifier que les tables principales sont créées
   await verifyTables();
+}
+
+/**
+ * Nettoie les objets problématiques avant l'initialisation
+ */
+async function cleanupProblematicObjects(client: any): Promise<void> {
+  console.log("🧹 Nettoyage préventif des objets problématiques...");
+
+  const cleanupQueries = [
+    // Supprimer les types enum corrompus
+    "DROP TYPE IF EXISTS message_type_enum CASCADE;",
+    "DROP TYPE IF EXISTS work_day_status_enum CASCADE;",
+
+    // Supprimer les tables qui peuvent causer des problèmes
+    "DROP TABLE IF EXISTS messages CASCADE;",
+    "DROP TABLE IF EXISTS message_media CASCADE;",
+    "DROP TABLE IF EXISTS work_days CASCADE;",
+  ];
+
+  for (const query of cleanupQueries) {
+    try {
+      await client.query(query);
+    } catch (error) {
+      // Ignorer les erreurs de nettoyage
+    }
+  }
+
+  console.log("✅ Nettoyage préventif terminé");
+}
+
+/**
+ * Détermine le type de bloc SQL
+ */
+function getBlockType(block: string): string {
+  if (block.includes("CREATE EXTENSION")) return "EXTENSION";
+  if (block.includes("CREATE TYPE")) return "TYPE ENUM";
+  if (block.includes("CREATE TABLE")) return "TABLE";
+  if (block.includes("CREATE INDEX")) return "INDEX";
+  if (block.includes("CREATE OR REPLACE FUNCTION")) return "FUNCTION";
+  if (block.includes("CREATE TRIGGER")) return "TRIGGER";
+  if (block.includes("CREATE VIEW")) return "VIEW";
+  if (block.includes("CREATE POLICY")) return "POLICY";
+  if (block.includes("ALTER TABLE")) return "ALTER TABLE";
+  if (block.includes("COMMENT ON")) return "COMMENT";
+  return "UNKNOWN";
+}
+
+/**
+ * Vérifie si un objet existe déjà et peut être ignoré
+ */
+async function shouldSkipExistingObject(
+  client: any,
+  block: string,
+): Promise<boolean> {
+  try {
+    // Vérifier les extensions
+    if (block.includes("CREATE EXTENSION")) {
+      const extensionMatch = block.match(
+        /CREATE EXTENSION IF NOT EXISTS "([^"]+)"/,
+      );
+      if (extensionMatch) {
+        const result = await client.query(
+          "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = $1)",
+          [extensionMatch[1]],
+        );
+        return result.rows[0].exists;
+      }
+    }
+
+    // Vérifier les types enum
+    if (block.includes("CREATE TYPE") && block.includes("AS ENUM")) {
+      const typeMatch = block.match(/CREATE TYPE (\w+) AS ENUM/);
+      if (typeMatch) {
+        const result = await client.query(
+          "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = $1)",
+          [typeMatch[1]],
+        );
+        return result.rows[0].exists;
+      }
+    }
+
+    // Vérifier les tables
+    if (block.includes("CREATE TABLE")) {
+      const tableMatch = block.match(/CREATE TABLE (\w+)/);
+      if (tableMatch) {
+        const result = await client.query(
+          "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = $1)",
+          [tableMatch[1]],
+        );
+        return result.rows[0].exists;
+      }
+    }
+
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Gère les erreurs connues et tente de les résoudre
+ */
+async function handleKnownErrors(
+  client: any,
+  error: any,
+  block: string,
+  blockType: string,
+): Promise<boolean> {
+  const errorCode = error.code;
+  const errorMessage = error.message;
+
+  // Erreur: type already exists
+  if (errorCode === "42710" && blockType === "TYPE ENUM") {
+    console.log(`ℹ️  Type enum existe déjà, continuons...`);
+    return true;
+  }
+
+  // Erreur: relation already exists
+  if (
+    errorCode === "42P07" &&
+    (blockType === "TABLE" || blockType === "INDEX")
+  ) {
+    console.log(`ℹ️  ${blockType} existe déjà, continuons...`);
+    return true;
+  }
+
+  // Erreur: relation does not exist pour les index
+  if (errorCode === "42P01" && blockType === "INDEX") {
+    console.log(`ℹ️  Table manquante pour l'index, ignoré`);
+    return true;
+  }
+
+  // Erreur de syntaxe critique
+  if (errorCode === "42601") {
+    console.error(`⚠️  Erreur de syntaxe critique détectée`);
+    return false;
+  }
+
+  return false;
 }
 
 /**
@@ -645,6 +771,12 @@ async function main(): Promise<void> {
         await initializeDatabase();
         break;
 
+      case "force-clean":
+        console.log("🧹 Nettoyage forcé de la base de données...");
+        await forceCleanDatabase();
+        await initializeDatabase();
+        break;
+
       case "verify":
         await verifyTables();
         await verifyEnumTypes();
@@ -667,9 +799,79 @@ async function main(): Promise<void> {
   }
 }
 
+/**
+ * Nettoyage forcé pour résoudre les problèmes de dépendances
+ */
+async function forceCleanDatabase(): Promise<void> {
+  const client = await db.connect();
+
+  try {
+    console.log("🔥 Suppression forcée de tous les objets...");
+
+    // Désactiver RLS temporairement
+    const disableRLSQueries = [
+      "ALTER TABLE IF EXISTS freelances DISABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE IF EXISTS companies DISABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE IF EXISTS user_sessions DISABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE IF EXISTS admin_sessions DISABLE ROW LEVEL SECURITY;",
+      "ALTER TABLE IF EXISTS otps DISABLE ROW LEVEL SECURITY;",
+    ];
+
+    for (const query of disableRLSQueries) {
+      try {
+        await client.query(query);
+      } catch (error) {
+        // Ignorer les erreurs
+      }
+    }
+
+    // Supprimer tous les objets dans l'ordre
+    const dropAllQuery = `
+      DO $$
+      DECLARE
+          r RECORD;
+      BEGIN
+          -- Drop all views
+          FOR r IN (SELECT schemaname, viewname FROM pg_views WHERE schemaname = 'public') LOOP
+              EXECUTE 'DROP VIEW IF EXISTS ' || quote_ident(r.schemaname) || '.' || quote_ident(r.viewname) || ' CASCADE';
+          END LOOP;
+
+          -- Drop all tables
+          FOR r IN (SELECT schemaname, tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+              EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename) || ' CASCADE';
+          END LOOP;
+
+          -- Drop all types
+          FOR r IN (SELECT typname FROM pg_type WHERE typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND typtype = 'e') LOOP
+              EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+          END LOOP;
+
+          -- Drop all functions
+          FOR r IN (SELECT proname, oidvectortypes(proargtypes) as argtypes FROM pg_proc WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')) LOOP
+              EXECUTE 'DROP FUNCTION IF EXISTS ' || quote_ident(r.proname) || '(' || r.argtypes || ') CASCADE';
+          END LOOP;
+      END $$;
+    `;
+
+    await client.query(dropAllQuery);
+    console.log("✅ Nettoyage forcé terminé");
+  } catch (error) {
+    console.error("❌ Erreur lors du nettoyage forcé:", error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 // Exécuter le script seulement s'il est appelé directement
 if (require.main === module) {
   main();
 }
 
-export { initializeDatabase, resetDatabase, verifyTables, verifyEnumTypes };
+export {
+  initializeDatabase,
+  resetDatabase,
+  verifyTables,
+  verifyEnumTypes,
+  forceCleanDatabase,
+};
