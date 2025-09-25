@@ -5,6 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "ts-node src/server.ts",
+    "start:prod": "npm run db:setup && npm run dev",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "db:superadmin": "ts-node src/scripts/db/create-superadmin.ts",
     "db:categorie_and_skills": "ts-node src/scripts/db/skills-and-categories.ts",
@@ -15,6 +16,7 @@
     "db:init": "ts-node src/scripts/db/init.ts init",
     "db:reset": "ts-node src/scripts/db/init.ts reset",
     "db:verify": "ts-node src/scripts/db/init.ts verify",
+    "db:setup": "npm run db:reset && npm run db:verify && npm run db:superadmin && npm run db:categorie_and_skills && npm run db:project_categories && npm run db:insert_freelances",
     "test:smtp": "ts-node src/scripts/test/test-smtp.ts",
     "test:send-welcome": "ts-node src/scripts/test/send-welcome-realtime.ts",
     "test:smtp:connection": "ts-node src/scripts/test/test-smtp.ts connection"
