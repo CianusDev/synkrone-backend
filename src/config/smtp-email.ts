@@ -15,12 +15,24 @@ console.log("🚀 Configuration SMTP pour Gmail chargée:", {
  */
 export const smtpConfig = {
   host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  port: 587, // TLS est plus compatible avec Render que SSL (465)
+  secure: false, // false pour port 587
   auth: {
-    user: envConfig.gmailUser, // Votre adresse Gmail
-    pass: envConfig.gmailAppPassword, // Mot de passe d'application Gmail
+    user: envConfig.gmailUser,
+    pass: envConfig.gmailAppPassword,
   },
+  tls: {
+    rejectUnauthorized: false, // Important pour Render
+    ciphers: "SSLv3", // Compatibilité étendue
+  },
+  connectionTimeout: 60000, // 60 secondes
+  greetingTimeout: 30000,
+  socketTimeout: 60000,
+  // Options spécifiques pour les environnements cloud
+  pool: true, // Utiliser un pool de connexions
+  maxConnections: 1, // Limiter les connexions simultanées
+  maxMessages: 100, // Messages par connexion
+  rateLimit: 14, // Messages par seconde (limite Gmail)
 };
 
 /**
