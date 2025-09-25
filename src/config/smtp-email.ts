@@ -12,13 +12,13 @@ dotenv.config();
 export const smtpConfig = {
   host: "smtp.gmail.com",
   port: 587, // Port TLS/STARTTLS recommandé
-  secure: false, // true pour 465 (SSL), false pour 587 (TLS)
+  secure: process.env.NODE_ENV === "production" ? true : false, // true pour 465 (SSL), false pour 587 (TLS)
   auth: {
     user: envConfig.gmailUser, // Votre adresse Gmail
     pass: envConfig.gmailAppPassword, // Mot de passe d'application Gmail
   },
   tls: {
-    rejectUnauthorized: false, // Peut être utile en développement
+    rejectUnauthorized: process.env.NODE_ENV === "production" ? true : false, // Peut être utile en développement
   },
 };
 

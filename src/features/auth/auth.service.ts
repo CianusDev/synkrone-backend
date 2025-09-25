@@ -726,15 +726,23 @@ export class AuthService {
         throw new AuthError("Erreur lors de la création du compte société");
       }
 
-      // Création et envoi du code OTP
-      await this.createAndSendOTP(
-        {
-          to: newCompany.company_email,
-          name: newCompany.company_name || "",
-          type: "company",
-        },
-        OtpType.EMAIL_VERIFICATION,
-      );
+      try {
+        // Création et envoi du code OTP
+        await this.createAndSendOTP(
+          {
+            to: newCompany.company_email,
+            name: newCompany.company_name || "",
+            type: "company",
+          },
+          OtpType.EMAIL_VERIFICATION,
+        );
+      } catch (error) {
+        console.error(
+          "Erreur lors de l'envoi de l'email de vérification pour la société:",
+          error,
+        );
+        // On ne bloque pas l'inscription si l'email d'OTP échoue
+      }
 
       // Notification de bienvenue
       const notificationRepo = new NotificationRepository();
