@@ -7,12 +7,11 @@ dotenv.config();
 
 /**
  * Configuration SMTP pour Gmail
- * Documentation: https://support.google.com/mail/answer/7126229
  */
 export const smtpConfig = {
   host: "smtp.gmail.com",
-  port: 465, // Port TLS/STARTTLS recommandé
-  secure: true, // false pour port 587 (TLS/STARTTLS)
+  port: 587, // Port TLS/STARTTLS recommandé
+  secure: false, // false pour port 587 (TLS/STARTTLS)
   auth: {
     user: envConfig.gmailUser, // Votre adresse Gmail
     pass: envConfig.gmailAppPassword, // Mot de passe d'application Gmail
