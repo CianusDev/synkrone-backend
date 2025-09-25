@@ -5,13 +5,18 @@ import { envConfig } from "./env.config";
 // Charger les variables d'environnement
 dotenv.config();
 
+console.log("🚀 Configuration SMTP pour Gmail chargée:", {
+  user: envConfig.gmailUser, // Votre adresse Gmail
+  pass: envConfig.gmailAppPassword, // Mot de passe d'application Gmail
+});
+
 /**
  * Configuration SMTP pour Gmail
  */
 export const smtpConfig = {
   host: "smtp.gmail.com",
-  port: 587, // Port TLS/STARTTLS recommandé
-  secure: false, // false pour port 587 (TLS/STARTTLS)
+  port: 465,
+  secure: true,
   auth: {
     user: envConfig.gmailUser, // Votre adresse Gmail
     pass: envConfig.gmailAppPassword, // Mot de passe d'application Gmail
