@@ -5,7 +5,7 @@ export interface Message {
   senderId: string;
   receiverId: string;
   content: string;
-  typeMessage: MessageType;
+  typeMessage?: MessageType;
   isRead: boolean;
   sentAt: Date;
   projectId?: string;

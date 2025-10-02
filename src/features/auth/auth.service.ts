@@ -252,12 +252,14 @@ export class AuthService {
     data: z.infer<typeof registerFreelanceSchema>,
   ): Promise<Freelance> {
     try {
-      // Vérification de l'existence du freelance par email
-      const emailExists = await this.checkEmailExists(data.email, "freelance");
-
-      if (emailExists) {
+      const freelanceExists =
+        await this.freelanceRepository.getFreelanceByEmail(data.email);
+      const companyExists = await this.companyRepository.getCompanyByEmail(
+        data.email,
+      );
+      if (freelanceExists || companyExists) {
         throw new ValidationError(
-          "Cet email est déjà utilisé par un autre compte.",
+          "Cet email est déjà utilisé par un autre compte (freelance ou entreprise).",
         );
       }
 
@@ -701,15 +703,14 @@ export class AuthService {
    */
   async registerCompany(data: z.infer<typeof registerCompanySchema>) {
     try {
-      // Vérification de l'existence de la société par email
-      const emailExists = await this.checkEmailExists(
+      const freelanceExists =
+        await this.freelanceRepository.getFreelanceByEmail(data.company_email);
+      const companyExists = await this.companyRepository.getCompanyByEmail(
         data.company_email,
-        "company",
       );
-
-      if (emailExists) {
+      if (freelanceExists || companyExists) {
         throw new ValidationError(
-          "Cet email est déjà utilisé par un autre compte.",
+          "Cet email est déjà utilisé par un autre compte (freelance ou entreprise).",
         );
       }
 

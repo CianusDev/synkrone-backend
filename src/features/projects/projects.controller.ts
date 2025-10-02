@@ -194,7 +194,7 @@ export class ProjectsController {
           isCorrectDescription: z.boolean(),
         }),
         prompt: `
-        Vérifie que le titre et la description du projet sont appropriés pour plateforme de freelancing .
+        Vérifie que le titre et la description du projet mission sont appropriés !
         Agit comme un modérateur de contenu.
         Voici le titre : "${validated.title}"
         Voici la description : "${validated.description}".`,

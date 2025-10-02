@@ -23,16 +23,7 @@ export const smtpConfig = {
   },
   tls: {
     rejectUnauthorized: false, // Important pour Render
-    ciphers: "SSLv3", // Compatibilité étendue
   },
-  connectionTimeout: 60000, // 60 secondes
-  greetingTimeout: 30000,
-  socketTimeout: 60000,
-  // Options spécifiques pour les environnements cloud
-  pool: true, // Utiliser un pool de connexions
-  maxConnections: 1, // Limiter les connexions simultanées
-  maxMessages: 100, // Messages par connexion
-  rateLimit: 14, // Messages par seconde (limite Gmail)
 };
 
 /**

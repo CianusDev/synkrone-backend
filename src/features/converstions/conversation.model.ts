@@ -4,6 +4,7 @@ export interface Conversation {
   companyId: string;
   applicationId?: string;
   contractId?: string;
+  lastMessage?: Record<string, any>;
   createdAt: Date;
   updatedAt?: Date;
 }

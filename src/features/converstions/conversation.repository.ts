@@ -19,7 +19,7 @@ export interface ConversationWithDetails {
     logoUrl?: string;
     // autres champs utiles
   };
-  lastMessage?: Message;
+  lastMessage?: Record<string, any> & Message;
   unreadCount?: number;
 }
 
