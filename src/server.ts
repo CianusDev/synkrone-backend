@@ -21,7 +21,6 @@ export const io = new Server(server, {
 
 // Import du handler Socket.IO APRES l'initialisation de io
 import "./socket/socket";
-
 /**
  * Démarre le serveur sur le port spécifié ou utilise le port par défaut
  * @param port Port à utiliser (optionnel, utilise PORT_SERVER par défaut)

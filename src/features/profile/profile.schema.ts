@@ -1,5 +1,5 @@
 import z from "zod";
-import { Availability } from "../freelance/freelance.model";
+import { Availability, ExprerienceLevel } from "../freelance/freelance.model";
 import { CompanySize } from "../company/company.model";
 
 // Schéma pour la complétion du profil freelance
@@ -8,21 +8,11 @@ export const updateFreelanceProfileSchema = z.object({
   lastname: z.string().min(1, "Le nom de famille est requis").optional(),
   photo_url: z.url("L'URL de la photo n'est pas valide").optional(),
   job_title: z.string().min(1, "Le titre du poste est requis").optional(),
-  experience_years: z
-    .number()
-    .min(0, "Les années d'expérience ne peuvent pas être négatives")
-    .optional(),
+  experience: z.enum(ExprerienceLevel).optional(),
   description: z.string().optional(),
-  portfolio_url: z
-    .string()
-    .url("L'URL du portfolio n'est pas valide")
-    .optional(),
-  cover_url: z
-    .string()
-    .url("L'URL de la couverture n'est pas valide")
-    .optional(),
-  video_url: z.string().url("L'URL de la vidéo n'est pas valide").optional(),
-  linkedin_url: z.string().url("L'URL LinkedIn n'est pas valide").optional(),
+  portfolio_url: z.url("L'URL du portfolio n'est pas valide").optional(),
+  cover_url: z.url("L'URL de la couverture n'est pas valide").optional(),
+  linkedin_url: z.url("L'URL LinkedIn n'est pas valide").optional(),
   tjm: z.number().positive("Le TJM doit être positif").optional(),
   availability: z
     .enum([Availability.AVAILABLE, Availability.BUSY, Availability.UNAVAILABLE])

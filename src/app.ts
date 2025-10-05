@@ -31,6 +31,8 @@ import mediaRoutes from "./features/media/media.route";
 import deliverablesRoutes from "./features/deliverables/deliverables.route";
 import { HTTP_STATUS, SOKET_EVENTS } from "./utils/constant";
 import deliverableMediaRoutes from "./features/media/deliverable_media/deliverable_media.route";
+import adminRouter from "./features/admin/admin.route";
+
 dotenv.config();
 
 export const app = express();
@@ -233,4 +235,5 @@ app.use("/api/media", mediaRoutes);
 app.use("/api/presence", presenceRoutes);
 app.use("/api/deliverables", deliverablesRoutes);
 app.use("/api/deliverable-media", deliverableMediaRoutes);
-app.use("/work-days", workDaysRouter);
+app.use("/api/work-days", workDaysRouter);
+app.use("/api/admin/", adminRouter);
