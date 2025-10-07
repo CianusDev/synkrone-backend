@@ -542,7 +542,7 @@ export const emailTemplates = {
       ${contractDate ? `Date de refus : ${contractDate}` : ""}
 
       Connectez-vous à votre tableau de bord Synkrone pour consulter les détails du contrat et envisager d'autres options :
-      ${envConfig.frontendUrl}/dashboard/contracts
+      ${envConfig.frontendUrl}
 
       L'équipe Synkrone
     `,
@@ -600,7 +600,7 @@ export const emailTemplates = {
       ${updateDate ? `Date de la mise à jour : ${updateDate}` : ""}
 
       Connectez-vous à votre tableau de bord Synkrone pour consulter les détails de la mise à jour et les prochaines étapes :
-      ${envConfig.frontendUrl}/dashboard/contracts
+      ${envConfig.frontendUrl}
 
       L'équipe Synkrone
     `,
@@ -648,7 +648,7 @@ export const emailTemplates = {
       Le freelance ${freelanceName} a demandé une modification du contrat pour le projet "${projectTitle}".
       ${requestDate ? `Date de la demande : ${requestDate}` : ""}
       Connectez-vous à votre tableau de bord Synkrone pour consulter les détails de la demande et y répondre :
-      ${envConfig.frontendUrl}/dashboard/contracts
+      ${envConfig.frontendUrl}
       L'équipe Synkrone
     `,
   }),
@@ -705,7 +705,7 @@ export const emailTemplates = {
       ${completionDate ? `Date de fin de mission : ${completionDate}` : ""}
 
       Connectez-vous à votre tableau de bord Synkrone pour consulter les détails de la mission terminée et laisser un feedback :
-      ${envConfig.frontendUrl}/dashboard/projects
+      ${envConfig.frontendUrl}
 
       L'équipe Synkrone
     `,
@@ -763,7 +763,131 @@ export const emailTemplates = {
       ${completionDate ? `Date de fin de mission : ${completionDate}` : ""}
 
       Connectez-vous à votre tableau de bord Synkrone pour consulter les détails de la mission terminée et laisser un feedback :
-      ${envConfig.frontendUrl}/dashboard/projects
+      ${envConfig.frontendUrl}
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier a un freelance que son compte a ete suspendu
+  accountSuspended: (freelanceName: string, reason: string, path?: string) => ({
+    subject: "Votre compte Synkrone a été suspendu",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Notification de suspension de compte</h2>
+        <p>
+          ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+        </p>
+        <p>
+          Nous vous informons que votre compte Synkrone a été suspendu en raison de la suivante :
+        </p>
+        <div style="background: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <p style="color: #721c24; margin: 0;">${reason}</p>
+        </div>
+        <p> Si vous pensez qu'il s'agit d'une erreur ou si vous avez des questions, n'hésitez pas à nous contacter.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Contacter le support
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Notification de suspension de compte - Synkrone
+
+      ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+
+      Nous vous informons que votre compte Synkrone a été suspendu en raison de la suivante :
+
+      Raison : ${reason}
+
+      Si vous pensez qu'il s'agit d'une erreur ou si vous avez des questions, n'hésitez pas à nous contacter :
+      ${envConfig.frontendUrl}
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier a une company que son compte a ete suspendu
+  accountSuspendedCompany: (
+    companyName: string,
+    reason: string,
+    path?: string,
+  ) => ({
+    subject: "Votre compte Synkrone a été suspendu",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Notification de suspension de compte</h2>
+        <p>
+          ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+        </p>
+        <p>
+          Nous vous informons que votre compte Synkrone a été suspendu en raison de la suivante :
+        </p>
+        <div style="background: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <p style="color: #721c24; margin: 0;">${reason}</p>
+        </div>
+        <p> Si vous pensez qu'il s'agit d'une erreur ou si vous avez des questions, n'hésitez pas à nous contacter.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Contacter le support
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Notification de suspension de compte - Synkrone
+
+      ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+
+      Nous vous informons que votre compte Synkrone a été suspendu en raison de la suivante :
+
+      Raison : ${reason}
+
+      Si vous pensez qu'il s'agit d'une erreur ou si vous avez des questions, n'hésitez pas à nous contacter :
+      ${envConfig.frontendUrl}
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier a un utilisateur que son compte a ete reactive
+  // peut etre utilise pour freelance et company
+  accountReactivated: (name: string, path?: string) => ({
+    subject: "Votre compte Synkrone a été réactivé",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Notification de réactivation de compte</h2>
+        <p>
+          ${name ? `Bonjour ${name},` : "Bonjour,"}
+        </p>
+        <p>
+          Nous avons le plaisir de vous informer que votre compte Synkrone a été réactivé. Vous pouvez désormais accéder à toutes les fonctionnalités de notre plateforme.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #28a745; color: white; padding: 12px 24px;  text-decoration: none; border-radius: 5px; display: inline-block;">
+            Accéder à mon compte
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Notification de réactivation de compte - Synkrone
+
+      ${name ? `Bonjour ${name},` : "Bonjour,"}
+
+      Nous avons le plaisir de vous informer que votre compte Synkrone a été réactivé. Vous pouvez désormais accéder à toutes les fonctionnalités de notre plateforme.
+
+      Accédez à votre compte ici : ${envConfig.frontendUrl}
 
       L'équipe Synkrone
     `,

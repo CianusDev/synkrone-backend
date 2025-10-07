@@ -1,11 +1,14 @@
 import { Router } from "express";
 import { FreelanceController } from "./freelance.controller";
+import { AuthAdminMiddleware } from "../../middlewares/auth-admin.middleware";
 
 const router = Router();
 const controller = new FreelanceController();
 
 // Créer un freelance
-router.post("/", (req, res) => controller.createFreelance(req, res));
+router.post("/", AuthAdminMiddleware, (req, res) =>
+  controller.createFreelance(req, res),
+);
 
 // Récupérer la liste paginée des freelances avec recherche et filtres (GET simple)
 router.get("/", (req, res) => controller.getFreelances(req, res));

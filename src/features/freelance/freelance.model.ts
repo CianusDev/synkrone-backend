@@ -38,4 +38,5 @@ export interface Freelance {
   blocked_at: Date | null;
   created_at: Date;
   updated_at: Date | null;
+  isBlocked?: boolean;
 }

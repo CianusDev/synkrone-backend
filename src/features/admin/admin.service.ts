@@ -1,24 +1,23 @@
-import { AdminRepository } from "./admin.repository";
-import { FreelanceRepository } from "../freelance/freelance.repository";
 import { CompanyRepository } from "../company/company.repository";
+import { FreelanceRepository } from "../freelance/freelance.repository";
 import { ProjectsRepository } from "../projects/projects.repository";
 import {
   Admin,
+  AdminCompanyFilters,
+  AdminCompanyView,
+  AdminFreelanceFilters,
+  AdminFreelanceView,
   AdminLevel,
-  DashboardStats,
-  UserSession,
+  AdminProjectFilters,
+  AdminProjectView,
   AdminSession,
+  AdminSessionFilters,
+  DashboardStats,
   SessionStats,
   SuspiciousActivity,
-  AdminFreelanceView,
-  AdminCompanyView,
-  AdminProjectView,
-  AdminFreelanceFilters,
-  AdminCompanyFilters,
-  AdminProjectFilters,
-  AdminSessionFilters,
-  AdminAction,
+  UserSession,
 } from "./admin.model";
+import { AdminRepository } from "./admin.repository";
 
 export class AdminService {
   private readonly repository: AdminRepository;
@@ -88,9 +87,8 @@ export class AdminService {
     requestingAdminId: string,
   ): Promise<Admin | null> {
     // Seuls les super_admin peuvent modifier les niveaux
-    const requestingAdmin = await this.repository.getAdminById(
-      requestingAdminId,
-    );
+    const requestingAdmin =
+      await this.repository.getAdminById(requestingAdminId);
     if (!requestingAdmin || requestingAdmin.level !== AdminLevel.SUPER_ADMIN) {
       throw new Error("Permissions insuffisantes");
     }
@@ -108,14 +106,10 @@ export class AdminService {
     return this.repository.updateAdminLevel(adminId, newLevel);
   }
 
-  async deleteAdmin(
-    adminId: string,
-    requestingAdminId: string,
-  ): Promise<void> {
+  async deleteAdmin(adminId: string, requestingAdminId: string): Promise<void> {
     // Seuls les super_admin peuvent supprimer des admins
-    const requestingAdmin = await this.repository.getAdminById(
-      requestingAdminId,
-    );
+    const requestingAdmin =
+      await this.repository.getAdminById(requestingAdminId);
     if (!requestingAdmin || requestingAdmin.level !== AdminLevel.SUPER_ADMIN) {
       throw new Error("Permissions insuffisantes");
     }
@@ -219,13 +213,9 @@ export class AdminService {
     requestingAdminId: string,
     reason?: string,
   ): Promise<boolean> {
-    const requestingAdmin = await this.repository.getAdminById(
-      requestingAdminId,
-    );
-    if (
-      !requestingAdmin ||
-      requestingAdmin.level !== AdminLevel.SUPER_ADMIN
-    ) {
+    const requestingAdmin =
+      await this.repository.getAdminById(requestingAdminId);
+    if (!requestingAdmin || requestingAdmin.level !== AdminLevel.SUPER_ADMIN) {
       throw new Error("Permissions insuffisantes");
     }
 
@@ -301,7 +291,7 @@ export class AdminService {
       throw new Error("Freelance non trouvé");
     }
 
-    if (freelance.isBlocked) {
+    if (freelance.blocked_at) {
       throw new Error("Ce freelance est déjà bloqué");
     }
 
@@ -336,7 +326,7 @@ export class AdminService {
       throw new Error("Freelance non trouvé");
     }
 
-    if (!freelance.isBlocked) {
+    if (!freelance.is_blocked) {
       throw new Error("Ce freelance n'est pas bloqué");
     }
 
@@ -451,7 +441,7 @@ export class AdminService {
       throw new Error("Entreprise non trouvée");
     }
 
-    if (company.isBlocked) {
+    if (company.is_blocked) {
       throw new Error("Cette entreprise est déjà bloquée");
     }
 
@@ -483,7 +473,7 @@ export class AdminService {
       throw new Error("Entreprise non trouvée");
     }
 
-    if (!company.isBlocked) {
+    if (!company.is_blocked) {
       throw new Error("Cette entreprise n'est pas bloquée");
     }
 
@@ -579,9 +569,7 @@ export class AdminService {
 
     // Une entreprise doit être vérifiée avant d'être certifiée
     if (!company.is_verified) {
-      throw new Error(
-        "L'entreprise doit être vérifiée avant d'être certifiée",
-      );
+      throw new Error("L'entreprise doit être vérifiée avant d'être certifiée");
     }
 
     const success = await this.repository.certifyCompany(companyId);

@@ -42,7 +42,7 @@ export class AuthAdminService {
   private readonly adminSessionRepository: AdminSessionRepository;
 
   // Session validity period in milliseconds (2 hours - shorter for admin security)
-  private readonly SESSION_VALIDITY_PERIOD = 2 * 60 * 60 * 1000;
+  private readonly SESSION_VALIDITY_PERIOD = 24 * 60 * 60 * 1000;
 
   constructor() {
     this.adminRepository = new AdminRepository();

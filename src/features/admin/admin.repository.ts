@@ -456,9 +456,22 @@ export class AdminRepository {
           WHEN f.blocked_at IS NOT NULL AND f.block_duration = -1 THEN NULL
           WHEN f.blocked_at IS NOT NULL THEN f.blocked_at + INTERVAL '1 day' * f.block_duration
           ELSE NULL
-        END AS block_expires_at
+        END AS block_expires_at,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', sk.id,
+              'name', sk.name,
+              'description', sk.description
+            )
+          ) FILTER (WHERE sk.id IS NOT NULL),
+          '[]'::json
+        ) AS skills
        FROM freelances f
-       WHERE f.id = $1`,
+       LEFT JOIN freelance_skills fs ON f.id = fs.freelance_id
+       LEFT JOIN skills sk ON fs.skill_id = sk.id
+       WHERE f.id = $1
+       GROUP BY f.id`,
       [id],
     );
     return result.rows[0] as AdminFreelanceView | null;

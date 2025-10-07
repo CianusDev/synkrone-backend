@@ -283,4 +283,15 @@ export class FreelanceRepository {
       throw new Error("Database error");
     }
   }
+
+  async isFreelanceBlocked(id: string): Promise<boolean> {
+    const query = `SELECT blocked_at FROM freelances WHERE id = $1`;
+    try {
+      const result = await db.query(query, [id]);
+      return result.rows[0]?.blocked_at ? true : false;
+    } catch (error) {
+      console.error("Error checking if freelance is blocked:", error);
+      throw new Error("Database error");
+    }
+  }
 }

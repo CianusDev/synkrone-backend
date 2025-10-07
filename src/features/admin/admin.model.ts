@@ -1,6 +1,7 @@
 import { Freelance } from "../freelance/freelance.model";
 import { Company } from "../company/company.model";
 import { Project } from "../projects/projects.model";
+import { FreelanceSkills } from "../freelance-skills/freelance-skills.model";
 
 export enum AdminLevel {
   SUPER_ADMIN = "super_admin",
@@ -139,8 +140,10 @@ export interface AdminFreelanceView extends Freelance {
   totalEarnings?: number;
   lastActivity?: Date;
   isBlocked?: boolean;
+  is_blocked?: boolean;
   blockReason?: string;
   blockExpiresAt?: Date;
+  skills?: FreelanceSkills[];
 }
 
 export interface AdminCompanyView extends Company {
@@ -150,6 +153,7 @@ export interface AdminCompanyView extends Company {
   totalSpent?: number;
   lastActivity?: Date;
   isBlocked?: boolean;
+  is_blocked?: boolean;
   blockReason?: string;
   blockExpiresAt?: Date;
 }

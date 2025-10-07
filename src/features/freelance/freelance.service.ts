@@ -24,10 +24,11 @@ export class FreelanceService {
 
   async getFreelanceById(id: string): Promise<Freelance | null> {
     const freelance = await this.repository.getFreelanceById(id);
+    const isBlocked = await this.repository.isFreelanceBlocked(id);
     if (!freelance) return null;
     const skills =
       await this.freelanceSkillsService.getFreelanceSkillsByFreelanceId(id);
-    return { ...freelance, skills };
+    return { ...freelance, skills, isBlocked };
   }
 
   async getFreelanceByEmail(email: string): Promise<Freelance | null> {
