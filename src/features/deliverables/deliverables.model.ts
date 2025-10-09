@@ -1,4 +1,5 @@
 import { Media } from "../media/media.model";
+import { Contract } from "../contracts/contracts.model";
 
 export enum DeliverableStatus {
   PLANNED = "planned",
@@ -6,6 +7,7 @@ export enum DeliverableStatus {
   SUBMITTED = "submitted",
   VALIDATED = "validated",
   REJECTED = "rejected",
+  CORRECTION_REQUESTED = "correction_requested",
 }
 
 /**
@@ -28,4 +30,12 @@ export interface Deliverable {
   createdAt?: string;
   updatedAt?: string;
   medias?: Media[];
+  contract?: Partial<Contract>;
+  freelance?: {
+    id: string;
+    firstname: string;
+    lastname: string;
+    email: string;
+    photo_url?: string;
+  };
 }

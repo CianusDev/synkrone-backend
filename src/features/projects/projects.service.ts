@@ -130,21 +130,19 @@ export class ProjectsService {
 
         if (contract) {
           project.contract = contract;
-
-          // Récupère les livrables associés au contrat
-          const deliverables = await this.repository.getDeliverablesByContract(
-            contract.id,
-          );
-          console.log({ deliverables });
-          project.deliverables = deliverables;
-          project.deliverableCount = deliverables.length;
         }
       } catch (error) {
-        console.error(
-          "Erreur lors de la récupération du contrat/livrables:",
-          error,
-        );
+        console.error("Erreur lors de la récupération du contrat:", error);
       }
+    }
+
+    // Récupère tous les livrables du projet (tous contrats confondus)
+    try {
+      const deliverables = await this.repository.getDeliverablesByProject(id);
+      project.deliverables = deliverables;
+      project.deliverableCount = deliverables.length;
+    } catch (error) {
+      console.error("Erreur lors de la récupération des livrables:", error);
     }
 
     // Récupère les projets récemment publiés (hors celui en cours)

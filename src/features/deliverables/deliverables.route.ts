@@ -24,7 +24,9 @@ router.get("/:id", (req, res) => controller.getDeliverableById(req, res));
  * GET /deliverables/contract/:contractId
  * Récupère tous les livrables d'un contrat
  */
-router.get("/contract/:contractId", (req, res) => controller.getDeliverablesByContract(req, res));
+router.get("/contract/:contractId", (req, res) =>
+  controller.getDeliverablesByContract(req, res),
+);
 
 /**
  * PATCH /deliverables/:id

@@ -166,6 +166,7 @@ Toutes les routes sont protégées par le middleware :
 - Support des mêmes paramètres de pagination et filtres que `/projects`
 - Le `companyId` est automatiquement extrait du token d'authentification
 - Paramètres disponibles : `page`, `limit`, `offset`, `search`, `status`, `typeWork`, `categoryId`
+- Chaque projet retourné inclut le nombre de livrables associés aux contrats actifs dans le champ `deliverableCount`
 
 ---
 
@@ -174,13 +175,14 @@ Toutes les routes sont protégées par le middleware :
 **Endpoint** :  
 `GET /projects/:id?freelanceId=uuid`
 
-- Si le paramètre `freelanceId` est fourni, le projet retourné inclut :
-  - Le contrat actif entre le freelance et l'entreprise pour ce projet (champ `contract`)
-  - La liste des livrables associés au contrat (champ `deliverables`)
+- Le projet retourné inclut toujours :
+  - Tous les livrables du projet (tous contrats confondus) dans le champ `deliverables`
+  - Le nombre total de livrables dans le champ `deliverableCount`
   - Les médias associés à chaque livrable (champ `medias` dans chaque deliverable)
-  - Le nombre total de livrables (champ `deliverableCount`)
+- Si le paramètre `freelanceId` est fourni en plus :
+  - Le contrat actif entre le freelance et l'entreprise pour ce projet (champ `contract`)
 
-**Réponse exemple avec freelanceId** :
+**Réponse exemple** :
 ```json
 {
   "success": true,
@@ -214,6 +216,20 @@ Toutes les routes sont protégées par le middleware :
         "amount": 1000,
         "dueDate": "2024-01-20",
         "order": 1,
+        "contract": {
+          "id": "uuid-contract",
+          "freelance_id": "uuid-freelance-1",
+          "payment_mode": "daily_rate",
+          "status": "active",
+          "tjm": 500
+        },
+        "freelance": {
+          "id": "uuid-freelance-1",
+          "firstname": "Jean",
+          "lastname": "Dupont",
+          "email": "jean.dupont@email.com",
+          "photo_url": "https://example.com/photo.jpg"
+        },
         "medias": [
           {
             "id": "uuid-media-1",
@@ -235,6 +251,20 @@ Toutes les routes sont protégées par le middleware :
         "amount": 3000,
         "dueDate": "2024-02-10",
         "order": 2,
+        "contract": {
+          "id": "uuid-contract-2",
+          "freelance_id": "uuid-freelance-2",
+          "payment_mode": "fixed_price",
+          "status": "active",
+          "tjm": null
+        },
+        "freelance": {
+          "id": "uuid-freelance-2",
+          "firstname": "Marie",
+          "lastname": "Martin",
+          "email": "marie.martin@email.com",
+          "photo_url": "https://example.com/photo2.jpg"
+        },
         "medias": []
       }
     ],
@@ -244,6 +274,11 @@ Toutes les routes sont protégées par le middleware :
   "message": "Projet récupéré avec succès"
 }
 ```
+
+**Note** : Chaque livrable inclut maintenant :
+- Les informations du contrat associé (`contract`)
+- Les informations du freelance responsable (`freelance`)
+- Les médias attachés au livrable (`medias`)
 
 ---
 
@@ -303,6 +338,7 @@ Toutes les routes sont protégées par le middleware :
 ## 📄 Pagination & Recherche
 
 - Paramètres `page`, `limit`, `offset`, `search`, `status`, `typeWork`, `companyId`, `categoryId`, `levelExperience`, `allowMultipleApplications`
+- Tous les projets retournés incluent le champ `deliverableCount` indiquant le nombre de livrables des contrats actifs
 - Réponse inclut :
   - `data` : liste des projets
   - `total` : nombre total de projets trouvés
@@ -346,7 +382,20 @@ Toutes les routes sont protégées par le middleware :
 ```json
 {
   "success": true,
-  "data": [ /* projets */ ],
+  "data": [
+    {
+      "id": "uuid-project",
+      "title": "Développement API REST", 
+      "description": "API pour plateforme e-commerce",
+      "status": "published",
+      "deliverableCount": 3,
+      "company": {
+        "id": "uuid-company",
+        "company_name": "TechCorp"
+      },
+      "skills": [...]
+    }
+  ],
   "total": 42,
   "limit": 10,
   "offset": 0,

@@ -8,7 +8,10 @@ export const updateFreelanceProfileSchema = z.object({
   lastname: z.string().min(1, "Le nom de famille est requis").optional(),
   photo_url: z.url("L'URL de la photo n'est pas valide").optional(),
   job_title: z.string().min(1, "Le titre du poste est requis").optional(),
-  experience: z.enum(ExprerienceLevel).optional(),
+  experience: z
+    .enum(ExprerienceLevel)
+    .optional()
+    .default(ExprerienceLevel.BEGINNER),
   description: z.string().optional(),
   portfolio_url: z.url("L'URL du portfolio n'est pas valide").optional(),
   cover_url: z.url("L'URL de la couverture n'est pas valide").optional(),
@@ -16,7 +19,8 @@ export const updateFreelanceProfileSchema = z.object({
   tjm: z.number().positive("Le TJM doit être positif").optional(),
   availability: z
     .enum([Availability.AVAILABLE, Availability.BUSY, Availability.UNAVAILABLE])
-    .optional(),
+    .optional()
+    .default(Availability.AVAILABLE),
   location: z.string().optional(),
   country: z.string().min(1, "Le pays est requis").optional(),
   phone: z.string().min(1, "Le numéro de téléphone est requis").optional(),
