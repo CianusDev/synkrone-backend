@@ -194,12 +194,14 @@ export class MessageService {
       });
 
       if (result.rows.length > 0) {
-        const mediaInfo = {
-          id: result.rows[0].id,
-          url: result.rows[0].url,
-          type: result.rows[0].type,
-          description: result.rows[0].description,
-          uploadedAt: result.rows[0].uploaded_at,
+        const row = result.rows[0];
+        const mediaInfo: Media = {
+          id: row.id,
+          url: row.url,
+          type: row.type,
+          description: row.description,
+          uploadedAt: row.uploaded_at,
+          size: row.size, // Ensure 'size' is included as required by Media type
         };
         mediaInfos.push(mediaInfo);
         console.log(`✅ Added media info:`, mediaInfo);

@@ -192,7 +192,8 @@ workDays: Array<{
       "tjmApplied": 500.00,
       "amount": 500.00
     }
-  ]
+  ],
+  "canEvaluated": true
 }
 ```
 
@@ -204,10 +205,13 @@ workDays: Array<{
 
 | Méthode | URL                                 | Description                              | Authentification |
 |---------|-------------------------------------|------------------------------------------|------------------|
-| POST    | `/deliverables`                     | Crée un livrable                         | freelance/company |
+| POST    | `/deliverables`                     | Crée un livrable                         | freelance |
 | GET     | `/deliverables/:id`                 | Récupère un livrable par son id          | freelance/company |
 | GET     | `/deliverables/contract/:contractId`| Liste tous les livrables d'un contrat    | freelance/company |
-| PATCH   | `/deliverables/:id`                 | Met à jour un livrable                   | freelance/company |
+| PATCH   | `/deliverables/:id`                 | Met à jour un livrable (statuts limités)| freelance |
+| PATCH   | `/deliverables/:id/company`         | Met à jour un livrable (tous statuts)   | company |
+| PATCH   | `/deliverables/:id/validate`        | Valide un livrable                       | company |
+| PATCH   | `/deliverables/:id/reject`          | Rejette un livrable                      | company |
 | DELETE  | `/deliverables/:id`                 | Supprime un livrable                     | freelance/company |
 
 ### Jours de travail (Work Days)
@@ -225,7 +229,7 @@ workDays: Array<{
 
 ## 📥 Payloads & Validation
 
-### Création de livrable
+### Création de livrable (freelance uniquement)
 
 ```json
 {
@@ -244,12 +248,13 @@ workDays: Array<{
 - Validation par Zod (`createDeliverableSchema`)
 - `title` : string, requis
 - `contractId` : UUID, requis
+- `status` : **Statuts autorisés pour freelances** : `planned`, `in_progress`, `submitted`
 - `isMilestone` : boolean, détermine si le livrable déclenche un paiement
 - `amount` : number ≥ 0, requis si `isMilestone = true`
 - `dueDate` : string format YYYY-MM-DD, optionnel
 - `mediaIds` : tableau d'UUID de médias à associer (optionnel)
 
-### Mise à jour de livrable
+### Mise à jour de livrable (freelance - statuts limités)
 
 ```json
 {
@@ -261,6 +266,43 @@ workDays: Array<{
   "mediaIds": ["media-uuid-3"]
 }
 ```
+
+**⚠️ Restriction** : Les freelances ne peuvent utiliser que les statuts : `planned`, `in_progress`, `submitted`
+
+### Mise à jour de livrable (company - tous statuts)
+
+```json
+{
+  "title": "Livrable modifié par l'entreprise",
+  "status": "validated",
+  "feedback": "Excellent travail, livrable conforme aux attentes",
+  "amount": 2000.00
+}
+```
+
+**✅ Autorisé** : Les companies peuvent utiliser tous les statuts : `planned`, `in_progress`, `submitted`, `validated`, `rejected`
+
+### Validation d'un livrable (company uniquement)
+
+```json
+{
+  "status": "validated",
+  "feedback": "Travail excellent, livrable accepté"
+}
+```
+
+### Rejet d'un livrable (company uniquement)
+
+```json
+{
+  "status": "rejected",
+  "feedback": "Le livrable ne correspond pas aux spécifications demandées"
+}
+```
+
+**Note** : Le feedback est obligatoire lors du rejet d'un livrable.
+
+**⚠️ Attention** : Lors du rejet d'un livrable, **tous les médias associés sont automatiquement supprimés** (soft delete).
 
 ### Ajout d'un jour de travail
 
@@ -305,12 +347,109 @@ workDays: Array<{
 - Les jours sont soumis par le freelance puis validés/rejetés par l'entreprise.
 - Le montant calculé = `tjmApplied` (peut être différent du TJM contractuel selon négociation).
 
+### Workflow des livrables et sécurité
+
+#### 🔒 Restrictions de sécurité par rôle
+
+**Freelances peuvent :**
+- Créer des livrables (`POST /deliverables`)
+- Modifier leurs livrables avec statuts limités (`PATCH /deliverables/:id`)
+- Statuts autorisés : `planned`, `in_progress`, `submitted`
+
+**Companies peuvent :**
+- Modifier tous les aspects des livrables (`PATCH /deliverables/:id/company`)
+- Valider des livrables (`PATCH /deliverables/:id/validate`)
+- Rejeter des livrables (`PATCH /deliverables/:id/reject`)
+- Statuts autorisés : `planned`, `in_progress`, `submitted`, `validated`, `rejected`
+
+#### Workflow des livrables
+
+1. **Freelance** : Crée un livrable (`status: 'planned'`)
+2. **Freelance** : Travaille sur le livrable (`status: 'in_progress'`)
+3. **Freelance** : Soumet le livrable (`status: 'submitted'`)
+4. **Company** : Valide (`status: 'validated'`) ou rejette (`status: 'rejected'`)
+5. **Clôture automatique** : Si tous les livrables milestone sont validés → contrat terminé
+6. **Paiement** : Seuls les livrables validés déclenchent les paiements
+
 ### Workflow des jours de travail
 
 1. **Freelance** : Ajoute ses jours avec description détaillée (`status: 'draft'`)
 2. **Freelance** : Soumet les jours pour validation (`status: 'submitted'`)  
 3. **Entreprise** : Valide (`status: 'validated'`) ou rejette (`status: 'rejected'`)
 4. **Paiement** : Seuls les jours validés sont comptabilisés pour le paiement
+
+---
+
+## 🤖 Automatisations et Logique Métier
+
+### Rejet d'un livrable
+
+Lorsqu'une **company rejette un livrable** (`PATCH /deliverables/:id/reject`) :
+
+1. **Statut** → `rejected`
+2. **Médias** → Tous les médias associés sont **automatiquement supprimés** (soft delete)
+3. **Feedback** → Obligatoire pour expliquer le rejet
+4. **Notification** → Le freelance est notifié du rejet et du feedback
+
+```json
+// Exemple de rejet
+POST /deliverables/abc-123/reject
+{
+  "status": "rejected",
+  "feedback": "Les spécifications ne correspondent pas au cahier des charges"
+}
+
+// Résultat : Livrable rejeté + médias supprimés automatiquement
+```
+
+### Validation et clôture automatique
+
+Lorsqu'une **company valide un livrable** (`PATCH /deliverables/:id/validate`) :
+
+1. **Vérification** → Le système vérifie si tous les **livrables milestone** du contrat sont validés
+2. **Clôture automatique** → Si oui, le contrat passe automatiquement en statut `completed`
+3. **Flag d'évaluation** → `canEvaluated: true` est retourné pour tous les livrables du contrat
+4. **Notifications** → Les deux parties sont notifiées de la fin du contrat
+
+```json
+// Tous les livrables milestone validés → Contrat terminé automatiquement
+{
+  "id": "livrable-final",
+  "status": "validated",
+  "contractId": "contrat-abc",
+  "canEvaluated": true,  // ✅ Prêt pour évaluation mutuelle
+  "contract": {
+    "status": "completed"  // ✅ Automatiquement terminé
+  }
+}
+```
+
+### Règles de clôture automatique
+
+- **Critère** : Tous les livrables avec `isMilestone: true` sont validés
+- **Exclusion** : Les livrables non-milestone (`isMilestone: false`) ne comptent pas
+- **Contrats daily_rate** : Les work_days validés comptent également
+- **Notification** : Email automatique aux deux parties lors de la clôture
+
+### Flag `canEvaluated`
+
+Le flag `canEvaluated` est automatiquement ajouté à chaque réponse de livrable :
+
+```typescript
+// Logique du flag
+canEvaluated = contract.status === "completed"
+```
+
+- `true` : Le contrat est terminé → évaluations mutuelles possibles
+- `false` : Le contrat est encore en cours → évaluations pas encore disponibles
+
+**Utilisation côté client :**
+```javascript
+if (deliverable.canEvaluated) {
+  // Afficher le bouton "Évaluer la collaboration"
+  showEvaluationButton();
+}
+```
 
 ---
 
@@ -428,10 +567,29 @@ Paiement par étapes avec montants prédéfinis :
 
 ## 🛡️ Sécurité & Bonnes pratiques
 
-- Les routes sont protégées par des middlewares d’authentification adaptés (freelance, company, admin).
-- Les IDs sont validés (UUID).
-- Les livrables sont enrichis avec les médias associés pour faciliter l’affichage frontend.
-- La date d’association des médias permet de trier ou filtrer les fichiers par ordre d’ajout.
+- **Séparation des rôles** : Les statuts `validated` et `rejected` sont strictement réservés aux companies
+- **Validation stricte** : Les freelances ne peuvent pas valider ou rejeter leurs propres livrables
+- **Routes protégées** : Middlewares d'authentification adaptés (freelance, company, admin)
+- **Validation des données** : IDs validés (UUID), payloads validés par Zod
+- **Feedback obligatoire** : Un feedback est requis lors du rejet d'un livrable
+- **Enrichissement automatique** : Les livrables incluent automatiquement leurs médias associés
+- **Traçabilité** : Date d'association des médias pour audit et tri chronologique
+- **Automatisation intelligente** : Suppression automatique des médias lors du rejet
+- **Clôture automatique** : Contrats terminés automatiquement quand tous les milestones sont validés
+- **Flag d'évaluation** : `canEvaluated` indique si les évaluations sont disponibles
+
+### Routes spécifiques par rôle
+
+```typescript
+// Routes freelance (statuts limités)
+POST   /deliverables          // Création
+PATCH  /deliverables/:id      // Mise à jour (planned, in_progress, submitted)
+
+// Routes company (tous statuts + actions spéciales)
+PATCH  /deliverables/:id/company   // Mise à jour complète
+PATCH  /deliverables/:id/validate  // Validation du livrable
+PATCH  /deliverables/:id/reject    // Rejet du livrable
+```
 
 ---
 

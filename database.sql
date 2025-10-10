@@ -26,7 +26,7 @@ CREATE TYPE message_type_enum AS ENUM (
 );
 CREATE TYPE type_work_enum AS ENUM ('remote', 'hybride', 'presentiel');
 CREATE TYPE type_media_enum AS ENUM ('pdf', 'image', 'doc', 'zip', 'other');
-CREATE TYPE project_status_enum AS ENUM ('draft', 'published', 'is_pending');
+CREATE TYPE project_status_enum AS ENUM ('draft', 'published', 'is_pending','closed');
 CREATE TYPE application_status_enum AS ENUM ('submitted', 'under_review', 'accepted', 'rejected', 'withdrawn');
 CREATE TYPE contract_status_enum AS ENUM ('draft', 'active', 'pending', 'completed', 'cancelled', 'suspended');
 CREATE TYPE payment_mode_enum AS ENUM ('fixed_price', 'daily_rate', 'by_milestone');

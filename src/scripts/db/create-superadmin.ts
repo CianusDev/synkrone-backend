@@ -11,7 +11,7 @@ async function createSuperAdmin() {
   const password_hashed = await hashPassword(password);
 
   try {
-    await adminRepository.createSuperAdmin({
+    await adminRepository.createAdmin({
       username,
       password_hashed,
       level,

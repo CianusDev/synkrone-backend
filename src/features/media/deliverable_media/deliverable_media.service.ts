@@ -45,4 +45,24 @@ export class DeliverableMediaService {
   ): Promise<DeliverableMedia | null> {
     return this.repository.getDeliverableMedia(deliverableId, mediaId);
   }
+
+  /**
+   * Supprime tous les médias associés à un livrable (soft delete).
+   */
+  async removeAllMediaFromDeliverable(deliverableId: string): Promise<number> {
+    const mediaLinks = await this.getMediaForDeliverable(deliverableId);
+    let removedCount = 0;
+
+    for (const link of mediaLinks) {
+      const removed = await this.removeMediaFromDeliverable(
+        deliverableId,
+        link.mediaId,
+      );
+      if (removed) {
+        removedCount++;
+      }
+    }
+
+    return removedCount;
+  }
 }

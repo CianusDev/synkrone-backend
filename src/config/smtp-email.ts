@@ -892,6 +892,325 @@ export const emailTemplates = {
       L'équipe Synkrone
     `,
   }),
+
+  // Template pour notifier la clôture automatique d'un contrat (freelance)
+  contractCompletedAutomatic: (
+    projectTitle: string,
+    freelanceName: string,
+    companyName?: string,
+    completionDate?: string,
+    path?: string,
+  ) => ({
+    subject: `Votre contrat pour "${projectTitle}" est terminé - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">🎉 Contrat terminé avec succès !</h2>
+        <p>
+          ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+        </p>
+        <p>
+          Félicitations ! Votre contrat pour le projet <strong>"${projectTitle}"</strong> a été automatiquement marqué comme terminé.
+        </p>
+        <p>
+          <strong>✅ Tous vos livrables ont été validés avec succès !</strong>
+        </p>
+        ${
+          companyName
+            ? `<p>L'entreprise <strong>${companyName}</strong> a validé l'ensemble de votre travail.</p>`
+            : ""
+        }
+        ${
+          completionDate
+            ? `<p>Date de completion : <strong>${completionDate}</strong></p>`
+            : ""
+        }
+        <p>
+          Vous pouvez maintenant évaluer votre collaboration et recevoir vos paiements finaux.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Évaluer la collaboration
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Contrat terminé avec succès - Synkrone
+
+      ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+
+      Félicitations ! Votre contrat pour le projet "${projectTitle}" a été automatiquement marqué comme terminé.
+
+      ✅ Tous vos livrables ont été validés avec succès !
+
+      ${companyName ? `L'entreprise ${companyName} a validé l'ensemble de votre travail.` : ""}
+      ${completionDate ? `Date de completion : ${completionDate}` : ""}
+
+      Vous pouvez maintenant évaluer votre collaboration et recevoir vos paiements finaux :
+      ${envConfig.frontendUrl}/dashboard/contracts
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier la clôture automatique d'un contrat (company)
+  contractCompletedAutomaticCompany: (
+    projectTitle: string,
+    companyName: string,
+    freelanceName?: string,
+    completionDate?: string,
+    path?: string,
+  ) => ({
+    subject: `Le contrat pour "${projectTitle}" est terminé - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">🎉 Contrat terminé avec succès !</h2>
+        <p>
+          ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+        </p>
+        <p>
+          Le contrat pour le projet <strong>"${projectTitle}"</strong> a été automatiquement marqué comme terminé.
+        </p>
+        <p>
+          <strong>✅ Tous les livrables ont été validés avec succès !</strong>
+        </p>
+        ${
+          freelanceName
+            ? `<p>Le freelance <strong>${freelanceName}</strong> a livré l'ensemble du travail demandé.</p>`
+            : ""
+        }
+        ${
+          completionDate
+            ? `<p>Date de completion : <strong>${completionDate}</strong></p>`
+            : ""
+        }
+        <p>
+          Vous pouvez maintenant évaluer votre collaboration avec le freelance.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Évaluer la collaboration
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Contrat terminé avec succès - Synkrone
+
+      ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+
+      Le contrat pour le projet "${projectTitle}" a été automatiquement marqué comme terminé.
+
+      ✅ Tous les livrables ont été validés avec succès !
+
+      ${freelanceName ? `Le freelance ${freelanceName} a livré l'ensemble du travail demandé.` : ""}
+      ${completionDate ? `Date de completion : ${completionDate}` : ""}
+
+      Vous pouvez maintenant évaluer votre collaboration avec le freelance :
+      ${envConfig.frontendUrl}/dashboard/contracts
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier le rejet d'un livrable avec suppression des médias
+  deliverableRejectedWithMedia: (
+    deliverableTitle: string,
+    freelanceName: string,
+    feedback: string,
+    projectTitle?: string,
+    path?: string,
+  ) => ({
+    subject: `Votre livrable "${deliverableTitle}" a été rejeté - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc3545;">❌ Livrable rejeté</h2>
+        <p>
+          ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+        </p>
+        <p>
+          Votre livrable <strong>"${deliverableTitle}"</strong> a été rejeté.
+        </p>
+        ${
+          projectTitle
+            ? `<p>Projet concerné : <strong>${projectTitle}</strong></p>`
+            : ""
+        }
+        <div style="background: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc3545;">
+          <h3 style="color: #721c24; margin-top: 0;">Feedback de l'entreprise :</h3>
+          <p style="color: #721c24; margin-bottom: 0;">${feedback}</p>
+        </div>
+        <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <p style="color: #856404; margin: 0;">
+            <strong>⚠️ Important :</strong> Les médias associés à ce livrable ont été automatiquement supprimés.
+            Vous devrez télécharger de nouveaux fichiers lors de votre prochaine soumission.
+          </p>
+        </div>
+        <p>
+          Prenez en compte les remarques et soumettez une nouvelle version de votre livrable.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Voir le livrable
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Livrable rejeté - Synkrone
+
+      ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+
+      Votre livrable "${deliverableTitle}" a été rejeté.
+      ${projectTitle ? `Projet concerné : ${projectTitle}` : ""}
+
+      Feedback de l'entreprise :
+      ${feedback}
+
+      ⚠️ Important : Les médias associés à ce livrable ont été automatiquement supprimés. Vous devrez télécharger de nouveaux fichiers lors de votre prochaine soumission.
+
+      Prenez en compte les remarques et soumettez une nouvelle version de votre livrable :
+      ${envConfig.frontendUrl}/dashboard/deliverables
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier la validation d'un livrable
+  deliverableValidated: (
+    deliverableTitle: string,
+    freelanceName: string,
+    companyName?: string,
+    projectTitle?: string,
+    path?: string,
+  ) => ({
+    subject: `Votre livrable "${deliverableTitle}" a été validé ! - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #28a745;">✅ Livrable validé avec succès !</h2>
+        <p>
+          ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+        </p>
+        <p>
+          Excellente nouvelle ! Votre livrable <strong>"${deliverableTitle}"</strong> a été validé avec succès.
+        </p>
+        ${
+          projectTitle
+            ? `<p>Projet concerné : <strong>${projectTitle}</strong></p>`
+            : ""
+        }
+        ${
+          companyName
+            ? `<p>L'entreprise <strong>${companyName}</strong> a approuvé votre travail.</p>`
+            : ""
+        }
+        <div style="background: #d4edda; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
+          <p style="color: #155724; margin: 0;">
+            <strong>🎉 Félicitations !</strong> Votre livrable respecte parfaitement les spécifications demandées.
+            Le paiement associé sera traité selon les termes du contrat.
+          </p>
+        </div>
+        <p>
+          Vous pouvez consulter les détails du livrable validé dans votre tableau de bord.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Voir le livrable
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Livrable validé avec succès - Synkrone
+
+      ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+
+      Excellente nouvelle ! Votre livrable "${deliverableTitle}" a été validé avec succès.
+
+      ${projectTitle ? `Projet concerné : ${projectTitle}` : ""}
+      ${companyName ? `L'entreprise ${companyName} a approuvé votre travail.` : ""}
+
+      🎉 Félicitations ! Votre livrable respecte parfaitement les spécifications demandées.
+      Le paiement associé sera traité selon les termes du contrat.
+
+      Consultez les détails dans votre tableau de bord :
+      ${envConfig.frontendUrl}/dashboard/deliverables
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier la soumission d'un livrable à l'entreprise
+  deliverableSubmitted: (
+    deliverableTitle: string,
+    freelanceName: string,
+    companyName?: string,
+    projectTitle?: string,
+    path?: string,
+  ) => ({
+    subject: `Nouveau livrable soumis : "${deliverableTitle}" - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #17a2b8;">📋 Nouveau livrable à examiner</h2>
+        <p>
+          ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+        </p>
+        <p>
+          Le freelance <strong>${freelanceName}</strong> vient de soumettre un nouveau livrable pour validation.
+        </p>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #17a2b8;">
+          <h3 style="color: #17a2b8; margin-top: 0;">Détails du livrable :</h3>
+          <p style="margin: 5px 0;"><strong>Titre :</strong> ${deliverableTitle}</p>
+          ${
+            projectTitle
+              ? `<p style="margin: 5px 0;"><strong>Projet :</strong> ${projectTitle}</p>`
+              : ""
+          }
+          <p style="margin: 5px 0;"><strong>Freelance :</strong> ${freelanceName}</p>
+        </div>
+        <p>
+          Connectez-vous à votre tableau de bord pour examiner le livrable et décider de le valider ou le rejeter.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #17a2b8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Examiner le livrable
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Nouveau livrable à examiner - Synkrone
+
+      ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+
+      Le freelance ${freelanceName} vient de soumettre un nouveau livrable pour validation.
+
+      Détails du livrable :
+      - Titre : ${deliverableTitle}
+      ${projectTitle ? `- Projet : ${projectTitle}` : ""}
+      - Freelance : ${freelanceName}
+
+      Connectez-vous à votre tableau de bord pour examiner le livrable et décider de le valider ou le rejeter :
+      ${envConfig.frontendUrl}/dashboard/deliverables
+
+      L'équipe Synkrone
+    `,
+  }),
 };
 
 export default {

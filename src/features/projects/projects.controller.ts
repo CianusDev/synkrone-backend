@@ -194,10 +194,13 @@ export class ProjectsController {
           isCorrectDescription: z.boolean(),
         }),
         prompt: `
-        Vérifie que le titre et la description du projet mission sont appropriés !
-        Agit comme un modérateur de contenu.
-        Voici le titre : "${validated.title}"
-        Voici la description : "${validated.description}".`,
+        Tu es un modérateur de contenu. Ta tâche est de vérifier si le titre et la description d'un projet de mission sont appropriés, professionnels et ne contiennent pas de contenu offensant, inapproprié ou interdit.
+        Réponds uniquement par les champs demandés : "isCorrectTitle" et "isCorrectDescription" (boolean).
+        Soit quand meme flexible par rapport aux titres un peu accrocheurs et description peu detaille.
+        ces pour des tests donc pas besoin d'etre trop strict.
+        Voici le titre du projet : "${validated.title}"
+        Voici la description du projet : "${validated.description}"
+        `,
       });
       console.log({
         object,
@@ -215,6 +218,13 @@ export class ProjectsController {
         return res.status(400).json({
           success: false,
           message: "La description du projet n'est pas appropriée.",
+        });
+      }
+      if (!object.isCorrectDescription && !object.isCorrectTitle) {
+        console.log("Le titre et la description du projet sont appropriés.");
+        return res.status(400).json({
+          success: true,
+          message: "Le titre et la description du projet sont appropriés.",
         });
       }
       const project = await this.service.createProject(validated);

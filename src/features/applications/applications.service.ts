@@ -103,6 +103,14 @@ export class ApplicationsService {
           message: `Le freelance ${freelance.firstname} ${freelance.lastname} a postulé au projet "${project.title}".`,
           type: NotificationTypeEnum.application,
           is_global: false,
+          metadata: {
+            applicationId: existingApplication
+              ? existingApplication.id
+              : "new_application", // On peut ajuster cela selon les besoins
+            projectId: project.id,
+            freelanceId: freelance.id,
+            link: `/company/projects/${project.id}?tab=applications`, // Lien vers la page des candidatures du projet
+          },
         },
       );
       if (notification) {
@@ -290,6 +298,12 @@ export class ApplicationsService {
             message: `Le freelance ${freelance.firstname} ${freelance.lastname} a retiré sa candidature au projet "${project.title}".`,
             type: NotificationTypeEnum.application,
             is_global: false,
+            metadata: {
+              applicationId: updated.id,
+              projectId: project.id,
+              freelanceId: freelance.id,
+              link: `/company/projects/${project.id}?tab=applications`, // Lien vers la page des candidatures du projet
+            },
           });
 
         if (notification) {
@@ -519,6 +533,12 @@ export class ApplicationsService {
                 message: `Votre candidature au projet "${projectTitle}" a été refusée car une autre a été acceptée.`,
                 type: NotificationTypeEnum.application,
                 is_global: false,
+                metadata: {
+                  applicationId: app.id,
+                  projectId: project.id,
+                  freelanceId: rejectedFreelance.id,
+                  link: `/freelance/proposals/${app.id}`, // Lien vers la page de la candidature
+                },
               });
             if (notification) {
               await this.userNotificationService.createUserNotification(

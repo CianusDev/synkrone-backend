@@ -5,6 +5,9 @@ import { DeliverablesRepository } from "./deliverables.repository";
 import {
   createDeliverableSchema,
   updateDeliverableSchema,
+  updateDeliverableCompanySchema,
+  validateDeliverableSchema,
+  rejectDeliverableSchema,
   deliverableIdSchema,
   contractIdSchema,
 } from "./deliverables.schema";
@@ -78,9 +81,8 @@ export class DeliverablesController {
   async getDeliverablesByContract(req: Request, res: Response) {
     try {
       const { contractId } = contractIdSchema.parse(req.params);
-      const deliverables = await this.service.getDeliverablesByContract(
-        contractId
-      );
+      const deliverables =
+        await this.service.getDeliverablesByContract(contractId);
       res.json({ success: true, data: deliverables });
     } catch (error) {
       this.handleError(error, res);
@@ -89,19 +91,99 @@ export class DeliverablesController {
 
   /**
    * PATCH /deliverables/:id
-   * Met à jour un livrable
+   * Met à jour un livrable (freelance uniquement)
    */
   async updateDeliverable(req: Request, res: Response) {
     try {
       const { id } = deliverableIdSchema.parse(req.params);
       const validated = updateDeliverableSchema.parse(req.body);
-      const updated = await this.service.updateDeliverable(id, validated);
+      const updated = await this.service.updateDeliverableAsFreelance(
+        id,
+        validated,
+      );
       if (!updated) {
         return res
           .status(404)
           .json({ success: false, error: "Livrable non trouvé" });
       }
       res.json({ success: true, data: updated });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  /**
+   * PATCH /deliverables/:id/company
+   * Met à jour un livrable (company - tous les statuts autorisés)
+   */
+  async updateDeliverableCompany(req: Request, res: Response) {
+    try {
+      const { id } = deliverableIdSchema.parse(req.params);
+      const validated = updateDeliverableCompanySchema.parse(req.body);
+      const updated = await this.service.updateDeliverableAsCompany(
+        id,
+        validated,
+      );
+      if (!updated) {
+        return res
+          .status(404)
+          .json({ success: false, error: "Livrable non trouvé" });
+      }
+      res.json({ success: true, data: updated });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  /**
+   * PATCH /deliverables/:id/validate
+   * Valide un livrable (company uniquement)
+   */
+  async validateDeliverable(req: Request, res: Response) {
+    try {
+      const { id } = deliverableIdSchema.parse(req.params);
+      const validated = validateDeliverableSchema.parse(req.body);
+      const updated = await this.service.updateDeliverableAsCompany(id, {
+        ...validated,
+        validatedAt: new Date().toISOString(),
+      });
+      if (!updated) {
+        return res
+          .status(404)
+          .json({ success: false, error: "Livrable non trouvé" });
+      }
+      res.json({
+        success: true,
+        data: updated,
+        message: "Livrable validé avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  /**
+   * PATCH /deliverables/:id/reject
+   * Rejette un livrable (company uniquement)
+   */
+  async rejectDeliverable(req: Request, res: Response) {
+    try {
+      const { id } = deliverableIdSchema.parse(req.params);
+      const validated = rejectDeliverableSchema.parse(req.body);
+      const updated = await this.service.updateDeliverableAsCompany(
+        id,
+        validated,
+      );
+      if (!updated) {
+        return res
+          .status(404)
+          .json({ success: false, error: "Livrable non trouvé" });
+      }
+      res.json({
+        success: true,
+        data: updated,
+        message: "Livrable rejeté avec succès",
+      });
     } catch (error) {
       this.handleError(error, res);
     }

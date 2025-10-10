@@ -4,7 +4,7 @@ import express, { Response } from "express";
 import { envConfig } from "./config/env.config";
 import applicationsRoutes from "./features/applications/applications.route";
 import authAdminRoutes from "./features/auth-admin/auth-admin.routes";
-import authRoutes from "./features/auth/auth.route";
+import authRoutes from "./features/auth/auth-unified.route";
 import categorySkillRoutes from "./features/category-skill/category-skill.route";
 import { CompanyRepository } from "./features/company/company.repository";
 import contractsRoutes from "./features/contracts/contracts.route";

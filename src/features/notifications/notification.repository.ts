@@ -1,4 +1,4 @@
-import { Notification } from "./notification.model";
+import { Notification, NotificationMetadata } from "./notification.model";
 import { db } from "../../config/database";
 
 /**
@@ -19,7 +19,8 @@ export class NotificationRepository {
         title, message, type, is_global, metadata
       ) VALUES (
         $1, $2, $3, $4, $5
-      ) RETURNING *
+      ) RETURNING id, title, message, type, is_global,
+                 metadata::text as metadata_text, created_at, updated_at
     `;
     const values = [
       notification.title,
@@ -31,7 +32,13 @@ export class NotificationRepository {
 
     try {
       const result = await db.query(query, values);
-      return result.rows[0] as Notification;
+      const row = result.rows[0];
+
+      // Parse metadata JSON properly
+      return {
+        ...row,
+        metadata: row.metadata_text ? JSON.parse(row.metadata_text) : null,
+      } as Notification;
     } catch (error) {
       console.error("Error creating notification:", error);
       throw new Error("Database error");
@@ -44,10 +51,23 @@ export class NotificationRepository {
    * @returns The notification or null if not found
    */
   async getNotificationById(id: string): Promise<Notification | null> {
-    const query = `SELECT * FROM notifications WHERE id = $1`;
+    const query = `
+      SELECT id, title, message, type, is_global,
+             metadata::text as metadata_text, created_at, updated_at
+      FROM notifications
+      WHERE id = $1
+    `;
     try {
       const result = await db.query(query, [id]);
-      return (result.rows[0] as Notification) || null;
+      const row = result.rows[0];
+
+      if (!row) return null;
+
+      // Parse metadata JSON properly
+      return {
+        ...row,
+        metadata: row.metadata_text ? JSON.parse(row.metadata_text) : null,
+      } as Notification;
     } catch (error) {
       console.error("Error fetching notification by ID:", error);
       throw new Error("Database error");
@@ -70,7 +90,9 @@ export class NotificationRepository {
     const offset = (page - 1) * limit;
 
     const query = `
-      SELECT * FROM notifications
+      SELECT id, title, message, type, is_global,
+             metadata::text as metadata_text, created_at, updated_at
+      FROM notifications
       ORDER BY created_at DESC
       LIMIT $1 OFFSET $2
     `;
@@ -82,8 +104,14 @@ export class NotificationRepository {
       const countResult = await db.query(countQuery);
       const total = parseInt(countResult.rows[0]?.total ?? "0", 10);
 
+      // Parse metadata for each notification
+      const data = dataResult.rows.map((row: any) => ({
+        ...row,
+        metadata: row.metadata_text ? JSON.parse(row.metadata_text) : null,
+      }));
+
       return {
-        data: dataResult.rows,
+        data,
         total,
         page,
         limit,
@@ -150,7 +178,7 @@ export class NotificationRepository {
       values.push(mergedNotification.is_global);
     }
     if (mergedNotification.metadata !== undefined) {
-      fields.push(`metadata = $${idx++}`);
+      fields.push(`metadata = $${idx++}::jsonb`);
       values.push(
         mergedNotification.metadata
           ? JSON.stringify(mergedNotification.metadata)
@@ -172,13 +200,22 @@ export class NotificationRepository {
       UPDATE notifications
       SET ${fields.join(", ")}
       WHERE id = $${idx}
-      RETURNING *
+      RETURNING id, title, message, type, is_global,
+                metadata::text as metadata_text, created_at, updated_at
     `;
     values.push(id);
 
     try {
       const result = await db.query(query, values);
-      return (result.rows[0] as Notification) || null;
+      const row = result.rows[0];
+
+      if (!row) return null;
+
+      // Parse metadata JSON properly
+      return {
+        ...row,
+        metadata: row.metadata_text ? JSON.parse(row.metadata_text) : null,
+      } as Notification;
     } catch (error) {
       console.error("Error updating notification:", error);
       throw new Error("Database error");

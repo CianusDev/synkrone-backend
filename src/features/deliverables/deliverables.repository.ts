@@ -68,7 +68,23 @@ export class DeliverablesRepository {
 
     for (const [key, value] of Object.entries(data)) {
       // Mapper les noms de champs TypeScript vers les noms de colonnes SQL
-      const sqlField = key === "dueDate" ? "due_date" : key;
+      let sqlField: string;
+      switch (key) {
+        case "dueDate":
+          sqlField = "due_date";
+          break;
+        case "isMilestone":
+          sqlField = "is_milestone";
+          break;
+        case "submittedAt":
+          sqlField = "submitted_at";
+          break;
+        case "validatedAt":
+          sqlField = "validated_at";
+          break;
+        default:
+          sqlField = key;
+      }
       fields.push(`${sqlField} = $${idx++}`);
       values.push(value);
     }

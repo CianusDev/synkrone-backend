@@ -506,6 +506,60 @@ app.use("/api/contracts", contractsRoutes);
 
 ---
 
+---
+
+## 📧 Notifications Email
+
+Le module contrats intègre un système de notification automatique par email utilisant les templates définis dans `smtp-email.ts`.
+
+### Notifications automatiques
+
+Les actions suivantes déclenchent automatiquement l'envoi d'emails :
+
+| Action | Template | Destinataire | Description |
+|--------|----------|-------------|-------------|
+| **Création de contrat** | `contractProposed` | Freelance | Proposition de contrat reçue |
+| **Acceptation** | `contractAccepted` | Entreprise | Contrat accepté par le freelance |
+| **Refus** | `contractRejected` | Entreprise | Contrat refusé par le freelance |
+| **Mise à jour** | `contractUpdated` | Freelance | Contrat modifié par l'entreprise |
+| **Completion auto** | `contractCompletedAutomatic` + `contractCompletedAutomaticCompany` | Les deux | Contrat terminé automatiquement |
+
+### Service de notification
+
+Le `ContractsNotificationService` gère l'envoi des emails :
+
+```typescript
+import { ContractsNotificationService } from './contracts-notification.service';
+
+const notificationService = new ContractsNotificationService();
+
+// Notification manuelle
+await notificationService.notifyContractProposed(contractId);
+await notificationService.notifyContractAccepted(contractId);
+await notificationService.notifyContractRejected(contractId);
+```
+
+### Configuration
+
+Assurez-vous que les variables d'environnement SMTP sont configurées :
+
+```env
+GMAIL_USER=your-email@gmail.com
+GMAIL_APP_PASSWORD=your-app-password
+FRONTEND_URL=https://yourapp.com
+APP_NAME=Synkrone
+```
+
+### Gestion des erreurs
+
+- Les notifications **ne font jamais échouer** les opérations principales
+- Les erreurs sont loggées mais n'interrompent pas le workflow
+- Les succès et échecs sont tracés dans les logs
+
+Voir `contracts-notifications-examples.md` pour plus de détails.
+
+---
+
 ## Auteur & Contact
 
-Pour toute question ou amélioration, contacte l’équipe backend.
+Pour toute question ou amélioration, contacte l'équipe backend.

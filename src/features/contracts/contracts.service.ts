@@ -10,6 +10,7 @@ import {
   CreateContractData,
 } from "./contracts.model";
 import { ContractsRepository } from "./contracts.repository";
+import { ContractsNotificationService } from "./contracts-notification.service";
 
 export class ContractsService {
   private readonly repository: ContractsRepository;
@@ -18,6 +19,7 @@ export class ContractsService {
   private readonly freelanceRepository: FreelanceRepository;
   private readonly projectsRepository: ProjectsRepository;
   private readonly companyRepository: CompanyRepository;
+  private readonly notificationService: ContractsNotificationService;
 
   constructor() {
     this.repository = new ContractsRepository();
@@ -26,6 +28,7 @@ export class ContractsService {
     this.projectsRepository = new ProjectsRepository();
     this.companyRepository = new CompanyRepository();
     this.deliverablesRepository = new DeliverablesRepository();
+    this.notificationService = new ContractsNotificationService();
   }
 
   /**
@@ -100,6 +103,17 @@ export class ContractsService {
       ? ContractStatus.PENDING
       : ContractStatus.DRAFT;
     await this.repository.updateContractStatus(newContract.id, newStatus);
+
+    // 8. Envoyer la notification de proposition de contrat au freelance
+    try {
+      await this.notificationService.notifyContractProposed(newContract.id);
+    } catch (error) {
+      console.error(
+        "Erreur lors de l'envoi de la notification de création de contrat:",
+        error,
+      );
+      // Ne pas faire échouer la création du contrat si l'email échoue
+    }
 
     return newContract;
   }
@@ -201,7 +215,33 @@ export class ContractsService {
     id: string,
     status: ContractStatus,
   ): Promise<Contract | null> {
-    return this.repository.updateContractStatus(id, status);
+    // Récupérer l'ancien statut pour les notifications
+    const existingContract = await this.repository.getContractById(id);
+    const oldStatus = existingContract?.status;
+
+    const updatedContract = await this.repository.updateContractStatus(
+      id,
+      status,
+    );
+
+    // Envoyer les notifications selon le changement de statut
+    if (updatedContract && oldStatus) {
+      try {
+        await this.notificationService.handleStatusChangeNotifications(
+          id,
+          oldStatus,
+          status,
+        );
+      } catch (error) {
+        console.error(
+          "Erreur lors de l'envoi des notifications de changement de statut:",
+          error,
+        );
+        // Ne pas faire échouer la mise à jour si l'email échoue
+      }
+    }
+
+    return updatedContract;
   }
 
   /**
@@ -305,10 +345,23 @@ export class ContractsService {
     }
 
     // 4. Mettre à jour le contrat
-    const updatedContract = this.repository.updateContract(id, {
+    const updatedContract = await this.repository.updateContract(id, {
       ...data,
       status: ContractStatus.PENDING,
     });
+
+    // 5. Envoyer la notification de mise à jour au freelance
+    if (updatedContract) {
+      try {
+        await this.notificationService.notifyContractUpdated(id);
+      } catch (error) {
+        console.error(
+          "Erreur lors de l'envoi de la notification de mise à jour:",
+          error,
+        );
+        // Ne pas faire échouer la mise à jour si l'email échoue
+      }
+    }
 
     return updatedContract;
   }
@@ -336,7 +389,25 @@ export class ContractsService {
       ? ContractStatus.ACTIVE
       : ContractStatus.PENDING;
 
-    return this.repository.updateContractStatus(id, newStatus);
+    const updatedContract = await this.repository.updateContractStatus(
+      id,
+      newStatus,
+    );
+
+    // 4. Envoyer la notification d'acceptation à l'entreprise
+    if (updatedContract) {
+      try {
+        await this.notificationService.notifyContractAccepted(id);
+      } catch (error) {
+        console.error(
+          "Erreur lors de l'envoi de la notification d'acceptation:",
+          error,
+        );
+        // Ne pas faire échouer l'acceptation si l'email échoue
+      }
+    }
+
+    return updatedContract;
   }
 
   /**
@@ -375,7 +446,25 @@ export class ContractsService {
     }
 
     // 2. Passer le statut à cancelled
-    return this.repository.updateContractStatus(id, ContractStatus.CANCELLED);
+    const updatedContract = await this.repository.updateContractStatus(
+      id,
+      ContractStatus.CANCELLED,
+    );
+
+    // 3. Envoyer la notification de refus à l'entreprise
+    if (updatedContract) {
+      try {
+        await this.notificationService.notifyContractRejected(id);
+      } catch (error) {
+        console.error(
+          "Erreur lors de l'envoi de la notification de refus:",
+          error,
+        );
+        // Ne pas faire échouer le refus si l'email échoue
+      }
+    }
+
+    return updatedContract;
   }
 
   /**

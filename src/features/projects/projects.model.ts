@@ -9,6 +9,7 @@ export enum ProjectStatus {
   DRAFT = "draft",
   PUBLISHED = "published",
   IS_PENDING = "is_pending",
+  CLOSED = "closed",
 }
 
 export enum TypeWork {

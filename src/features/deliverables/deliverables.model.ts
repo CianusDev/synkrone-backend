@@ -7,7 +7,6 @@ export enum DeliverableStatus {
   SUBMITTED = "submitted",
   VALIDATED = "validated",
   REJECTED = "rejected",
-  CORRECTION_REQUESTED = "correction_requested",
 }
 
 /**
@@ -38,4 +37,5 @@ export interface Deliverable {
     email: string;
     photo_url?: string;
   };
+  canEvaluated?: boolean;
 }

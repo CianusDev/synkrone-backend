@@ -57,7 +57,11 @@ export class UserNotificationRepository {
     const offset = (page - 1) * limit;
 
     const query = `
-      SELECT un.*, n.*
+      SELECT
+        un.id, un.user_id, un.notification_id, un.is_read,
+        un.created_at, un.updated_at,
+        n.title, n.message, n.type, n.is_global, n.metadata,
+        n.created_at as notif_created_at, n.updated_at as notif_updated_at
       FROM user_notifications un
       JOIN notifications n ON un.notification_id = n.id
       WHERE un.user_id = $1
@@ -100,7 +104,10 @@ export class UserNotificationRepository {
           message,
           type,
           is_global,
-          metadata: metadata ? JSON.parse(metadata) : null,
+          metadata:
+            metadata && typeof metadata === "string"
+              ? JSON.parse(metadata)
+              : metadata,
           created_at: notif_created_at,
           updated_at: notif_updated_at,
         };
