@@ -421,7 +421,7 @@ export class ProjectsRepository {
   }
 
   /**
-   * Récupère les missions (projets avec contrats actifs) d'un freelance
+   * Récupère les missions (projets avec candidatures acceptées) d'un freelance
    */
   async getFreelanceMissions(
     freelanceId: string,
@@ -473,33 +473,44 @@ export class ProjectsRepository {
           'created_at', c.created_at,
           'updated_at', c.updated_at
         ) AS company,
-        json_build_object(
-          'id', ct.id,
-          'status', ct.status,
-          'payment_mode', ct.payment_mode,
-          'total_amount', ct.total_amount,
-          'tjm', ct.tjm,
-          'estimated_days', ct.estimated_days,
-          'start_date', ct.start_date,
-          'end_date', ct.end_date,
-          'created_at', ct.created_at
-        ) AS contract,
-        (
-          SELECT COUNT(*) FROM deliverables d WHERE d.contract_id = ct.id
+        CASE
+          WHEN ct.id IS NOT NULL AND ct.status = 'active'
+          THEN json_build_object(
+            'id', ct.id,
+            'status', ct.status,
+            'payment_mode', ct.payment_mode,
+            'total_amount', ct.total_amount,
+            'tjm', ct.tjm,
+            'estimated_days', ct.estimated_days,
+            'start_date', ct.start_date,
+            'end_date', ct.end_date,
+            'created_at', ct.created_at
+          )
+          ELSE NULL
+        END AS contract,
+        CASE
+          WHEN ct.id IS NOT NULL AND ct.status = 'active'
+          THEN true
+          ELSE false
+        END AS "canWork",
+        COALESCE(
+          (SELECT COUNT(*) FROM deliverables d WHERE d.contract_id = ct.id),
+          0
         ) AS "deliverableCount"
       FROM projects p
       INNER JOIN companies c ON p.company_id = c.id
-      INNER JOIN contracts ct ON p.id = ct.project_id
-      WHERE ct.freelance_id = $1
-      AND ct.status = 'active'
+      INNER JOIN applications a ON p.id = a.project_id
+      LEFT JOIN contracts ct ON p.id = ct.project_id AND ct.freelance_id = a.freelance_id AND ct.status = 'active'
+      WHERE a.freelance_id = $1
+      AND a.status = 'accepted'
     `;
 
     let countQuery = `
       SELECT COUNT(*) AS total
       FROM projects p
-      INNER JOIN contracts ct ON p.id = ct.project_id
-      WHERE ct.freelance_id = $1
-      AND ct.status = 'active'
+      INNER JOIN applications a ON p.id = a.project_id
+      WHERE a.freelance_id = $1
+      AND a.status = 'accepted'
     `;
 
     const conditions = [];

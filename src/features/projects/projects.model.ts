@@ -49,4 +49,5 @@ export interface Project {
   contract?: Contract; // <-- Ajouté pour les missions
   deliverableCount?: number; // <-- Ajouté pour le nombre de livrables
   deliverables?: Deliverable[]; // <-- Ajouté pour les livrables du contrat
+  canWork?: boolean; // <-- Ajouté pour indiquer si le freelance peut travailler sur ce projet
 }

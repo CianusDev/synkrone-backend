@@ -299,7 +299,7 @@ export class ProjectsService {
   }
 
   /**
-   * Récupère les missions (projets avec contrats actifs) d'un freelance
+   * Récupère les missions (projets avec candidatures acceptées) d'un freelance
    */
   async getFreelanceMissions(
     freelanceId: string,

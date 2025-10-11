@@ -287,13 +287,15 @@ Toutes les routes sont protégées par le middleware :
 **Endpoint** :  
 `GET /projects/my-missions`
 
-- Récupère automatiquement les missions (projets avec contrats actifs) du freelance connecté via le token
-- Une mission est un projet pour lequel le freelance a un contrat actif
+- Récupère automatiquement les missions (projets avec candidatures acceptées) du freelance connecté via le token
+- Une mission est un projet pour lequel le freelance a une candidature acceptée (`status = 'accepted'`)
 - Support des paramètres de pagination et recherche
 - Le `freelanceId` est automatiquement extrait du token d'authentification
 - Paramètres disponibles : `page`, `limit`, `offset`, `search`
-- Chaque projet retourné inclut les informations du contrat associé dans le champ `contract`
-- Le nombre de livrables associés au contrat est disponible dans le champ `deliverableCount`
+- Chaque projet retourné inclut :
+  - Les informations du contrat associé dans le champ `contract` (si contrat actif existe)
+  - Le champ `canWork` (boolean) indiquant si le freelance peut travailler (a un contrat actif)
+  - Le nombre de livrables associés au contrat dans le champ `deliverableCount`
 
 **Réponse exemple** :
 ```json
@@ -305,6 +307,7 @@ Toutes les routes sont protégées par le middleware :
       "title": "Développement API REST",
       "description": "API pour plateforme e-commerce",
       "status": "published",
+      "canWork": true,
       "deliverableCount": 5,
       "company": {
         "id": "uuid-company",
@@ -332,6 +335,24 @@ Toutes les routes sont protégées par le middleware :
   "message": "Liste de vos missions récupérée avec succès"
 }
 ```
+
+### Logique des missions freelance
+
+**Critères d'affichage** :
+- ✅ Projets avec candidature `accepted` pour le freelance connecté
+- ✅ Tous les statuts de projets (published, closed, etc.)
+
+**Champ `canWork`** :
+- `true` : Le freelance a un contrat actif sur ce projet et peut commencer/continuer à travailler
+- `false` : Candidature acceptée mais pas encore de contrat actif (en attente de signature)
+
+**Champ `contract`** :
+- Présent si contrat actif existe
+- `null` si aucun contrat actif (candidature acceptée mais contrat pas encore créé)
+
+**Champ `deliverableCount`** :
+- Nombre de livrables du contrat actif
+- `0` si pas de contrat actif
 
 ---
 

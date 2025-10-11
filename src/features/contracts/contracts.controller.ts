@@ -9,6 +9,7 @@ import {
   freelanceIdParamSchema,
   companyIdParamSchema,
   projectIdParamSchema,
+  requestContractModificationSchema,
 } from "./contracts.schema";
 import { ZodError } from "zod";
 import { ContractStatus, CreateContractData } from "./contracts.model";
@@ -335,6 +336,42 @@ export class ContractsController {
         success: true,
         data: updated,
         message: "Contrat refusé avec succès",
+      });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  // PATCH /contracts/:id/request-modification : demander une modification de contrat (freelance uniquement)
+  async requestContractModification(req: Request, res: Response) {
+    try {
+      const { id } = contractIdSchema.parse(req.params);
+      const validatedData = requestContractModificationSchema.parse(req.body);
+
+      // Vérifier que la raison est fournie
+      if (!validatedData.reason || !validatedData.reason.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "La raison de la demande de modification est obligatoire",
+        });
+      }
+
+      const updated = await this.service.requestContractModification(
+        id,
+        validatedData.reason.trim(),
+      );
+
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          message: "Contrat non trouvé ou modification non demandable",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: updated,
+        message: "Demande de modification envoyée avec succès",
       });
     } catch (error) {
       this.handleError(error, res);

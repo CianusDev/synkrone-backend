@@ -177,3 +177,11 @@ export const filterContractsSchema = z.object({
       message: "Limite invalide.",
     }),
 });
+
+// Schéma pour la demande de modification de contrat par le freelance
+export const requestContractModificationSchema = z.object({
+  reason: z
+    .string()
+    .min(10, "La raison doit contenir au moins 10 caractères.")
+    .max(500, "La raison ne peut pas dépasser 500 caractères."),
+});

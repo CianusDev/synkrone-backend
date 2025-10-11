@@ -433,6 +433,7 @@ export class DeliverablesService {
         companyName: company?.company_name || "Entreprise",
         freelanceEmail: freelance?.email,
         companyEmail: company?.company_email,
+        avatar: freelance?.photo_url || company?.logo_url || null,
       };
 
       // Envoyer les notifications

@@ -115,7 +115,7 @@ export class ProjectsController {
     }
   }
 
-  // GET /projects/my-missions : missions du freelance connecté (projets avec contrats actifs)
+  // GET /projects/my-missions : missions du freelance connecté (projets avec candidatures acceptées)
   async getMyMissions(req: Request & { freelance?: Freelance }, res: Response) {
     try {
       const freelance = req.freelance; // Injecté par le middleware AuthFreelanceMiddleware

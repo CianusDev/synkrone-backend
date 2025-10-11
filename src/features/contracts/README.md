@@ -126,13 +126,57 @@ export interface Contract {
       "job_title": "Développeur Mobile",
       "tjm": 500,
       "experience": "expert"
-    }
+    },
+    "deliverables": [
+      {
+        "id": "uuid-deliverable-1",
+        "title": "Analyse des besoins",
+        "description": "Document d'analyse détaillée",
+        "status": "validated",
+        "is_milestone": true,
+        "amount": 1000,
+        "due_date": "2024-02-01",
+        "submitted_at": "2024-01-28T10:00:00Z",
+        "validated_at": "2024-01-29T14:30:00Z",
+        "feedback": "Excellent travail",
+        "order": 1,
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": "2024-01-29T14:30:00Z",
+        "medias": [
+          {
+            "id": "uuid-media-1",
+            "url": "https://storage.example.com/analysis.pdf",
+            "type": "pdf",
+            "size": 1024000,
+            "uploadedAt": "2024-01-28T09:30:00Z",
+            "uploadedBy": "uuid-freelance",
+            "description": "Document d'analyse complet"
+          }
+        ]
+      },
+      {
+        "id": "uuid-deliverable-2",
+        "title": "Développement fonctionnalités",
+        "description": "Implémentation des fonctionnalités principales",
+        "status": "in_progress",
+        "is_milestone": true,
+        "amount": 3000,
+        "due_date": "2024-02-15",
+        "submitted_at": null,
+        "validated_at": null,
+        "feedback": null,
+        "order": 2,
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": null,
+        "medias": []
+      }
+    ]
   },
   "message": "Contrat récupéré avec succès"
 }
 ```
 
-> **Note :** Tous les endpoints GET retournent maintenant les informations enrichies du projet et du freelance associés au contrat.
+> **Note :** Tous les endpoints GET retournent maintenant les informations enrichies du projet, du freelance et des livrables associés au contrat. Chaque livrable inclut également ses médias attachés (documents, images, etc.).
 
 ---
 
@@ -369,7 +413,37 @@ export interface Contract {
 
 ---
 
-### 13. Supprimer un contrat
+### 13. Demander une modification de contrat
+
+`PATCH /api/contracts/:id/request-modification`
+
+**Body (obligatoire) :**
+```json
+{
+  "reason": "Je souhaiterais modifier les dates du projet car j'ai besoin de plus de temps pour la phase de tests."
+}
+```
+
+**Validation :**
+- `reason` : Obligatoire, minimum 10 caractères, maximum 500 caractères
+
+**Comportement :**
+- Change le statut du contrat de `active` vers `pending`
+- Envoie une notification email à l'entreprise
+- Envoie automatiquement un message système dans le chat de l'entreprise avec la raison fournie
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Demande de modification envoyée avec succès"
+}
+```
+
+---
+
+### 14. Supprimer un contrat
 
 `DELETE /api/contracts/:id`
 
@@ -449,10 +523,13 @@ Paiement échelonné selon les livrables validés.
    - **Acceptation avec livrables milestone** : statut → `active`
    - **Acceptation sans livrables milestone** : statut → `pending`
    - **Refus** : statut → `cancelled`
-4. **Gestion des livrables** :
+4. **Demande de modification** : Le freelance peut demander une modification d'un contrat actif :
+   - **Demande de modification** : `active` → `pending` (l'entreprise peut alors modifier le contrat)
+   - **Communication automatique** : La raison est envoyée dans le chat de l'entreprise via un message système
+5. **Gestion des livrables** :
    - **Ajout de milestones** : `pending` → `active`
    - **Suppression de tous les milestones** : `active` → `pending`
-5. **Verrouillage** : Une fois accepté ou refusé, le contrat n'est plus modifiable (sauf transitions milestone)
+6. **Verrouillage** : Une fois accepté ou refusé, le contrat n'est plus modifiable (sauf demande de modification ou transitions milestone)
 
 ### Validation automatique
 - **fixed_price** / **by_milestone** : `total_amount` obligatoire et positif
@@ -475,8 +552,9 @@ Tous les endpoints **GET** retournent désormais les contrats enrichis avec :
 
 - **`project`** : Informations complètes du projet associé (titre, description, budget, statut, etc.)
 - **`freelance`** : Informations du freelance associé (nom, prénom, titre, expérience, TJM, etc.)
+- **`deliverables`** : Liste complète des livrables du contrat avec leurs médias associés (documents, images, fichiers)
 
-Cet enrichissement se fait automatiquement via des JOIN en base de données pour optimiser les performances et éviter les requêtes multiples côté client.
+Cet enrichissement se fait automatiquement via des JOIN en base de données pour optimiser les performances et éviter les requêtes multiples côté client. Les livrables sont triés par ordre (`order` ASC) puis par date de création (`created_at` ASC).
 
 ## Sécurité & Bonnes pratiques
 
@@ -489,15 +567,47 @@ Cet enrichissement se fait automatiquement via des JOIN en base de données pour
   - **Création** : entreprise ou admin
   - **Modification** : entreprise ou admin (statut draft uniquement)
   - **Acceptation/Refus** : freelance concerné uniquement
+  - **Demande de modification** : freelance concerné uniquement (statut active)
   - **Transitions milestone** : admin ou système (activation/suspension selon milestones)
   - **Consultation** : freelance, entreprise ou admin
   - **Suppression/Statut** : admin uniquement
 
 ---
 
-## Exemple d’intégration
+## 📬 Intégration avec le système de Messages
 
-Dans ton app Express principale :
+### Demande de modification automatique dans le chat
+
+Lorsqu'un freelance demande une modification de contrat, le système :
+
+1. **Met à jour le statut** : `active` → `pending`
+2. **Envoie un email** à l'entreprise (notification classique)
+3. **Crée automatiquement un message système** dans la conversation entre le freelance et l'entreprise
+
+**Format du message automatique :**
+```
+🔄 **Demande de modification du contrat**
+
+Raison : [Raison fournie par le freelance]
+
+Le contrat a été remis en attente pour permettre les modifications nécessaires.
+```
+
+**Intégration requise :**
+- Service de Messages (`MessageService`)
+- Service de Conversations (`ConversationService`)
+- La conversation est créée automatiquement si elle n'existe pas
+
+### Avantages de cette approche
+
+- ✅ **Traçabilité** : La demande est visible dans l'historique du chat
+- ✅ **Communication directe** : Pas besoin de passer par les emails uniquement
+- ✅ **Context** : Le message apparaît dans la conversation liée au projet/contrat
+- ✅ **Temps réel** : Si le chat est ouvert, la notification apparaît immédiatement
+
+## Exemple d'intégration
+
+Dans ton app Express principale :
 
 ```ts
 import contractsRoutes from "./src/features/contracts/contracts.route";
@@ -522,6 +632,7 @@ Les actions suivantes déclenchent automatiquement l'envoi d'emails :
 | **Acceptation** | `contractAccepted` | Entreprise | Contrat accepté par le freelance |
 | **Refus** | `contractRejected` | Entreprise | Contrat refusé par le freelance |
 | **Mise à jour** | `contractUpdated` | Freelance | Contrat modifié par l'entreprise |
+| **Demande de modification** | `contractModificationRequested` + Message chat | Entreprise | Freelance demande une modification |
 | **Completion auto** | `contractCompletedAutomatic` + `contractCompletedAutomaticCompany` | Les deux | Contrat terminé automatiquement |
 
 ### Service de notification

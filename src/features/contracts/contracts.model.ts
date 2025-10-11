@@ -1,5 +1,6 @@
 import { Project } from "../projects/projects.model";
 import { Freelance } from "../freelance/freelance.model";
+import { Deliverable } from "../deliverables/deliverables.model";
 
 export enum ContractStatus {
   DRAFT = "draft",
@@ -8,6 +9,7 @@ export enum ContractStatus {
   COMPLETED = "completed",
   CANCELLED = "cancelled",
   SUSPENDED = "suspended",
+  REQUEST = "request",
 }
 
 export enum PaymentMode {
@@ -33,6 +35,7 @@ export interface Contract {
   created_at: Date;
   project?: Project;
   freelance?: Freelance;
+  deliverables?: Deliverable[];
 }
 
 /**

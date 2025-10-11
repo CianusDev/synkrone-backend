@@ -4,7 +4,12 @@ import {
   PaymentMode,
   CreateContractData,
 } from "./contracts.model";
+import { Deliverable } from "../deliverables/deliverables.model";
 import { query } from "../../config/database";
+
+interface DeliverableWithMedia extends Omit<Deliverable, "medias"> {
+  medias: any[];
+}
 
 export class ContractsRepository {
   /**
@@ -69,9 +74,9 @@ export class ContractsRepository {
   }
 
   /**
-   * Récupère un contrat par son ID
+   * Récupère un contrat par son ID avec les livrables associés
    * @param id - UUID du contrat
-   * @returns Le contrat ou null si non trouvé
+   * @returns Le contrat avec ses livrables ou null si non trouvé
    */
   async getContractById(id: string): Promise<Contract | null> {
     const sql = `
@@ -135,9 +140,63 @@ export class ContractsRepository {
       LEFT JOIN freelances f ON c.freelance_id = f.id
       WHERE c.id = $1;
     `;
+
     try {
       const result = await query<Contract>(sql, [id]);
-      return result.rows[0] || null;
+      const contract = result.rows[0];
+
+      if (!contract) {
+        return null;
+      }
+
+      // Récupérer les livrables avec leurs médias
+      const deliverablesQuery = `
+        SELECT
+          d.id,
+          d.contract_id AS "contractId",
+          d.title,
+          d.description,
+          d.status,
+          d.is_milestone AS "isMilestone",
+          d.amount,
+          d.due_date AS "dueDate",
+          d.submitted_at AS "submittedAt",
+          d.validated_at AS "validatedAt",
+          d.feedback,
+          d."order",
+          d.created_at AS "createdAt",
+          d.updated_at AS "updatedAt",
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'id', m.id,
+                'url', m.url,
+                'type', m.type,
+                'size', m.size,
+                'uploadedAt', m.uploaded_at,
+                'uploadedBy', m.uploaded_by,
+                'description', m.description
+              )
+            ) FILTER (WHERE m.id IS NOT NULL),
+            '[]'::json
+          ) AS medias
+        FROM deliverables d
+        LEFT JOIN deliverable_media dm ON d.id = dm.deliverable_id AND dm.deleted_at IS NULL
+        LEFT JOIN media m ON dm.media_id = m.id
+        WHERE d.contract_id = $1
+        GROUP BY d.id, d.contract_id, d.title, d.description, d.status,
+                 d.is_milestone, d.amount, d.due_date, d.submitted_at,
+                 d.validated_at, d.feedback, d."order", d.created_at, d.updated_at
+        ORDER BY d."order" ASC, d.created_at ASC;
+      `;
+
+      const deliverablesResult = await query<DeliverableWithMedia>(
+        deliverablesQuery,
+        [id],
+      );
+      contract.deliverables = deliverablesResult.rows;
+
+      return contract;
     } catch (error) {
       console.error(
         "Erreur lors de la récupération du contrat par ID :",

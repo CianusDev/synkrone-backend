@@ -24,7 +24,8 @@ export interface NotificationMetadata {
   project_id?: string;
   freelance_id?: string;
   company_id?: string;
-
+  logo_url?: string;
+  freelance_fullname?: string;
   // Informations contextuelles
   deliverable_title?: string;
   deliverable_status?: string;

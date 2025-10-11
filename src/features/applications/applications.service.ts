@@ -476,6 +476,14 @@ export class ApplicationsService {
           message: notificationMessage,
           type: NotificationTypeEnum.application,
           is_global: false,
+          metadata: {
+            company_name: project.company?.company_name || "",
+            logo_url: project.company?.logo_url || "",
+            applicationId: application.id,
+            projectId: project.id,
+            freelanceId: freelance.id,
+            link: `/freelance/proposals/${application.id}`, // Lien vers la page de la candidature
+          },
         },
       );
 

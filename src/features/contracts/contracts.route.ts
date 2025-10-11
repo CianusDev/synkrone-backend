@@ -48,6 +48,11 @@ router.patch("/:id/refuse", AuthFreelanceMiddleware, (req, res) =>
   controller.refuseContract(req, res),
 );
 
+// Demander une modification de contrat (freelance uniquement)
+router.patch("/:id/request-modification", AuthFreelanceMiddleware, (req, res) =>
+  controller.requestContractModification(req, res),
+);
+
 // Mettre à jour le statut d'un contrat (admin uniquement)
 router.patch("/:id/status", AuthAdminMiddleware, (req, res) =>
   controller.updateContractStatus(req, res),

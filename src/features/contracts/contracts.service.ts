@@ -3,6 +3,8 @@ import { CompanyRepository } from "../company/company.repository";
 import { DeliverablesRepository } from "../deliverables/deliverables.repository";
 import { FreelanceRepository } from "../freelance/freelance.repository";
 import { ProjectsRepository } from "../projects/projects.repository";
+import { MessageService } from "../messages/message.service";
+import { ConversationService } from "../converstions/conversation.service";
 import {
   Contract,
   ContractStatus,
@@ -19,6 +21,8 @@ export class ContractsService {
   private readonly freelanceRepository: FreelanceRepository;
   private readonly projectsRepository: ProjectsRepository;
   private readonly companyRepository: CompanyRepository;
+  private readonly messageService: MessageService;
+  private readonly conversationService: ConversationService;
   private readonly notificationService: ContractsNotificationService;
 
   constructor() {
@@ -28,6 +32,8 @@ export class ContractsService {
     this.projectsRepository = new ProjectsRepository();
     this.companyRepository = new CompanyRepository();
     this.deliverablesRepository = new DeliverablesRepository();
+    this.messageService = new MessageService();
+    this.conversationService = new ConversationService();
     this.notificationService = new ContractsNotificationService();
   }
 
@@ -519,5 +525,85 @@ export class ContractsService {
 
     // 3. Passer le statut à pending
     return this.repository.updateContractStatus(id, ContractStatus.PENDING);
+  }
+
+  /**
+   * Demande une modification de contrat (pour le freelance, seulement si statut active)
+   */
+  async requestContractModification(
+    id: string,
+    reason?: string,
+  ): Promise<Contract | null> {
+    // 1. Vérifier que le contrat existe et est en statut active
+    const existingContract = await this.repository.getContractById(id);
+    if (!existingContract) {
+      throw new Error("Contrat non trouvé");
+    }
+    if (existingContract.status !== ContractStatus.PENDING) {
+      throw new Error(
+        "Seuls les contrats actifs peuvent faire l'objet d'une demande de modification",
+      );
+    }
+
+    // 2. Passer le statut à resquet (remis en attente)
+    const updatedContract = await this.repository.updateContractStatus(
+      id,
+      ContractStatus.REQUEST,
+    );
+
+    // 3. Envoyer la notification par email à l'entreprise
+    if (updatedContract) {
+      try {
+        await this.notificationService.notifyContractModificationRequested(
+          id,
+          reason,
+        );
+      } catch (error) {
+        console.error(
+          "Erreur lors de l'envoi de la notification email de demande de modification:",
+          error,
+        );
+        // Ne pas faire échouer la demande si l'email échoue
+      }
+
+      // 4. Envoyer un message dans le chat de l'entreprise avec la raison
+      if (reason && reason.trim()) {
+        try {
+          // Récupérer ou créer la conversation entre le freelance et l'entreprise
+          const conversation =
+            await this.conversationService.createOrGetConversation({
+              freelanceId: existingContract.freelance_id,
+              companyId: existingContract.company_id,
+              applicationId: existingContract.application_id,
+              contractId: existingContract.id,
+            });
+
+          if (conversation) {
+            // Envoyer un message système avec la raison de la demande de modification
+            const messageContent = `🔄 **Demande de modification du contrat**: ${reason}\n\nLe contrat a été remis en attente pour permettre les modifications nécessaires.`;
+
+            await this.messageService.createSystemMessage(
+              existingContract.freelance_id, // Sender = freelance
+              existingContract.company_id, // Receiver = entreprise
+              messageContent,
+              conversation.conversation.id,
+              existingContract.project_id,
+            );
+
+            console.log(
+              `💬 Message de demande de modification envoyé dans le chat (conversation ${conversation.conversation.id})`,
+            );
+          }
+        } catch (chatError) {
+          console.error(
+            "Erreur lors de l'envoi du message de demande de modification dans le chat:",
+            chatError,
+          );
+          // Ne pas faire échouer la demande si l'envoi du message échoue
+        }
+      }
+    }
+
+    return updatedContract;
   }
 }
