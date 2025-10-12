@@ -25,6 +25,31 @@ export class AuthUnifiedController {
   // ===========================================
 
   /**
+   * Connexion unifiée (auto-détection freelance/company)
+   * Fonctionne pour freelances et entreprises
+   */
+  async login(req: Request, res: Response) {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: "Email and password are required",
+        });
+      }
+
+      const data = await this.authService.login({ email, password }, req);
+      res.status(HTTP_STATUS.OK).json({
+        success: true,
+        data: data,
+        message: "Login successful",
+      });
+    } catch (error: any) {
+      this.handleError(error, res);
+    }
+  }
+
+  /**
    * Demande de réinitialisation de mot de passe unifiée
    * Fonctionne pour freelances et entreprises
    */
@@ -166,7 +191,9 @@ export class AuthUnifiedController {
         });
       }
 
-      const freelance = await this.authService.registerFreelance(validation.data);
+      const freelance = await this.authService.registerFreelance(
+        validation.data,
+      );
       res.status(HTTP_STATUS.CREATED).json({
         success: true,
         data: freelance,
@@ -187,14 +214,17 @@ export class AuthUnifiedController {
         });
       }
 
-      const data = await this.authService.loginFreelance({ email, password }, req);
+      const data = await this.authService.loginFreelance(
+        { email, password },
+        req,
+      );
       res.status(HTTP_STATUS.OK).json({
         success: true,
         data: data,
         message: "Login successful",
       });
     } catch (error: any) {
-      res.status(HTTP_STATUS.UNAUTHORIZED).json({ error: error.message });
+      this.handleError(error, res);
     }
   }
 
@@ -233,7 +263,10 @@ export class AuthUnifiedController {
         });
       }
 
-      const data = await this.authService.loginCompany({ email, password }, req);
+      const data = await this.authService.loginCompany(
+        { email, password },
+        req,
+      );
       res.status(HTTP_STATUS.OK).json({
         success: true,
         data: data,

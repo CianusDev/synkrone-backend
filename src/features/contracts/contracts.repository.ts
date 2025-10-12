@@ -677,10 +677,24 @@ export class ContractsRepository {
           'phone', f.phone,
           'created_at', f.created_at,
           'updated_at', f.updated_at
-        ) AS freelance
+        ) AS freelance,
+        json_build_object(
+          'id', comp.id,
+          'company_name', comp.company_name,
+          'company_email', comp.company_email,
+          'logo_url', comp.logo_url,
+          'industry', comp.industry,
+          'website_url', comp.website_url,
+          'company_size', comp.company_size,
+          'is_certified', comp.is_certified,
+          'is_verified', comp.is_verified,
+          'country', comp.country,
+          'city', comp.city
+        ) AS company
       FROM contracts c
       LEFT JOIN projects p ON c.project_id = p.id
       LEFT JOIN freelances f ON c.freelance_id = f.id
+      LEFT JOIN companies comp ON c.company_id = comp.id
       ${where}
       ORDER BY c.created_at DESC
       LIMIT $${idx++}
@@ -693,6 +707,7 @@ export class ContractsRepository {
       SELECT COUNT(*) AS total FROM contracts c
       LEFT JOIN projects p ON c.project_id = p.id
       LEFT JOIN freelances f ON c.freelance_id = f.id
+      LEFT JOIN companies comp ON c.company_id = comp.id
       ${where}
     `;
     const countValues = values;

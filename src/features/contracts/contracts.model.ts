@@ -1,6 +1,7 @@
 import { Project } from "../projects/projects.model";
 import { Freelance } from "../freelance/freelance.model";
 import { Deliverable } from "../deliverables/deliverables.model";
+import { Company } from "../company/company.model";
 
 export enum ContractStatus {
   DRAFT = "draft",
@@ -36,6 +37,7 @@ export interface Contract {
   project?: Project;
   freelance?: Freelance;
   deliverables?: Deliverable[];
+  company?: Company;
 }
 
 /**

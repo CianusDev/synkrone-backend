@@ -1,4 +1,5 @@
 import { FreelanceSkills } from "../freelance-skills/freelance-skills.model";
+import { Evaluation, EvaluationStats } from "../evaluation/evaluation.model";
 
 export enum Availability {
   AVAILABLE = "available",
@@ -39,4 +40,38 @@ export interface Freelance {
   created_at: Date;
   updated_at: Date | null;
   isBlocked?: boolean;
+  // Données enrichies pour le profil
+  evaluations?: {
+    stats: EvaluationStats | null;
+    recent: Evaluation[];
+    total: number;
+  };
+  completedMissions?: CompletedMission[];
+}
+
+export interface CompletedMission {
+  id: string;
+  project: {
+    id: string;
+    title: string;
+    description?: string;
+    budget: {
+      min?: number;
+      max?: number;
+    };
+    company: {
+      id: string;
+      name: string | null;
+      logo_url?: string | null;
+      industry?: string | null;
+    };
+  } | null;
+  contract: {
+    paymentMode: string;
+    totalAmount?: number;
+    tjm?: number;
+    startDate?: Date;
+    endDate?: Date;
+    completedAt: Date;
+  };
 }

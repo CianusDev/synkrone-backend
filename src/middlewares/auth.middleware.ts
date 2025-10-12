@@ -24,6 +24,6 @@ export const AuthMiddleware: RequestHandler = async (req, res, next) => {
   //   user,
   //   role,
   // });
-  (req as any).user = user;
+  (req as any).user = { ...user, userType: role };
   next();
 };

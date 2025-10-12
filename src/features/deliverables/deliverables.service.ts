@@ -9,6 +9,7 @@ import { DeliverablesNotificationService } from "./notifications/deliverables-no
 import { ProjectsRepository } from "../projects/projects.repository";
 import { FreelanceRepository } from "../freelance/freelance.repository";
 import { CompanyRepository } from "../company/company.repository";
+import { ProjectStatus } from "../projects/projects.model";
 
 // Statuts autorisés pour les freelances
 const FREELANCE_ALLOWED_STATUSES = [
@@ -327,7 +328,11 @@ export class DeliverablesService {
           contractId,
           ContractStatus.COMPLETED,
         );
-
+        // Mettre à jour le statut du projet associé à "CLOSED"
+        await this.projectsRepository.updateProjectStatusByContract(
+          contractId,
+          ProjectStatus.CLOSED,
+        );
         console.log(
           `✅ Contrat ${contractId} automatiquement clôturé - tous les livrables milestone validés`,
         );

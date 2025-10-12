@@ -708,4 +708,18 @@ export class ProjectsRepository {
     );
     return result.rows;
   }
+
+  async updateProjectStatusByContract(
+    contractId: string,
+    status: ProjectStatus,
+  ): Promise<void> {
+    await query(
+      `UPDATE projects
+       SET status = $1, updated_at = NOW()
+       WHERE id = (
+         SELECT project_id FROM contracts WHERE id = $2
+       )`,
+      [status, contractId],
+    );
+  }
 }

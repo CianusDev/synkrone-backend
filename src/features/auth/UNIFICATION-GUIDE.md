@@ -36,13 +36,14 @@ Total: 15 endpoints
 ```
 Spécifiques Freelances:
 POST /api/auth/freelance/register    ← Reste séparé (données différentes)
-POST /api/auth/freelance/login       ← Reste séparé (retour différent)
+POST /api/auth/freelance/login       ← Reste séparé (compatibilité)
 
 Spécifiques Entreprises:
 POST /api/auth/company/register      ← Reste séparé (données différentes)
-POST /api/auth/company/login         ← Reste séparé (retour différent)
+POST /api/auth/company/login         ← Reste séparé (compatibilité)
 
 Unifiés (Auto-détection freelance/company):
+POST /api/auth/login                 ← UNIFIÉ ✨ (auto-détection)
 POST /api/auth/verify-email          ← UNIFIÉ ✨
 POST /api/auth/forgot-password       ← UNIFIÉ ✨
 POST /api/auth/reset-password        ← UNIFIÉ ✨
@@ -52,7 +53,7 @@ POST /api/auth/resend-reset-otp      ← UNIFIÉ ✨
 Commun:
 POST /api/auth/logout
 
-Total: 9 endpoints (-40% d'endpoints)
+Total: 10 endpoints (-33% d'endpoints par rapport à l'original)
 ```
 
 ## 🛠️ **Architecture d'Unification**
@@ -114,20 +115,20 @@ interface UserData {
 ### **2. Simplification de l'API**
 ```typescript
 // AVANT - Le client devait savoir le type d'utilisateur
-const resetFreelance = await fetch('/api/auth/freelance/forgot-password', {
+const loginFreelance = await fetch('/api/auth/freelance/login', {
   method: 'POST',
-  body: JSON.stringify({ email: 'john@example.com' })
+  body: JSON.stringify({ email: 'john@example.com', password: 'password123' })
 });
 
-const resetCompany = await fetch('/api/auth/company/forgot-password', {
+const loginCompany = await fetch('/api/auth/company/login', {
   method: 'POST', 
-  body: JSON.stringify({ email: 'company@example.com' })
+  body: JSON.stringify({ email: 'company@example.com', password: 'password123' })
 });
 
 // APRÈS - Un seul endpoint universel
-const reset = await fetch('/api/auth/forgot-password', {
+const login = await fetch('/api/auth/login', {
   method: 'POST',
-  body: JSON.stringify({ email: 'any-user@example.com' })
+  body: JSON.stringify({ email: 'any-user@example.com', password: 'password123' })
   // ✨ Auto-détecte si c'est un freelance ou une entreprise
 });
 ```
@@ -166,10 +167,14 @@ const reset = await fetch('/api/auth/forgot-password', {
 
 **Raison** : Structures de données complètement différentes
 
-### **2. Connexion (`/login`)**
+### **2. Connexion (`/login`) - MAINTENANT UNIFIÉ ! ✨**
 ```typescript
-// Retour Freelance
+// Endpoint unifié avec auto-détection
+POST /api/auth/login
+
+// Retour pour Freelance (détecté automatiquement)
 {
+  "userType": "freelance",  ← Indicateur de type
   "freelance": {
     "firstname": "John",    ← Données spécifiques
     "lastname": "Doe",      ← Données spécifiques
@@ -178,8 +183,9 @@ const reset = await fetch('/api/auth/forgot-password', {
   }
 }
 
-// Retour Entreprise
+// Retour pour Entreprise (détecté automatiquement)
 {
+  "userType": "company",    ← Indicateur de type
   "company": {
     "company_name": "ACME", ← Données spécifiques
     "industry": "Tech",     ← Champ spécifique
@@ -188,7 +194,7 @@ const reset = await fetch('/api/auth/forgot-password', {
 }
 ```
 
-**Raison** : Données de retour complètement différentes
+**Raison** : Maintenant unifié avec auto-détection ! Les endpoints séparés restent pour la compatibilité.
 
 ## 🚀 **Migration vers l'API Unifiée**
 
@@ -200,27 +206,29 @@ const reset = await fetch('/api/auth/forgot-password', {
 ### **Étape 2: Mise à Jour Frontend** 
 ```typescript
 // Remplacer ceci:
-const forgotPasswordFreelance = (email: string) => {
-  return fetch('/api/auth/freelance/forgot-password', {
+const loginFreelance = (email: string, password: string) => {
+  return fetch('/api/auth/freelance/login', {
     method: 'POST',
-    body: JSON.stringify({ email })
+    body: JSON.stringify({ email, password })
   });
 };
 
-const forgotPasswordCompany = (email: string) => {
-  return fetch('/api/auth/company/forgot-password', {
+const loginCompany = (email: string, password: string) => {
+  return fetch('/api/auth/company/login', {
     method: 'POST', 
-    body: JSON.stringify({ email })
+    body: JSON.stringify({ email, password })
   });
 };
 
 // Par ceci:
-const forgotPassword = (email: string) => {
-  return fetch('/api/auth/forgot-password', {
+const login = (email: string, password: string) => {
+  return fetch('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email })
+    body: JSON.stringify({ email, password })
   });
 };
+
+// Le endpoint unifié retourne userType pour identifier le type d'utilisateur
 ```
 
 ### **Étape 3: Dépréciation Ancienne API**
@@ -243,6 +251,7 @@ const forgotPassword = (email: string) => {
 
 ### **Frontend**
 - [ ] Créer les nouvelles fonctions d'API unifiées
+- [ ] Migrer les formulaires de connexion vers l'endpoint unifié
 - [ ] Migrer les formulaires de mot de passe oublié
 - [ ] Migrer les formulaires de vérification email
 - [ ] Tester tous les flux d'authentification
@@ -263,15 +272,17 @@ const forgotPassword = (email: string) => {
 ## 🎯 **Résultats Attendus**
 
 ### **Métriques de Performance**
-- **-40% d'endpoints** à maintenir
-- **-50% de code dupliqué** dans les contrôleurs
-- **-30% de tests** requis
+- **-33% d'endpoints** à maintenir (15 → 10)
+- **-60% de code dupliqué** dans les contrôleurs
+- **-40% de tests** requis
 - **Temps de développement réduit** pour les nouvelles fonctionnalités
 
 ### **Améliorations UX**
+- **Interface unifiée** pour la connexion (plus besoin de choisir freelance/entreprise)
 - **Interface unifiée** pour la récupération de mot de passe
 - **Moins de confusion** pour les utilisateurs
 - **Réduction des erreurs** de sélection de type de compte
+- **Expérience de connexion simplifiée**
 
 ### **Maintenabilité**
 - **Logique centralisée** plus facile à débugger

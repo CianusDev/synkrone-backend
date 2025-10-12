@@ -65,7 +65,7 @@ export class AuthController {
         message: "Login successful",
       });
     } catch (error: any) {
-      res.status(HTTP_STATUS.UNAUTHORIZED).json({ error: error.message });
+      this.handleError(error, res);
     }
   }
 

@@ -8,6 +8,9 @@ const controller = new AuthUnifiedController();
 // ROUTES UNIFIÉES (FREELANCES + ENTREPRISES)
 // ===========================================
 
+// Connexion unifiée (auto-détection freelance/company)
+router.post("/login", controller.login.bind(controller));
+
 // Mot de passe oublié unifié
 router.post("/forgot-password", controller.forgotPassword.bind(controller));
 
@@ -18,17 +21,26 @@ router.post("/reset-password", controller.resetPassword.bind(controller));
 router.post("/verify-email", controller.verifyEmail.bind(controller));
 
 // Renvoi du code de vérification d'email unifié
-router.post("/resend-email-otp", controller.resendEmailVerificationOTP.bind(controller));
+router.post(
+  "/resend-email-otp",
+  controller.resendEmailVerificationOTP.bind(controller),
+);
 
 // Renvoi du code de réinitialisation de mot de passe unifié
-router.post("/resend-reset-otp", controller.resendResetPasswordOTP.bind(controller));
+router.post(
+  "/resend-reset-otp",
+  controller.resendResetPasswordOTP.bind(controller),
+);
 
 // ===========================================
 // ROUTES SPÉCIFIQUES FREELANCES
 // ===========================================
 
 // Inscription freelance (reste spécifique)
-router.post("/freelance/register", controller.registerFreelance.bind(controller));
+router.post(
+  "/freelance/register",
+  controller.registerFreelance.bind(controller),
+);
 
 // Connexion freelance (reste spécifique)
 router.post("/freelance/login", controller.loginFreelance.bind(controller));

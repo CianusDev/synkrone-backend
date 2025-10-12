@@ -32,6 +32,7 @@ import deliverablesRoutes from "./features/deliverables/deliverables.route";
 import { HTTP_STATUS, SOKET_EVENTS } from "./utils/constant";
 import deliverableMediaRoutes from "./features/media/deliverable_media/deliverable_media.route";
 import adminRouter from "./features/admin/admin.route";
+import evaluationRoutes from "./features/evaluation/evaluation.route";
 
 dotenv.config();
 
@@ -237,3 +238,4 @@ app.use("/api/deliverables", deliverablesRoutes);
 app.use("/api/deliverable-media", deliverableMediaRoutes);
 app.use("/api/work-days", workDaysRouter);
 app.use("/api/admin/", adminRouter);
+app.use("/api/evaluations", evaluationRoutes);

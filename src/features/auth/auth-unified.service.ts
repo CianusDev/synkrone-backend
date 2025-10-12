@@ -101,12 +101,15 @@ export class AuthUnifiedService {
   /**
    * Méthode privée pour trouver un utilisateur par email (freelance ou company)
    * @param email Email à chercher
-   * @returns UserData unifié ou null
+   * @returns UserData unifié avec l'entité complète ou null
    */
-  private async findUserByEmail(email: string): Promise<UserData | null> {
+  private async findUserByEmail(
+    email: string,
+  ): Promise<(UserData & { entity: Freelance | Company }) | null> {
     try {
       // Chercher d'abord dans les freelances
-      const freelance = await this.freelanceRepository.getFreelanceByEmail(email);
+      const freelance =
+        await this.freelanceRepository.getFreelanceByEmail(email);
       if (freelance) {
         return {
           id: freelance.id,
@@ -115,6 +118,7 @@ export class AuthUnifiedService {
           type: "freelance" as UserType,
           is_verified: freelance.is_verified,
           password_hashed: freelance.password_hashed,
+          entity: freelance,
         };
       }
 
@@ -128,12 +132,16 @@ export class AuthUnifiedService {
           type: "company" as UserType,
           is_verified: company.is_verified,
           password_hashed: company.password_hashed,
+          entity: company,
         };
       }
 
       return null;
     } catch (error) {
-      console.error(`Erreur lors de la recherche de l'utilisateur ${email}:`, error);
+      console.error(
+        `Erreur lors de la recherche de l'utilisateur ${email}:`,
+        error,
+      );
       throw new AuthError("Erreur lors de la recherche de l'utilisateur");
     }
   }
@@ -271,11 +279,17 @@ export class AuthUnifiedService {
     userType: UserType,
   ): Promise<UserEntity | null> {
     if (userType === "freelance") {
-      return await this.freelanceRepository.updateFreelancePassword(email, hashedPassword);
+      return await this.freelanceRepository.updateFreelancePassword(
+        email,
+        hashedPassword,
+      );
     } else {
       const company = await this.companyRepository.getCompanyByEmail(email);
       if (!company) return null;
-      return await this.companyRepository.updateCompanyPassword(company.id, hashedPassword);
+      return await this.companyRepository.updateCompanyPassword(
+        company.id,
+        hashedPassword,
+      );
     }
   }
 
@@ -300,6 +314,126 @@ export class AuthUnifiedService {
   // ===========================================
 
   /**
+   * Connexion unifiée (auto-détection freelance/company)
+   * @param data Données de connexion (email, mot de passe)
+   * @param req Requête Express
+   * @returns Informations de session et utilisateur avec type détecté
+   */
+  async login(data: z.infer<typeof loginSchema>, req: Request) {
+    try {
+      const { sessionId } = req.body;
+
+      // Recherche de l'utilisateur pour déterminer son type
+      const user = await this.findUserByEmail(data.email);
+
+      if (!user) {
+        throw new UnauthorizedError("Email ou mot de passe incorrect");
+      }
+
+      // Vérification du mot de passe avec timing constant pour éviter les timing attacks
+      const isPasswordValid = await comparePassword(
+        data.password,
+        user.password_hashed,
+      );
+
+      // Si le mot de passe n'est pas valide, arrêter ici
+      if (!isPasswordValid) {
+        throw new UnauthorizedError("Email ou mot de passe incorrect");
+      }
+
+      // Vérification de l'email
+      const isEmailVerified = user.is_verified;
+
+      // Vérifier si le compte est suspendu (après validation du mot de passe)
+      const isAccountSuspended =
+        user.type === "freelance"
+          ? (user.entity as Freelance).block_duration === -1
+          : (user.entity as Company).block_duration === -1;
+
+      if (isAccountSuspended) {
+        throw new UnauthorizedError(
+          "Votre compte a été suspendu. Veuillez contacter le support pour plus d'informations.",
+        );
+      }
+
+      if (!isEmailVerified) {
+        throw new UnauthorizedError(
+          "Veuillez vérifier votre email avant de vous connecter",
+        );
+      }
+
+      // Gestion de la session utilisateur
+      const newSessionId = await this.handleUserSession(
+        user.id,
+        req,
+        sessionId,
+      );
+
+      // Création du token JWT pour l'authentification
+      const token = createUserToken(user.entity, user.type);
+
+      // Retourner les informations selon le type d'utilisateur
+      if (user.type === "freelance") {
+        const freelance = user.entity as Freelance;
+        return {
+          userType: "freelance" as const,
+          token,
+          freelance: {
+            id: freelance.id,
+            email: freelance.email,
+            firstname: freelance.firstname,
+            lastname: freelance.lastname,
+            is_verified: freelance.is_verified,
+            is_first_login: freelance.is_first_login,
+            availability: freelance.availability,
+            phone: freelance.phone,
+            photo_url: freelance.photo_url,
+            job_title: freelance.job_title,
+            experience: freelance.experience,
+            description: freelance.description,
+            country: freelance.country,
+            city: freelance.city,
+          },
+          sessionId: newSessionId,
+        };
+      } else {
+        const company = user.entity as Company;
+        return {
+          userType: "company" as const,
+          token,
+          company: {
+            id: company.id,
+            company_email: company.company_email,
+            company_name: company.company_name,
+            logo_url: company.logo_url,
+            is_verified: company.is_verified,
+            is_first_login: company.is_first_login,
+            company_phone: company.company_phone,
+            website_url: company.website_url,
+            country: company.country,
+            city: company.city,
+            address: company.address,
+            company_description: company.company_description,
+            industry: company.industry,
+            company_size: company.company_size,
+          },
+          sessionId: newSessionId,
+        };
+      }
+    } catch (error) {
+      // Propagation des erreurs personnalisées
+      if (error instanceof AuthError) {
+        throw error;
+      }
+      // Conversion des erreurs standards en erreurs personnalisées
+      console.error("Erreur lors de la connexion unifiée:", error);
+      throw new UnauthorizedError(
+        "Erreur lors de la connexion. Veuillez réessayer.",
+      );
+    }
+  }
+
+  /**
    * Demande de réinitialisation de mot de passe unifiée
    * @param email Email de l'utilisateur (freelance ou company)
    */
@@ -310,7 +444,9 @@ export class AuthUnifiedService {
 
       // Si l'utilisateur n'existe pas, on retourne silencieusement pour des raisons de sécurité
       if (!user) {
-        console.log(`Tentative de réinitialisation pour un email inexistant: ${email}`);
+        console.log(
+          `Tentative de réinitialisation pour un email inexistant: ${email}`,
+        );
         return; // Retourne silencieusement sans erreur
       }
 
@@ -325,8 +461,13 @@ export class AuthUnifiedService {
         throw error;
       }
       // Conversion des erreurs standards en erreurs personnalisées
-      console.error("Erreur lors de la demande de réinitialisation de mot de passe:", error);
-      throw new AuthError("Erreur lors de l'envoi de l'email de réinitialisation");
+      console.error(
+        "Erreur lors de la demande de réinitialisation de mot de passe:",
+        error,
+      );
+      throw new AuthError(
+        "Erreur lors de l'envoi de l'email de réinitialisation",
+      );
     }
   }
 
@@ -359,7 +500,11 @@ export class AuthUnifiedService {
       const password_hashed = await hashPassword(newPassword);
 
       // Mise à jour du mot de passe selon le type d'utilisateur
-      const updatedUser = await this.updateUserPassword(email, password_hashed, user.type);
+      const updatedUser = await this.updateUserPassword(
+        email,
+        password_hashed,
+        user.type,
+      );
 
       if (!updatedUser) {
         throw new AuthError("Erreur lors de la mise à jour du mot de passe");
@@ -370,7 +515,10 @@ export class AuthUnifiedService {
         throw error;
       }
       // Conversion des erreurs standards en erreurs personnalisées
-      console.error("Erreur lors de la réinitialisation du mot de passe:", error);
+      console.error(
+        "Erreur lors de la réinitialisation du mot de passe:",
+        error,
+      );
       throw new AuthError("Erreur lors de la réinitialisation du mot de passe");
     }
   }
@@ -380,7 +528,9 @@ export class AuthUnifiedService {
    * @param data Données de vérification (email, code)
    * @returns L'utilisateur mis à jour
    */
-  async verifyEmail(data: z.infer<typeof verifyEmailSchema>): Promise<UserEntity> {
+  async verifyEmail(
+    data: z.infer<typeof verifyEmailSchema>,
+  ): Promise<UserEntity> {
     try {
       // Vérification de l'OTP
       await this.verifyOTP(data.email, data.code);
@@ -392,7 +542,10 @@ export class AuthUnifiedService {
       }
 
       // Mise à jour selon le type d'utilisateur
-      const verifiedUser = await this.markEmailAsVerified(data.email, user.type);
+      const verifiedUser = await this.markEmailAsVerified(
+        data.email,
+        user.type,
+      );
 
       if (!verifiedUser) {
         throw new NotFoundError("Compte utilisateur non trouvé.");
@@ -438,7 +591,10 @@ export class AuthUnifiedService {
         throw error;
       }
       // Conversion des erreurs standards en erreurs personnalisées
-      console.error("Erreur lors du renvoi du code de vérification d'email:", error);
+      console.error(
+        "Erreur lors du renvoi du code de vérification d'email:",
+        error,
+      );
       throw new AuthError("Erreur lors de l'envoi de l'email de vérification");
     }
   }
@@ -453,7 +609,9 @@ export class AuthUnifiedService {
       const user = await this.findUserByEmail(email);
       if (!user) {
         // Pour des raisons de sécurité, on ne devrait pas révéler si l'email existe ou non
-        console.log(`Tentative de renvoi d'OTP pour un email inexistant: ${email}`);
+        console.log(
+          `Tentative de renvoi d'OTP pour un email inexistant: ${email}`,
+        );
         return; // Retourne silencieusement sans erreur
       }
 
@@ -468,8 +626,13 @@ export class AuthUnifiedService {
         throw error;
       }
       // Conversion des erreurs standards en erreurs personnalisées
-      console.error("Erreur lors du renvoi du code de réinitialisation:", error);
-      throw new AuthError("Erreur lors de l'envoi de l'email de réinitialisation");
+      console.error(
+        "Erreur lors du renvoi du code de réinitialisation:",
+        error,
+      );
+      throw new AuthError(
+        "Erreur lors de l'envoi de l'email de réinitialisation",
+      );
     }
   }
 
@@ -480,7 +643,9 @@ export class AuthUnifiedService {
   /**
    * Inscription d'un freelance (reste séparée car données spécifiques)
    */
-  async registerFreelance(data: z.infer<typeof registerFreelanceSchema>): Promise<Freelance> {
+  async registerFreelance(
+    data: z.infer<typeof registerFreelanceSchema>,
+  ): Promise<Freelance> {
     try {
       const emailExists = await this.checkEmailExists(data.email);
       if (emailExists) {
@@ -543,7 +708,9 @@ export class AuthUnifiedService {
   /**
    * Inscription d'une entreprise (reste séparée car données spécifiques)
    */
-  async registerCompany(data: z.infer<typeof registerCompanySchema>): Promise<Company> {
+  async registerCompany(
+    data: z.infer<typeof registerCompanySchema>,
+  ): Promise<Company> {
     try {
       const emailExists = await this.checkEmailExists(data.company_email);
       if (emailExists) {
@@ -619,7 +786,9 @@ export class AuthUnifiedService {
       const { sessionId } = req.body;
 
       // Vérification de l'existence du freelance par email
-      const freelance = await this.freelanceRepository.getFreelanceByEmail(data.email);
+      const freelance = await this.freelanceRepository.getFreelanceByEmail(
+        data.email,
+      );
 
       // Si le freelance n'existe pas, message d'erreur générique (sécurité)
       if (!freelance) {
@@ -627,14 +796,26 @@ export class AuthUnifiedService {
       }
 
       // Vérification du mot de passe avec timing constant pour éviter les timing attacks
-      const isPasswordValid = await comparePassword(data.password, freelance.password_hashed);
+      const isPasswordValid = await comparePassword(
+        data.password,
+        freelance.password_hashed,
+      );
+
+      // Si le mot de passe n'est pas valide, arrêter ici
+      if (!isPasswordValid) {
+        throw new UnauthorizedError("Email ou mot de passe incorrect");
+      }
 
       // Vérification de l'email
       const isEmailVerified = freelance.is_verified;
 
-      // Si le mot de passe n'est pas valide ou l'email n'est pas vérifié
-      if (!isPasswordValid) {
-        throw new UnauthorizedError("Email ou mot de passe incorrect");
+      // verifier si le compte est suspendu (après validation du mot de passe)
+      const isAccountSuspended = freelance.block_duration === -1;
+
+      if (isAccountSuspended) {
+        throw new UnauthorizedError(
+          "Votre compte a été suspendu. Veuillez contacter le support pour plus d'informations.",
+        );
       }
 
       if (!isEmailVerified) {
@@ -644,7 +825,11 @@ export class AuthUnifiedService {
       }
 
       // Gestion de la session utilisateur
-      const newSessionId = await this.handleUserSession(freelance.id, req, sessionId);
+      const newSessionId = await this.handleUserSession(
+        freelance.id,
+        req,
+        sessionId,
+      );
 
       // Création du token JWT pour l'authentification
       const token = createUserToken(freelance, "freelance");
@@ -677,7 +862,9 @@ export class AuthUnifiedService {
       }
       // Conversion des erreurs standards en erreurs personnalisées
       console.error("Erreur lors de la connexion freelance:", error);
-      throw new UnauthorizedError("Erreur lors de la connexion. Veuillez réessayer.");
+      throw new UnauthorizedError(
+        "Erreur lors de la connexion. Veuillez réessayer.",
+      );
     }
   }
 
@@ -689,7 +876,9 @@ export class AuthUnifiedService {
       const { sessionId } = req.body;
 
       // Vérification de l'existence de la société par email
-      const company = await this.companyRepository.getCompanyByEmail(data.email);
+      const company = await this.companyRepository.getCompanyByEmail(
+        data.email,
+      );
 
       // Si la société n'existe pas, message d'erreur générique (sécurité)
       if (!company) {
@@ -698,15 +887,27 @@ export class AuthUnifiedService {
       }
 
       // Vérification du mot de passe avec timing constant pour éviter les timing attacks
-      const isPasswordValid = await comparePassword(data.password, company.password_hashed);
+      const isPasswordValid = await comparePassword(
+        data.password,
+        company.password_hashed,
+      );
+
+      // Si le mot de passe n'est pas valide, arrêter ici
+      if (!isPasswordValid) {
+        console.log("Invalid password for company:", data.email);
+        throw new UnauthorizedError("Email ou mot de passe incorrect");
+      }
 
       // Vérification de l'email
       const isEmailVerified = company.is_verified;
 
-      // Si le mot de passe n'est pas valide ou l'email n'est pas vérifié
-      if (!isPasswordValid) {
-        console.log("Invalid password for company:", data.email);
-        throw new UnauthorizedError("Email ou mot de passe incorrect");
+      // verifier si le compte est suspendu (après validation du mot de passe)
+      const isAccountSuspended = company.block_duration === -1;
+
+      if (isAccountSuspended) {
+        throw new UnauthorizedError(
+          "Votre compte a été suspendu. Veuillez contacter le support pour plus d'informations.",
+        );
       }
 
       if (!isEmailVerified) {
@@ -716,7 +917,11 @@ export class AuthUnifiedService {
       }
 
       // Gestion de la session utilisateur
-      const newSessionId = await this.handleUserSession(company.id, req, sessionId);
+      const newSessionId = await this.handleUserSession(
+        company.id,
+        req,
+        sessionId,
+      );
 
       // Création du token JWT pour l'authentification
       const token = createUserToken(company, "company");
@@ -749,7 +954,9 @@ export class AuthUnifiedService {
       }
       // Conversion des erreurs standards en erreurs personnalisées
       console.error("Erreur lors de la connexion société:", error);
-      throw new UnauthorizedError("Erreur lors de la connexion. Veuillez réessayer.");
+      throw new UnauthorizedError(
+        "Erreur lors de la connexion. Veuillez réessayer.",
+      );
     }
   }
 
@@ -760,7 +967,8 @@ export class AuthUnifiedService {
   async logout(sessionId: string): Promise<void> {
     try {
       // Vérification de l'existence de la session
-      const session = await this.userSessionRepository.getSessionById(sessionId);
+      const session =
+        await this.userSessionRepository.getSessionById(sessionId);
 
       // Si la session n'existe pas, on lance une erreur
       if (!session) {

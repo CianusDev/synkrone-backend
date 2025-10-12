@@ -22,6 +22,61 @@ Le module d'authentification est construit avec les composants suivants :
 
 ## Endpoints API
 
+### Authentification Unifiée
+
+#### 1. Connexion Unifiée (Auto-détection)
+```http
+POST /api/auth/login
+```
+
+**Corps de la requête**
+```json
+{
+  "email": "user@example.com",
+  "password": "P@ssw0rd123",
+  "sessionId": "uuid-optionnel"
+}
+```
+
+**Réponse de succès pour Freelance (200 OK)**
+```json
+{
+  "success": true,
+  "data": {
+    "userType": "freelance",
+    "token": "jwt-token",
+    "freelance": {
+      "id": "uuid",
+      "firstname": "John",
+      "lastname": "Doe",
+      "email": "john@example.com",
+      "is_verified": true
+    },
+    "sessionId": "uuid"
+  },
+  "message": "Login successful"
+}
+```
+
+**Réponse de succès pour Entreprise (200 OK)**
+```json
+{
+  "success": true,
+  "data": {
+    "userType": "company",
+    "token": "jwt-token",
+    "company": {
+      "id": "uuid",
+      "company_email": "contact@company.com",
+      "company_name": "ACME Inc.",
+      "is_verified": true
+    },
+    "sessionId": "uuid"
+  },
+  "message": "Login successful"
+}
+```
+
 ### Authentification Freelance
 
 #### 1. Inscription Freelance
@@ -54,7 +109,7 @@ POST /api/auth/freelance/register
 }
 ```
 
-#### 2. Connexion Freelance
+#### 2. Connexion Freelance (Spécifique - Compatibilité)
 ```http
 POST /api/auth/freelance/login
 ```
@@ -86,6 +141,8 @@ POST /api/auth/freelance/login
   "message": "Login successful"
 }
 ```
+
+**Note:** Utilisez plutôt l'endpoint unifié `/api/auth/login`
 
 #### 3. Vérification d'Email Freelance
 ```http
@@ -222,7 +279,7 @@ POST /api/auth/company/register
 }
 ```
 
-#### 2. Connexion Entreprise
+#### 2. Connexion Entreprise (Spécifique - Compatibilité)
 ```http
 POST /api/auth/company/login
 ```
@@ -253,6 +310,8 @@ POST /api/auth/company/login
   "message": "Login successful"
 }
 ```
+
+**Note:** Utilisez plutôt l'endpoint unifié `/api/auth/login`
 
 #### 3. Vérification d'Email Entreprise
 ```http

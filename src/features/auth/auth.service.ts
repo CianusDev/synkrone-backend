@@ -340,12 +340,21 @@ export class AuthService {
         freelance.password_hashed,
       );
 
+      // Si le mot de passe n'est pas valide, arrêter ici
+      if (!isPasswordValid) {
+        throw new UnauthorizedError("Email ou mot de passe incorrect");
+      }
+
       // Vérification de l'email
       const isEmailVerified = freelance.is_verified;
 
-      // Si le mot de passe n'est pas valide ou l'email n'est pas vérifié
-      if (!isPasswordValid) {
-        throw new UnauthorizedError("Email ou mot de passe incorrect");
+      // verifier si le compte est suspendu (après validation du mot de passe)
+      const isAccountSuspended = freelance.block_duration === -1;
+
+      if (isAccountSuspended) {
+        throw new UnauthorizedError(
+          "Votre compte a été suspendu. Veuillez contacter le support pour plus d'informations.",
+        );
       }
 
       if (!isEmailVerified) {
@@ -575,7 +584,7 @@ export class AuthService {
   }
 
   /**
-   * Vérification de l'email d'un freelance
+   * Vérification de l'email d'un faussireelance
    * @param data Données de vérification (email, code)
    * @returns Le freelance mis à jour
    */
@@ -636,13 +645,22 @@ export class AuthService {
         company.password_hashed,
       );
 
+      // Si le mot de passe n'est pas valide, arrêter ici
+      if (!isPasswordValid) {
+        console.log("Invalid password for company:", data.email);
+        throw new UnauthorizedError("Email ou mot de passe incorrect");
+      }
+
       // Vérification de l'email
       const isEmailVerified = company.is_verified;
 
-      // Si le mot de passe n'est pas valide ou l'email n'est pas vérifié
-      if (!isPasswordValid) {
-        console.log("Company not found with email:", data.email);
-        throw new UnauthorizedError("Email ou mot de passe incorrect");
+      // verifier si le compte est suspendu (après validation du mot de passe)
+      const isAccountSuspended = company.block_duration === -1;
+
+      if (isAccountSuspended) {
+        throw new UnauthorizedError(
+          "Votre compte a été suspendu. Veuillez contacter le support pour plus d'informations.",
+        );
       }
 
       if (!isEmailVerified) {
