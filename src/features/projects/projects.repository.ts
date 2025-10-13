@@ -229,6 +229,7 @@ export class ProjectsRepository {
     offset?: number;
     levelExperience?: string;
     allowMultipleApplications?: boolean;
+    isPublicEndpoint?: boolean; // Nouveau paramètre pour l'endpoint public
   }): Promise<{
     data: Project[];
     total: number;
@@ -324,6 +325,20 @@ export class ProjectsRepository {
       whereValues.push(`%${params.search}%`);
       whereValues.push(`%${params.search}%`);
       paramIdx += 2;
+    }
+
+    // Logique spéciale pour l'endpoint public
+    if (params?.isPublicEndpoint) {
+      // Pour l'endpoint public, exclure les projets qui n'acceptent pas les candidatures multiples
+      // ET qui ont déjà une candidature acceptée
+      conditions.push(`(
+        p.allow_multiple_applications = true
+        OR NOT EXISTS (
+          SELECT 1 FROM applications a
+          WHERE a.project_id = p.id
+          AND a.status = 'accepted'
+        )
+      )`);
     }
 
     // Ajout des conditions WHERE

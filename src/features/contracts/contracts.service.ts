@@ -105,6 +105,7 @@ export class ContractsService {
     const hasMilestones = await this.checkContractHasMilestones(newContract.id);
 
     // 7. Déterminer le statut selon la présence de livrables milestone
+    // Pas de livrables = DRAFT (brouillon), avec livrables = PENDING (en attente d'acceptation)
     const newStatus = hasMilestones
       ? ContractStatus.PENDING
       : ContractStatus.DRAFT;
@@ -113,6 +114,13 @@ export class ContractsService {
     // 8. Envoyer la notification de proposition de contrat au freelance
     try {
       await this.notificationService.notifyContractProposed(newContract.id);
+
+      // 9. Si le contrat est en attente de livrables, notifier le freelance
+      if (newStatus === ContractStatus.DRAFT) {
+        await this.notificationService.notifyContractWaitingForDeliverables(
+          newContract.id,
+        );
+      }
     } catch (error) {
       console.error(
         "Erreur lors de l'envoi de la notification de création de contrat:",
@@ -373,7 +381,8 @@ export class ContractsService {
   }
 
   /**
-   * Accepte un contrat (pour le freelance, seulement si statut draft)
+   * Accepte un contrat (pour le freelance, seulement si statut pending)
+   * Le contrat passe en ACTIVE s'il y a des livrables milestone, sinon reste en DRAFT
    */
   async acceptContract(id: string): Promise<Contract | null> {
     // 1. Vérifier que le contrat existe et est en statut pending
@@ -391,6 +400,7 @@ export class ContractsService {
     const hasMilestones = await this.checkContractHasMilestones(id);
 
     // 3. Déterminer le statut selon la présence de livrables milestone
+    // Avec livrables = ACTIVE (prêt à commencer le travail), sans livrables = reste DRAFT
     const newStatus = hasMilestones
       ? ContractStatus.ACTIVE
       : ContractStatus.PENDING;
@@ -404,6 +414,13 @@ export class ContractsService {
     if (updatedContract) {
       try {
         await this.notificationService.notifyContractAccepted(id);
+
+        // Si le contrat reste en draft (pas de livrables), notifier le freelance
+        if (newStatus === ContractStatus.PENDING) {
+          await this.notificationService.notifyContractWaitingForDeliverables(
+            id,
+          );
+        }
       } catch (error) {
         console.error(
           "Erreur lors de l'envoi de la notification d'acceptation:",
@@ -448,7 +465,9 @@ export class ContractsService {
       throw new Error("Contrat non trouvé");
     }
     if (existingContract.status !== ContractStatus.PENDING) {
-      throw new Error("Seuls les contrats en attente peuvent être refusés");
+      throw new Error(
+        "Seuls les contrats en statut pending peuvent être refusés",
+      );
     }
 
     // 2. Passer le statut à cancelled
@@ -474,7 +493,7 @@ export class ContractsService {
   }
 
   /**
-   * Active un contrat en statut PENDING (quand des milestones sont ajoutés)
+   * Active un contrat en statut PENDING (quand le freelance commence le travail)
    */
   async activatePendingContract(id: string): Promise<Contract | null> {
     // 1. Vérifier que le contrat existe et est en statut pending
@@ -488,7 +507,7 @@ export class ContractsService {
       );
     }
 
-    // 2. Vérifier qu'il y a maintenant des livrables milestone
+    // 2. Vérifier qu'il y a des livrables milestone
     const hasMilestones = await this.checkContractHasMilestones(id);
     if (!hasMilestones) {
       throw new Error(
@@ -496,8 +515,26 @@ export class ContractsService {
       );
     }
 
-    // 3. Passer le statut à active
-    return this.repository.updateContractStatus(id, ContractStatus.ACTIVE);
+    // 3. Passer le statut à active (travail peut commencer)
+    const activatedContract = await this.repository.updateContractStatus(
+      id,
+      ContractStatus.ACTIVE,
+    );
+
+    // 4. Notifier l'entreprise que le travail commence
+    if (activatedContract) {
+      try {
+        await this.notificationService.notifyDeliverablesCreatedForContract(id);
+      } catch (error) {
+        console.error(
+          "Erreur lors de l'envoi de la notification de début de travail:",
+          error,
+        );
+        // Ne pas faire échouer l'activation si l'email échoue
+      }
+    }
+
+    return activatedContract;
   }
 
   /**
@@ -539,16 +576,16 @@ export class ContractsService {
     if (!existingContract) {
       throw new Error("Contrat non trouvé");
     }
-    if (existingContract.status !== ContractStatus.PENDING) {
+    if (existingContract.status !== ContractStatus.ACTIVE) {
       throw new Error(
         "Seuls les contrats actifs peuvent faire l'objet d'une demande de modification",
       );
     }
 
-    // 2. Passer le statut à resquet (remis en attente)
+    // 2. Passer le statut à pending (remis en attente pour modification)
     const updatedContract = await this.repository.updateContractStatus(
       id,
-      ContractStatus.REQUEST,
+      ContractStatus.PENDING,
     );
 
     // 3. Envoyer la notification par email à l'entreprise
@@ -580,7 +617,7 @@ export class ContractsService {
 
           if (conversation) {
             // Envoyer un message système avec la raison de la demande de modification
-            const messageContent = `🔄 **Demande de modification du contrat**: ${reason}\n\nLe contrat a été remis en attente pour permettre les modifications nécessaires.`;
+            const messageContent = `🔄 **Demande de modification du contrat**\n\nRaison : ${reason}\n\nLe contrat a été remis en attente pour permettre les modifications nécessaires.`;
 
             await this.messageService.createSystemMessage(
               existingContract.freelance_id, // Sender = freelance
@@ -605,5 +642,86 @@ export class ContractsService {
     }
 
     return updatedContract;
+  }
+
+  /**
+   * Méthode publique pour notifier qu'un contrat attend des livrables
+   * Utilisée par d'autres modules
+   */
+  async notifyContractWaitingForDeliverables(
+    contractId: string,
+  ): Promise<void> {
+    try {
+      await this.notificationService.notifyContractWaitingForDeliverables(
+        contractId,
+      );
+    } catch (error) {
+      console.error(
+        "Erreur lors de l'envoi de la notification de livrables en attente:",
+        error,
+      );
+    }
+  }
+
+  /**
+   * Méthode publique pour notifier qu'un freelance a créé des livrables
+   * Utilisée par d'autres modules (ex: deliverables)
+   */
+  async notifyDeliverablesCreated(contractId: string): Promise<void> {
+    try {
+      await this.notificationService.notifyDeliverablesCreatedForContract(
+        contractId,
+      );
+    } catch (error) {
+      console.error(
+        "Erreur lors de l'envoi de la notification de création de livrables:",
+        error,
+      );
+    }
+  }
+
+  /**
+   * Méthode pour notifier qu'un freelance a créé des livrables (contrat reste PENDING)
+   * Le contrat ne s'active que quand le freelance commence vraiment le travail
+   * Utilisée par le module deliverables
+   */
+  async notifyDeliverablesCreatedForContract(
+    contractId: string,
+  ): Promise<Contract | null> {
+    try {
+      // Vérifier que le contrat existe
+      const existingContract =
+        await this.repository.getContractById(contractId);
+      if (!existingContract) {
+        console.error("Contrat non trouvé pour notification:", contractId);
+        return null;
+      }
+
+      // Notifier l'entreprise que les livrables ont été créés
+      if (existingContract.status === ContractStatus.PENDING) {
+        await this.notificationService.notifyDeliverablesCreatedForContract(
+          contractId,
+        );
+        console.log(
+          `📋 Livrables créés pour le contrat ${contractId} - contrat reste en PENDING`,
+        );
+      }
+
+      return existingContract;
+    } catch (error) {
+      console.error(
+        "Erreur lors de la notification de création de livrables:",
+        error,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Méthode pour activer manuellement un contrat PENDING vers ACTIVE
+   * Utilisée quand le freelance commence réellement le travail
+   */
+  async startContractWork(contractId: string): Promise<Contract | null> {
+    return this.activatePendingContract(contractId);
   }
 }

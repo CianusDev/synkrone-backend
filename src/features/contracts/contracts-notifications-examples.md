@@ -13,11 +13,14 @@ Le `ContractsNotificationService` gère automatiquement l'envoi des emails lors 
 // Lors de la création d'un contrat
 const contract = await contractsService.createContract(contractData);
 // ✅ Email automatique envoyé au freelance avec le template 'contractProposed'
+// ✅ Si aucun livrable milestone : Email avec template 'contractWaitingForDeliverables'
 ```
 
-**Template utilisé** : `contractProposed`  
+**Templates utilisés** : 
+- `contractProposed` (toujours envoyé)
+- `contractWaitingForDeliverables` (si contrat en statut DRAFT sans livrables)  
 **Destinataire** : Freelance  
-**Contenu** : Notification qu'une nouvelle proposition de contrat a été reçue
+**Contenu** : Notification qu'une nouvelle proposition de contrat a été reçue + action requise pour créer des livrables
 
 ### 2. Acceptation de contrat
 ```typescript
@@ -274,6 +277,43 @@ Pour ajouter de nouvelles notifications :
 3. Appelez la notification dans le service approprié
 4. Documentez ici la nouvelle notification
 
+## 📋 **Nouveau Workflow des Contrats**
+
+### Workflow avec livrables automatisé
+
+```
+1. 🏢 Entreprise crée contrat
+   ↓
+2. 📧 Email "contractProposed" → Freelance
+   ↓
+3. 📧 Email "contractWaitingForDeliverables" → Freelance (si pas de livrables)
+   ↓
+4. 👤 Freelance accepte contrat :
+   - Avec livrables → reste PENDING (prêt à commencer)
+   - Sans livrables → reste DRAFT (doit créer des livrables)
+   ↓
+5. 👤 Freelance crée des livrables milestone (si besoin)
+   ↓
+6. 📧 Email "deliverablesCreatedForContract" → Entreprise
+   ↓
+7. 👤 Freelance commence le travail (PENDING → ACTIVE)
+   ↓
+8. 🚀 Travail en cours !
+```
+
+### Cas particuliers
+
+**Contrat avec livrables pré-créés :**
+- Si des livrables milestone existent déjà → Contrat créé en PENDING
+- Pas d'email "contractWaitingForDeliverables"
+- Acceptation du freelance → Contrat reste en PENDING (prêt à commencer)
+- Début du travail → PENDING → ACTIVE
+
+**Contrat sans livrables :**
+- Contrat créé en DRAFT
+- Email "contractWaitingForDeliverables" envoyé automatiquement
+- Acceptation du freelance → reste en DRAFT jusqu'à création des livrables
+
 ## 📬 Intégration avec le système de Messages
 
 ### Demande de modification de contrat
@@ -371,6 +411,41 @@ Assurez-vous que les services de messages sont correctement configurés :
 # Variables pour le chat temps réel
 SOCKET_IO_CORS_ORIGIN=https://yourapp.com
 FRONTEND_URL=https://yourapp.com
+```
+
+## 🚀 **Intégration dans votre code**
+
+### Service contracts
+
+```typescript
+import { ContractsService } from './contracts.service';
+
+const contractsService = new ContractsService();
+
+// Notifier manuellement qu'un contrat attend des livrables
+await contractsService.notifyContractWaitingForDeliverables(contractId);
+
+// Notifier manuellement la création de livrables
+await contractsService.notifyDeliverablesCreated(contractId);
+
+// Forcer l'activation d'un contrat avec livrables
+await contractsService.activateContractWithDeliverables(contractId);
+```
+
+### Service deliverables
+
+```typescript
+// L'activation automatique est déjà intégrée dans createDeliverable()
+// Pas besoin d'appels manuels dans la plupart des cas
+```
+
+### Monitoring des nouvelles notifications
+
+```bash
+# Logs à surveiller
+grep "📧.*livrables" logs/app.log
+grep "✅.*activé automatiquement" logs/app.log
+grep "📋.*livrable milestone ajouté" logs/app.log
 ```
 
 ## Support

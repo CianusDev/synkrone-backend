@@ -30,6 +30,8 @@ export interface ContractCompletionNotificationData {
   freelanceName: string;
   companyName: string;
   completionDate: string;
+  freelanceEmail?: string;
+  companyEmail?: string;
 }
 
 export class DeliverablesNotificationService {
@@ -111,18 +113,17 @@ export class DeliverablesNotificationService {
           `dashboard/deliverables/${data.deliverableId}`,
         );
 
-        // TODO: Récupérer l'email du freelance depuis la base de données
-        // await sendEmail({
-        //   to: freelanceEmail,
-        //   subject: emailTemplate.subject,
-        //   html: emailTemplate.html,
-        //   text: emailTemplate.text,
-        // });
-        console.log(
-          "📧 Email de validation de livrable préparé (besoin de l'email du freelance)",
-        );
-
-        console.log("📧 Email de validation de livrable envoyé au freelance");
+        if (data.freelanceEmail) {
+          await sendEmail({
+            to: data.freelanceEmail,
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text,
+          });
+          console.log("📧 Email de validation de livrable envoyé au freelance");
+        } else {
+          console.log("⚠️ Email du freelance non disponible pour l'envoi");
+        }
       } catch (emailError) {
         console.error("❌ Erreur envoi email validation livrable:", emailError);
       }
@@ -175,18 +176,17 @@ export class DeliverablesNotificationService {
           `dashboard/deliverables/${data.deliverableId}`,
         );
 
-        // TODO: Récupérer l'email du freelance depuis la base de données
-        // await sendEmail({
-        //   to: freelanceEmail,
-        //   subject: emailTemplate.subject,
-        //   html: emailTemplate.html,
-        //   text: emailTemplate.text,
-        // });
-        console.log(
-          "📧 Email de rejet de livrable préparé (besoin de l'email du freelance)",
-        );
-
-        console.log("📧 Email de rejet de livrable envoyé au freelance");
+        if (data.freelanceEmail) {
+          await sendEmail({
+            to: data.freelanceEmail,
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text,
+          });
+          console.log("📧 Email de rejet de livrable envoyé au freelance");
+        } else {
+          console.log("⚠️ Email du freelance non disponible pour l'envoi");
+        }
       } catch (emailError) {
         console.error("❌ Erreur envoi email rejet livrable:", emailError);
       }
@@ -237,18 +237,19 @@ export class DeliverablesNotificationService {
           `dashboard/deliverables/${data.deliverableId}`,
         );
 
-        // TODO: Récupérer l'email de l'entreprise depuis la base de données
-        // await sendEmail({
-        //   to: companyEmail,
-        //   subject: emailTemplate.subject,
-        //   html: emailTemplate.html,
-        //   text: emailTemplate.text,
-        // });
-        console.log(
-          "📧 Email de soumission de livrable préparé (besoin de l'email de l'entreprise)",
-        );
-
-        console.log("📧 Email de soumission de livrable envoyé à l'entreprise");
+        if (data.companyEmail) {
+          await sendEmail({
+            to: data.companyEmail,
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text,
+          });
+          console.log(
+            "📧 Email de soumission de livrable envoyé à l'entreprise",
+          );
+        } else {
+          console.log("⚠️ Email de l'entreprise non disponible pour l'envoi");
+        }
       } catch (emailError) {
         console.error("❌ Erreur envoi email soumission livrable:", emailError);
       }
@@ -318,18 +319,18 @@ export class DeliverablesNotificationService {
         `dashboard/contracts/${data.contractId}`,
       );
 
-      // TODO: Récupérer l'email du freelance depuis la base de données
-      // await sendEmail({
-      //   to: freelanceEmail,
-      //   subject: emailTemplate.subject,
-      //   html: emailTemplate.html,
-      //   text: emailTemplate.text,
-      // });
-      console.log(
-        "📧 Email de clôture de contrat préparé pour le freelance (besoin de l'email)",
-      );
-
-      console.log("📧 Email de clôture de contrat envoyé au freelance");
+      // Note: L'email sera fourni par le service appelant
+      if (data.freelanceEmail) {
+        await sendEmail({
+          to: data.freelanceEmail,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+          text: emailTemplate.text,
+        });
+        console.log("📧 Email de clôture de contrat envoyé au freelance");
+      } else {
+        console.log("⚠️ Email du freelance non disponible pour l'envoi");
+      }
     } catch (emailError) {
       console.error(
         "❌ Erreur envoi email clôture contrat (freelance):",
@@ -382,18 +383,18 @@ export class DeliverablesNotificationService {
         `dashboard/contracts/${data.contractId}`,
       );
 
-      // TODO: Récupérer l'email de l'entreprise depuis la base de données
-      // await sendEmail({
-      //   to: companyEmail,
-      //   subject: emailTemplate.subject,
-      //   html: emailTemplate.html,
-      //   text: emailTemplate.text,
-      // });
-      console.log(
-        "📧 Email de clôture de contrat préparé pour l'entreprise (besoin de l'email)",
-      );
-
-      console.log("📧 Email de clôture de contrat envoyé à l'entreprise");
+      // Note: L'email sera fourni par le service appelant
+      if (data.companyEmail) {
+        await sendEmail({
+          to: data.companyEmail,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+          text: emailTemplate.text,
+        });
+        console.log("📧 Email de clôture de contrat envoyé à l'entreprise");
+      } else {
+        console.log("⚠️ Email de l'entreprise non disponible pour l'envoi");
+      }
     } catch (emailError) {
       console.error(
         "❌ Erreur envoi email clôture contrat (entreprise):",

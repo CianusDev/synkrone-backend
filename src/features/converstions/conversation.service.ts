@@ -39,19 +39,60 @@ export class ConversationService {
     }
 
     if (!conversation) {
-      const created = await this.repository.createConversation(data);
-      // Récupérer la conversation créée avec détails
-      if (created.applicationId) {
-        conversation = await this.repository.findConversationByApplication(
-          created.applicationId,
-          currentUserId,
-        );
-      } else {
-        conversation = await this.repository.findConversation(
-          created.freelanceId,
-          created.companyId,
-          currentUserId,
-        );
+      try {
+        // Essayer de créer une nouvelle conversation
+        const created = await this.repository.createConversation(data);
+        // Récupérer la conversation créée avec détails
+        if (created.applicationId) {
+          conversation = await this.repository.findConversationByApplication(
+            created.applicationId,
+            currentUserId,
+          );
+        } else {
+          conversation = await this.repository.findConversation(
+            created.freelanceId,
+            created.companyId,
+            currentUserId,
+          );
+        }
+      } catch (error) {
+        // Si erreur de contrainte unique, récupérer la conversation existante et la mettre à jour
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "23505" // Code erreur PostgreSQL pour violation de contrainte unique
+        ) {
+          console.log(
+            `⚠️ Conversation existe déjà entre freelance ${data.freelanceId} et company ${data.companyId}, mise à jour de l'application_id`,
+          );
+
+          // Récupérer la conversation existante
+          const existingConversation = await this.repository.findConversation(
+            data.freelanceId!,
+            data.companyId!,
+            currentUserId,
+          );
+
+          if (existingConversation?.conversation.id && data.applicationId) {
+            // Mettre à jour l'application_id de la conversation existante
+            await this.repository.updateConversationApplicationId(
+              existingConversation.conversation.id,
+              data.applicationId,
+            );
+
+            // Récupérer la conversation mise à jour
+            conversation = await this.repository.findConversationByApplication(
+              data.applicationId,
+              currentUserId,
+            );
+          } else {
+            conversation = existingConversation;
+          }
+        } else {
+          // Si autre erreur, la relancer
+          throw error;
+        }
       }
     }
     return conversation!;

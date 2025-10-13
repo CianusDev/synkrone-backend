@@ -9,6 +9,7 @@ import { NotificationTypeEnum } from "../notifications/notification.model";
 import { UserNotificationService } from "../notifications/user-notifications/user-notification.service";
 import { ConversationService } from "../converstions/conversation.service";
 import { emailTemplates, sendEmail } from "../../config/smtp-email";
+import { Availability } from "../freelance/freelance.model";
 
 export class ApplicationsService {
   private readonly repository: ApplicationsRepository;
@@ -429,6 +430,23 @@ export class ApplicationsService {
       if (status === ApplicationStatus.ACCEPTED) {
         notificationTitle = "Candidature acceptée";
         notificationMessage = `Votre candidature au projet "${project.title}" a été acceptée.`;
+
+        // Mettre à jour la disponibilité du freelance à "busy"
+        try {
+          await this.freelanceRepository.updateFreelanceProfile(freelance.id, {
+            availability: Availability.BUSY,
+          });
+          console.log(
+            `✅ Disponibilité du freelance ${freelance.id} mise à jour : busy`,
+          );
+        } catch (availabilityError) {
+          console.error(
+            `❌ Erreur mise à jour disponibilité freelance ${freelance.id}:`,
+            availabilityError,
+          );
+          // Ne pas faire échouer l'acceptation si la mise à jour de disponibilité échoue
+        }
+
         const template = emailTemplates.applicationAccepted(
           project.title,
           freelance.firstname || "Cher(e) Freelance",
@@ -503,22 +521,34 @@ export class ApplicationsService {
     ) {
       await this.repository.rejectOtherApplications(application.project_id, id);
 
-      // Créer la conversation entre le freelance et la company si elle n'existe pas déjà
+      // Créer ou récupérer la conversation entre le freelance et la company
       if (project && project.company?.id) {
         try {
-          await this.conversationService.createOrGetConversation({
-            freelanceId: application.freelance_id,
-            companyId: project.company.id,
-            applicationId: application.id,
-          });
+          const conversation =
+            await this.conversationService.createOrGetConversation({
+              freelanceId: application.freelance_id,
+              companyId: project.company.id,
+              applicationId: application.id,
+            });
           console.log(
             `✅ Conversation créée/récupérée pour la candidature acceptée: ${application.id}`,
+          );
+          console.log(
+            `📞 Conversation ID: ${conversation.conversation.id} - Freelance: ${application.freelance_id} - Company: ${project.company.id}`,
           );
         } catch (conversationError) {
           console.error(
             `❌ Erreur lors de la création de la conversation pour la candidature ${application.id}:`,
             conversationError,
           );
+
+          // Log plus détaillé de l'erreur
+          if (conversationError instanceof Error) {
+            console.error(
+              `❌ Détail de l'erreur: ${conversationError.message}`,
+            );
+          }
+
           // Ne pas faire échouer toute l'opération si la conversation échoue
           // L'acceptation de la candidature reste valide
         }
@@ -742,6 +772,9 @@ export class ApplicationsService {
       console.log(
         `✅ Négociation initialisée pour la candidature: ${applicationId}`,
       );
+      console.log(
+        `📞 Conversation ID: ${conversation.conversation.id} - Freelance: ${application.freelance_id} - Company: ${project.company.id}`,
+      );
 
       const updateApplication = await this.repository.updateApplicationStatus(
         application.id,
@@ -755,7 +788,16 @@ export class ApplicationsService {
         `❌ Erreur lors de l'initialisation de la négociation pour la candidature ${applicationId}:`,
         conversationError,
       );
-      throw new Error("Impossible d'initialiser la négociation");
+
+      // Log plus détaillé de l'erreur
+      if (conversationError instanceof Error) {
+        console.error(`❌ Détail de l'erreur: ${conversationError.message}`);
+        console.error(`❌ Stack trace:`, conversationError.stack);
+      }
+
+      throw new Error(
+        `Impossible d'initialiser la négociation: ${conversationError instanceof Error ? conversationError.message : "Erreur inconnue"}`,
+      );
     }
   }
 }

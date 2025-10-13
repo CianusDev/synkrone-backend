@@ -67,8 +67,9 @@ export const projectIdSchema = z.object({
 });
 
 // Schéma pour la recherche, pagination et filtres sur la liste des projets
+// Note: pour l'endpoint public GET /projects, le status est forcé à 'published'
 export const getProjectsWithFiltersSchema = z.object({
-  status: z.enum(ProjectStatus).optional(),
+  status: z.enum(ProjectStatus).optional(), // Ignoré pour GET /projects (toujours 'published')
   typeWork: z.enum(TypeWork).optional(),
   companyId: z.uuid().optional(),
   categoryId: z.uuid().optional(),

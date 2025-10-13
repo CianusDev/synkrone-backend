@@ -11,6 +11,7 @@ import {
   updateProjectSchema,
 } from "./projects.schema";
 import { ProjectsService } from "./projects.service";
+import { ProjectStatus } from "./projects.model";
 
 export class ProjectsController {
   private readonly service: ProjectsService;
@@ -40,13 +41,13 @@ export class ProjectsController {
     });
   }
 
-  // GET /projects : liste paginée, recherche, filtres
+  // GET /projects : liste paginée, recherche, filtres (uniquement projets publiés)
   async getProjects(req: Request, res: Response) {
     try {
       const parsed = getProjectsWithFiltersSchema.parse(req.query);
 
       const result = await this.service.listProjects({
-        status: parsed.status,
+        status: ProjectStatus.PUBLISHED, // Forcer uniquement les projets publiés
         typeWork: parsed.typeWork,
         companyId: parsed.companyId,
         categoryId: parsed.categoryId,
@@ -55,6 +56,7 @@ export class ProjectsController {
         limit: parsed.limit,
         offset: parsed.offset,
         freelanceId: parsed.freelanceId, // Pour vérifier si le freelance a postulé ou a été invité
+        isPublicEndpoint: true, // Activer le filtrage spécial pour l'endpoint public
       });
 
       res.status(200).json({

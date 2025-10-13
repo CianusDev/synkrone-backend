@@ -225,6 +225,7 @@ export class ProjectsService {
     limit?: number;
     offset?: number;
     freelanceId?: string; // <-- Ajouté
+    isPublicEndpoint?: boolean; // <-- Ajouté pour l'endpoint public
   }): Promise<{
     data: Project[];
     total: number;
@@ -244,6 +245,7 @@ export class ProjectsService {
       ...params,
       limit: finalLimit,
       offset: finalOffset,
+      isPublicEndpoint: params?.isPublicEndpoint,
     });
 
     // Ajouter les skills à chaque projet

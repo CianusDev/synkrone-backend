@@ -28,12 +28,16 @@ export interface Evaluation {
     name: string;
     email: string;
     type: UserType;
+    avatar_url?: string;
+    evaluation_date: Date;
   };
   evaluated?: {
     id: string;
     name: string;
     email: string;
     type: UserType;
+    avatar_url?: string;
+    evaluation_date: Date;
   };
 }
 

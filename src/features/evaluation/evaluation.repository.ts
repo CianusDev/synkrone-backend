@@ -85,14 +85,18 @@ export class EvaluationRepository {
               'id', f_eval.id,
               'name', CONCAT(f_eval.firstname, ' ', f_eval.lastname),
               'email', f_eval.email,
-              'type', 'freelance'
+              'type', 'freelance',
+              'avatar_url', f_eval.photo_url,
+              'evaluation_date', e.created_at
             )
           ELSE
             json_build_object(
               'id', c_eval.id,
               'name', c_eval.company_name,
               'email', c_eval.company_email,
-              'type', 'company'
+              'type', 'company',
+              'avatar_url', c_eval.logo_url,
+              'evaluation_date', e.created_at
             )
         END AS evaluator,
         CASE
@@ -101,14 +105,18 @@ export class EvaluationRepository {
               'id', f_eval_ed.id,
               'name', CONCAT(f_eval_ed.firstname, ' ', f_eval_ed.lastname),
               'email', f_eval_ed.email,
-              'type', 'freelance'
+              'type', 'freelance',
+              'avatar_url', f_eval_ed.photo_url,
+              'evaluation_date', e.created_at
             )
           ELSE
             json_build_object(
               'id', c_eval_ed.id,
               'name', c_eval_ed.company_name,
               'email', c_eval_ed.company_email,
-              'type', 'company'
+              'type', 'company',
+              'avatar_url', c_eval_ed.logo_url,
+              'evaluation_date', e.created_at
             )
         END AS evaluated
       FROM evaluations e
@@ -278,14 +286,18 @@ export class EvaluationRepository {
               'id', f_eval.id,
               'name', CONCAT(f_eval.firstname, ' ', f_eval.lastname),
               'email', f_eval.email,
-              'type', 'freelance'
+              'type', 'freelance',
+              'avatar_url', f_eval.photo_url,
+              'evaluation_date', e.created_at
             )
           ELSE
             json_build_object(
               'id', c_eval.id,
               'name', c_eval.company_name,
               'email', c_eval.company_email,
-              'type', 'company'
+              'type', 'company',
+              'avatar_url', c_eval.logo_url,
+              'evaluation_date', e.created_at
             )
         END AS evaluator,
         CASE
@@ -294,14 +306,18 @@ export class EvaluationRepository {
               'id', f_eval_ed.id,
               'name', CONCAT(f_eval_ed.firstname, ' ', f_eval_ed.lastname),
               'email', f_eval_ed.email,
-              'type', 'freelance'
+              'type', 'freelance',
+              'avatar_url', f_eval_ed.photo_url,
+              'evaluation_date', e.created_at
             )
           ELSE
             json_build_object(
               'id', c_eval_ed.id,
               'name', c_eval_ed.company_name,
               'email', c_eval_ed.company_email,
-              'type', 'company'
+              'type', 'company',
+              'avatar_url', c_eval_ed.logo_url,
+              'evaluation_date', e.created_at
             )
         END AS evaluated
       FROM evaluations e

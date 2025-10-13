@@ -154,7 +154,7 @@ export class FreelanceService {
           limit: 50, // Limite pour éviter trop de données
         });
 
-      // Formater les données pour ne retourner que les infos essentielles
+      // Formater les données pouCr ne retourner que les infos essentielles
       const missions = contractsResult.data.map((contract) => ({
         id: contract.id,
         project: contract.project

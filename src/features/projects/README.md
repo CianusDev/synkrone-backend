@@ -91,7 +91,7 @@ Toutes les routes sont protégées par le middleware :
 
 | Méthode | URL                        | Description                        | Authentification |
 |---------|----------------------------|------------------------------------|------------------|
-| GET     | `/projects`                | Liste paginée des projets          | company          |
+| GET     | `/projects`                | Liste des projets publiés et disponibles pour candidature | public           |
 | GET     | `/projects/my-projects`    | Projets de l'entreprise connectée  | company          |
 | GET     | `/projects/my-missions`    | Missions du freelance connecté     | freelance        |
 | GET     | `/projects/:id`            | Récupère un projet par son id      | company          |
@@ -358,11 +358,18 @@ Toutes les routes sont protégées par le middleware :
 
 ## 📄 Pagination & Recherche
 
-- Paramètres `page`, `limit`, `offset`, `search`, `status`, `typeWork`, `companyId`, `categoryId`, `levelExperience`, `allowMultipleApplications`
+### GET /projects (Public)
+- **Filtrage automatique** : Seuls les projets avec `status = 'published'` sont retournés
+- **Logique `allowMultipleApplications`** :
+  - ✅ **Si `allowMultipleApplications = true`** : Projet toujours visible (accepte plusieurs candidatures)
+  - ✅ **Si `allowMultipleApplications = false`** : Projet visible uniquement s'il n'a **aucune candidature acceptée**
+  - ❌ **Si candidature déjà acceptée + `allowMultipleApplications = false`** : Projet **masqué** (plus de nouvelles candidatures)
+- Paramètres disponibles : `page`, `limit`, `offset`, `search`, `typeWork`, `companyId`, `categoryId`, `levelExperience`, `allowMultipleApplications`
+- ⚠️ **Note** : Le paramètre `status` est ignoré car seuls les projets publiés sont accessibles
 - Tous les projets retournés incluent le champ `deliverableCount` indiquant le nombre de livrables des contrats actifs
 - Réponse inclut :
-  - `data` : liste des projets
-  - `total` : nombre total de projets trouvés
+  - `data` : liste des projets publiés et disponibles pour candidature
+  - `total` : nombre total de projets publiés et disponibles trouvés
   - `limit` : taille de page
   - `offset` : offset
   - `page` : numéro de page actuelle
@@ -400,6 +407,7 @@ Toutes les routes sont protégées par le middleware :
 
 ## 🧪 Exemple de réponse paginée
 
+### GET /projects (Projets publiés uniquement)
 ```json
 {
   "success": true,
@@ -425,6 +433,11 @@ Toutes les routes sont protégées par le middleware :
   "message": "Liste des projets récupérée avec succès"
 }
 ```
+
+**Notes importantes** : 
+- Tous les projets dans cette réponse ont automatiquement `"status": "published"` car l'endpoint filtre automatiquement les projets non publiés.
+- Les projets avec `"allowMultipleApplications": false` et ayant déjà une candidature acceptée ne sont **pas affichés**.
+- Seuls les projets **disponibles pour candidature** sont visibles dans cet endpoint public.
 
 ---
 

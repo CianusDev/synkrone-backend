@@ -424,4 +424,27 @@ export class ConversationRepository {
       throw new Error("Database error");
     }
   }
+
+  /**
+   * Met à jour l'application_id d'une conversation existante
+   * Utilisé pour associer une conversation existante à une nouvelle candidature
+   */
+  async updateConversationApplicationId(
+    conversationId: string,
+    applicationId: string,
+  ): Promise<Conversation | null> {
+    const query = `
+      UPDATE conversations
+      SET application_id = $2, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `;
+    try {
+      const result = await db.query(query, [conversationId, applicationId]);
+      return (result.rows[0] as Conversation) || null;
+    } catch (error) {
+      console.error("Error updating conversation application_id:", error);
+      throw new Error("Database error");
+    }
+  }
 }

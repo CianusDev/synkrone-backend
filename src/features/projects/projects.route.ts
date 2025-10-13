@@ -6,7 +6,7 @@ import { AuthFreelanceMiddleware } from "../../middlewares/auth-freelance.middle
 const router = Router();
 const controller = new ProjectsController();
 
-// Liste paginée des projets avec recherche et filtres (GET)
+// Liste paginée des projets publiés avec recherche et filtres (GET) - Accès public
 router.get("/", (req, res) => controller.getProjects(req, res));
 
 // Récupérer les projets de l'entreprise connectée (GET)

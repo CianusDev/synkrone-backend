@@ -517,19 +517,20 @@ Paiement échelonné selon les livrables validés.
 ## Logique métier
 
 ### Workflow de validation des contrats
-1. **Création** : L'entreprise crée un contrat avec le statut `draft`
-2. **Modification** : L'entreprise peut modifier le contrat tant qu'il est en statut `draft`
+1. **Création** : L'entreprise crée un contrat avec le statut selon les livrables :
+   - **Sans livrables milestone** : statut → `draft` (brouillon)
+   - **Avec livrables milestone** : statut → `pending` (en attente d'acceptation)
+2. **Modification** : L'entreprise peut modifier le contrat tant qu'il est en statut `draft` ou `pending`
 3. **Acceptation/Refus** : Le freelance peut accepter ou refuser le contrat :
-   - **Acceptation avec livrables milestone** : statut → `active`
-   - **Acceptation sans livrables milestone** : statut → `pending`
+   - **Acceptation avec livrables milestone** : statut → `pending` (prêt à commencer)
+   - **Acceptation sans livrables milestone** : statut → `draft` (doit créer des livrables)
    - **Refus** : statut → `cancelled`
-4. **Demande de modification** : Le freelance peut demander une modification d'un contrat actif :
+4. **Début du travail** : Le freelance commence le travail (manuellement ou via premier livrable soumis) :
+   - **Début de travail** : `pending` → `active`
+5. **Demande de modification** : Le freelance peut demander une modification d'un contrat actif :
    - **Demande de modification** : `active` → `pending` (l'entreprise peut alors modifier le contrat)
    - **Communication automatique** : La raison est envoyée dans le chat de l'entreprise via un message système
-5. **Gestion des livrables** :
-   - **Ajout de milestones** : `pending` → `active`
-   - **Suppression de tous les milestones** : `active` → `pending`
-6. **Verrouillage** : Une fois accepté ou refusé, le contrat n'est plus modifiable (sauf demande de modification ou transitions milestone)
+6. **Verrouillage** : Une fois accepté ou refusé, le contrat n'est plus modifiable (sauf demande de modification)
 
 ### Validation automatique
 - **fixed_price** / **by_milestone** : `total_amount` obligatoire et positif
@@ -541,8 +542,11 @@ Paiement échelonné selon les livrables validés.
 
 ### Calculs automatiques
 - **daily_rate** : `montant_estimé = tjm × estimated_days`
-- **Statuts** : Workflow `draft` → `active`/`pending` → `completed`/`cancelled`
-- **Transitions automatiques** : Basculement `pending` ↔ `active` selon la présence de livrables milestone
+- **Statuts** : Workflow `draft` → `pending` → `active` → `completed`/`cancelled`
+- **Transitions automatiques** : 
+  - Création avec livrables : `draft` → `pending`
+  - Acceptation : reste dans le même statut ou passe de `draft` vers `pending`
+  - Début de travail : `pending` → `active`
 
 ---
 

@@ -528,7 +528,7 @@ export const emailTemplates = {
           </a>
         </div>
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-        <p style="color: #888; font-size: 14px;">L  'équipe Synkrone</p>
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
       </div>
     `,
     text: `
@@ -626,7 +626,7 @@ export const emailTemplates = {
         </p>
         ${
           requestDate
-            ? `<p>Date de la demande : <strong>${requestDate}</ strong></p>`
+            ? `<p>Date de la demande : <strong>${requestDate}</strong></p>`
             : ""
         }
         <p>
@@ -749,7 +749,7 @@ export const emailTemplates = {
           </a>
         </div>
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-        <p style="color: #888; font-size: 14px;">L  'équipe Synkrone</p>
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
       </div>
     `,
     text: `
@@ -1207,6 +1207,316 @@ export const emailTemplates = {
 
       Connectez-vous à votre tableau de bord pour examiner le livrable et décider de le valider ou le rejeter :
       ${envConfig.frontendUrl}/dashboard/deliverables
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier qu'une évaluation a été reçue (freelance)
+  evaluationReceived: (
+    freelanceName: string,
+    companyName: string,
+    projectTitle: string,
+    rating: number,
+    path?: string,
+  ) => ({
+    subject: `Nouvelle évaluation reçue pour "${projectTitle}" - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">⭐ Nouvelle évaluation reçue</h2>
+        <p>
+          ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+        </p>
+        <p>
+          Vous venez de recevoir une nouvelle évaluation de la part de <strong>${companyName}</strong> pour le projet <strong>"${projectTitle}"</strong>.
+        </p>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+          <h3 style="color: #007bff; margin-top: 0;">Note attribuée</h3>
+          <div style="font-size: 32px; color: #ffc107;">
+            ${"⭐".repeat(rating)}${"☆".repeat(5 - rating)}
+          </div>
+          <p style="font-size: 24px; color: #007bff; margin: 10px 0;"><strong>${rating}/5</strong></p>
+        </div>
+        <p>
+          Cette évaluation contribue à améliorer votre réputation sur la plateforme Synkrone.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Voir l'évaluation complète
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Nouvelle évaluation reçue - Synkrone
+
+      ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+
+      Vous venez de recevoir une nouvelle évaluation de la part de ${companyName} pour le projet "${projectTitle}".
+
+      Note attribuée : ${rating}/5 étoiles
+
+      Cette évaluation contribue à améliorer votre réputation sur la plateforme Synkrone.
+
+      Consultez l'évaluation complète :
+      ${envConfig.frontendUrl}/dashboard/evaluations
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier qu'une évaluation a été reçue (company)
+  evaluationReceivedCompany: (
+    companyName: string,
+    freelanceName: string,
+    projectTitle: string,
+    rating: number,
+    path?: string,
+  ) => ({
+    subject: `Nouvelle évaluation reçue pour "${projectTitle}" - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">⭐ Nouvelle évaluation reçue</h2>
+        <p>
+          ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+        </p>
+        <p>
+          Vous venez de recevoir une nouvelle évaluation de la part du freelance <strong>${freelanceName}</strong> pour le projet <strong>"${projectTitle}"</strong>.
+        </p>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+          <h3 style="color: #007bff; margin-top: 0;">Note attribuée</h3>
+          <div style="font-size: 32px; color: #ffc107;">
+            ${"⭐".repeat(rating)}${"☆".repeat(5 - rating)}
+          </div>
+          <p style="font-size: 24px; color: #007bff; margin: 10px 0;"><strong>${rating}/5</strong></p>
+        </div>
+        <p>
+          Cette évaluation contribue à améliorer la réputation de votre entreprise sur la plateforme Synkrone.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Voir l'évaluation complète
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Nouvelle évaluation reçue - Synkrone
+
+      ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+
+      Vous venez de recevoir une nouvelle évaluation de la part du freelance ${freelanceName} pour le projet "${projectTitle}".
+
+      Note attribuée : ${rating}/5 étoiles
+
+      Cette évaluation contribue à améliorer la réputation de votre entreprise sur la plateforme Synkrone.
+
+      Consultez l'évaluation complète :
+      ${envConfig.frontendUrl}/dashboard/evaluations
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour rappeler de laisser une évaluation
+  evaluationReminder: (
+    userName: string,
+    projectTitle: string,
+    otherPartyName: string,
+    userType: "freelance" | "company",
+    path?: string,
+  ) => ({
+    subject: `N'oubliez pas d'évaluer votre collaboration pour "${projectTitle}" - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">⏰ Rappel d'évaluation</h2>
+        <p>
+          ${userName ? `Bonjour ${userName},` : "Bonjour,"}
+        </p>
+        <p>
+          Votre projet <strong>"${projectTitle}"</strong> avec ${userType === "freelance" ? "l'entreprise" : "le freelance"} <strong>${otherPartyName}</strong> est terminé depuis quelques jours.
+        </p>
+        <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <p style="color: #856404; margin: 0;">
+            <strong>📝 Votre avis compte !</strong><br>
+            Prenez quelques instants pour évaluer cette collaboration. Votre feedback aidera les autres membres de la communauté Synkrone.
+          </p>
+        </div>
+        <p>
+          L'évaluation ne prend que quelques minutes et contribue à améliorer la qualité des collaborations sur notre plateforme.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #ffc107; color: #212529; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+            Laisser mon évaluation
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Rappel d'évaluation - Synkrone
+
+      ${userName ? `Bonjour ${userName},` : "Bonjour,"}
+
+      Votre projet "${projectTitle}" avec ${userType === "freelance" ? "l'entreprise" : "le freelance"} ${otherPartyName} est terminé depuis quelques jours.
+
+      📝 Votre avis compte !
+      Prenez quelques instants pour évaluer cette collaboration. Votre feedback aidera les autres membres de la communauté Synkrone.
+
+      Laissez votre évaluation :
+      ${envConfig.frontendUrl}/dashboard/evaluations
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier qu'un contrat attend des livrables
+  contractWaitingForDeliverables: (
+    projectTitle: string,
+    freelanceName: string,
+    companyName?: string,
+    contractDate?: string,
+    path?: string,
+  ) => ({
+    subject: `Action requise : Créer les livrables pour "${projectTitle}" - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #ffc107;">⏳ Contrat en attente de livrables</h2>
+        <p>
+          ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+        </p>
+        <p>
+          Votre contrat pour le projet <strong>"${projectTitle}"</strong> a été créé avec succès.
+        </p>
+        ${
+          companyName
+            ? `<p>L'entreprise <strong>${companyName}</strong> attend maintenant que vous créiez les livrables du projet.</p>`
+            : ""
+        }
+        <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <p style="color: #856404; margin: 0;">
+            <strong>📋 Action requise :</strong><br>
+            Pour activer votre contrat, vous devez créer au moins un livrable milestone.
+            Cela permettra de structurer le projet et d'organiser les paiements.
+          </p>
+        </div>
+        <p>
+          Les livrables vous permettent de :
+        </p>
+        <ul>
+          <li>Organiser votre travail par étapes</li>
+          <li>Définir les jalons de paiement</li>
+          <li>Communiquer clairement sur l'avancement</li>
+          <li>Sécuriser vos revenus</li>
+        </ul>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #ffc107; color: #212529; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+            Créer mes livrables
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Contrat en attente de livrables - Synkrone
+
+      ${freelanceName ? `Bonjour ${freelanceName},` : "Bonjour,"}
+
+      Votre contrat pour le projet "${projectTitle}" a été créé avec succès.
+
+      ${companyName ? `L'entreprise ${companyName} attend maintenant que vous créiez les livrables du projet.` : ""}
+
+      📋 Action requise :
+      Pour activer votre contrat, vous devez créer au moins un livrable milestone.
+      Cela permettra de structurer le projet et d'organiser les paiements.
+
+      Les livrables vous permettent de :
+      - Organiser votre travail par étapes
+      - Définir les jalons de paiement
+      - Communiquer clairement sur l'avancement
+      - Sécuriser vos revenus
+
+      Créez vos livrables :
+      ${envConfig.frontendUrl}/dashboard/contracts
+
+      L'équipe Synkrone
+    `,
+  }),
+
+  // Template pour notifier qu'un freelance a créé des livrables
+  deliverablesCreatedForContract: (
+    projectTitle: string,
+    companyName: string,
+    freelanceName?: string,
+    deliverableCount?: number,
+    contractDate?: string,
+    path?: string,
+  ) => ({
+    subject: `Livrables créés pour "${projectTitle}" - Contrat activé - Synkrone`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #28a745;">✅ Livrables créés avec succès</h2>
+        <p>
+          ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+        </p>
+        <p>
+          Excellente nouvelle ! Le freelance ${freelanceName ? `<strong>${freelanceName}</strong>` : ""} a créé les livrables pour le projet <strong>"${projectTitle}"</strong>.
+        </p>
+        <div style="background: #d4edda; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
+          <p style="color: #155724; margin: 0;">
+            <strong>🎉 Contrat activé !</strong><br>
+            Le contrat est maintenant actif et le travail peut commencer.
+            ${deliverableCount ? `${deliverableCount} livrable${deliverableCount > 1 ? "s ont été créés" : " a été créé"}.` : ""}
+          </p>
+        </div>
+        <p>
+          Vous pouvez maintenant :
+        </p>
+        <ul>
+          <li>Suivre l'avancement du projet via les livrables</li>
+          <li>Valider ou rejeter les livrables soumis</li>
+          <li>Communiquer avec le freelance</li>
+          <li>Gérer les paiements par étapes</li>
+        </ul>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${envConfig.frontendUrl}/${path}"
+             style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Voir le contrat et les livrables
+          </a>
+        </div>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #888; font-size: 14px;">L'équipe Synkrone</p>
+      </div>
+    `,
+    text: `
+      Livrables créés - Contrat activé - Synkrone
+
+      ${companyName ? `Bonjour ${companyName},` : "Bonjour,"}
+
+      Excellente nouvelle ! Le freelance ${freelanceName || ""} a créé les livrables pour le projet "${projectTitle}".
+
+      🎉 Contrat activé !
+      Le contrat est maintenant actif et le travail peut commencer.
+      ${deliverableCount ? `${deliverableCount} livrable${deliverableCount > 1 ? "s ont été créés" : " a été créé"}.` : ""}
+
+      Vous pouvez maintenant :
+      - Suivre l'avancement du projet via les livrables
+      - Valider ou rejeter les livrables soumis
+      - Communiquer avec le freelance
+      - Gérer les paiements par étapes
+
+      Voir le contrat et les livrables :
+      ${envConfig.frontendUrl}/dashboard/contracts
 
       L'équipe Synkrone
     `,

@@ -1,16 +1,17 @@
 import { Request, Response } from "express";
-import { EvaluationService } from "./evaluation.service";
-import {
-  createEvaluationSchema,
-  updateEvaluationSchema,
-  evaluationIdSchema,
-  userIdSchema,
-  contractIdSchema,
-  evaluationFiltersSchema,
-  evaluationStatsParamsSchema,
-} from "./evaluation.schema";
-import { ZodError } from "zod";
+import z, { ZodError } from "zod";
 import { CreateEvaluationData, UserType } from "./evaluation.model";
+import {
+  contractIdSchema,
+  createEvaluationSchema,
+  evaluationFiltersSchema,
+  evaluationIdSchema,
+  updateEvaluationSchema,
+  userIdSchema,
+} from "./evaluation.schema";
+import { EvaluationService } from "./evaluation.service";
+import { generateObject } from "ai";
+import { google } from "@ai-sdk/google";
 
 export class EvaluationController {
   private readonly service: EvaluationService;
@@ -62,6 +63,40 @@ export class EvaluationController {
         rating: data.rating,
         comment: data.comment,
       };
+
+      // Modération du commentaire avec l'IA
+      if (data.comment && data.comment.trim().length > 0) {
+        try {
+          const { object } = await generateObject({
+            model: google("gemini-2.5-flash"),
+            output: "object",
+            schema: z.object({
+              isAppropriate: z.boolean(),
+              reason: z.string().optional(),
+            }),
+            prompt: `
+            Tu es un modérateur de contenu. Ta tâche est de vérifier si ce commentaire d'évaluation est approprié et ne contient pas de contenu offensant, inapproprié ou interdit.
+            Réponds uniquement par les champs demandés : "isAppropriate" (boolean) et "reason" (string optionnel pour expliquer pourquoi c'est inapproprié).
+            Sois flexible mais rejette les contenus vraiment offensants, discriminatoires ou inappropriés.
+
+            Voici le commentaire à modérer : "${data.comment}"
+            `,
+          });
+
+          if (!object.isAppropriate) {
+            return res.status(400).json({
+              success: false,
+              message: "Le commentaire contient du contenu inapproprié",
+              reason:
+                object.reason ||
+                "Contenu non conforme aux règles de modération",
+            });
+          }
+        } catch (moderationError) {
+          console.error("Erreur lors de la modération:", moderationError);
+          // En cas d'erreur de modération, on continue sans bloquer
+        }
+      }
 
       const evaluation = await this.service.createEvaluation(evaluationData);
 
